@@ -156,6 +156,7 @@ class UIAtlas:
 
     BUTTONS = {
         "jugar": "menu_jugar",
+        "iniciar run": "menu_jugar",
         "mejoras": "menu_mejoras",
         "mejoras pausa": "pause_mejoras",
         "personajes": "menu_personajes",
@@ -165,6 +166,8 @@ class UIAtlas:
         "habilidades": "up_habilidades",
         "modificadores": "up_modificadores",
         "volver": "up_volver",
+        "volver al menu": "up_volver",
+        "volver al menú": "up_volver",
         "sonido": "settings_sonido",
         "musica": "settings_musica",
         "graficos": "settings_graficos",
