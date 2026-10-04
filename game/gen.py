@@ -161,13 +161,67 @@ def _generate_decorations(rng, room_type, biome, floor, reserved, seed_value=0):
     return result
 
 
+
+def _shape_floor_mask(rng, room_type, door_sides):
+    """Genera siluetas de sala variadas manteniendo todos los accesos conectados."""
+    # Las salas normales conservan el rectángulo clásico con pequeñas variaciones.
+    # Las formas más pronunciadas siguen dejando libres los cuatro puntos de puerta.
+    choices = ["rectangle", "octagon", "chamfer", "cross", "diamond"]
+    if room_type in ("boss", "miniboss"):
+        choices = ["rectangle", "octagon", "chamfer"]
+    shape = rng.choice(choices)
+
+    cx, cy = ROOM_W // 2, ROOM_H // 2
+    mask = set()
+
+    for y in range(1, ROOM_H - 1):
+        for x in range(1, ROOM_W - 1):
+            dx, dy = abs(x - cx), abs(y - cy)
+            inside = False
+            if shape == "rectangle":
+                inside = True
+            elif shape == "octagon":
+                inside = dx <= cx - 1 and dy <= cy - 1 and (dx + dy) <= max(cx, cy) + 1
+            elif shape == "chamfer":
+                inside = dx <= cx - 1 and dy <= cy - 1 and not (dx >= cx - 3 and dy >= cy - 2)
+            elif shape == "cross":
+                inside = (abs(x - cx) <= 4) or (abs(y - cy) <= 3)
+            elif shape == "diamond":
+                inside = (dx / max(1, cx - 1) + dy / max(1, cy - 1)) <= 1.0
+            if inside:
+                mask.add((x, y))
+
+    # Los accesos activos siempre forman un pequeño pasillo recto hacia la sala.
+    # Esto permite usar cualquier silueta sin romper la conectividad del dungeon.
+    for side in door_sides:
+        if side == "N":
+            for y in range(0, cy + 1):
+                mask.add((cx, y))
+        elif side == "S":
+            for y in range(cy, ROOM_H):
+                mask.add((cx, y))
+        elif side == "W":
+            for x in range(0, cx + 1):
+                mask.add((x, cy))
+        elif side == "E":
+            for x in range(cx, ROOM_W):
+                mask.add((x, cy))
+
+    # La zona central siempre existe para que spawn, enemigos y objetivos tengan
+    # un área continua aun en las formas más estrechas.
+    for y in range(cy - 2, cy + 3):
+        for x in range(cx - 3, cx + 4):
+            if 0 <= x < ROOM_W and 0 <= y < ROOM_H:
+                mask.add((x, y))
+    return shape, mask
+
 def generate_room(seed=None, room_type="combat", biome="ruins", door_sides=None):
     rng=random.Random(seed)
-    g=[[0]*ROOM_W for _ in range(ROOM_H)]
-    for x in range(ROOM_W): g[0][x]=g[-1][x]=1
-    for y in range(ROOM_H): g[y][0]=g[y][-1]=1
+    active=set(door_sides) if door_sides is not None else set(("N","S","W","E"))
+    shape_name, floor_mask = _shape_floor_mask(rng, room_type, active)
+    g=[[0 if (x,y) in floor_mask else 1 for x in range(ROOM_W)] for y in range(ROOM_H)]
+
     all_doors={"N":(ROOM_W//2,0),"S":(ROOM_W//2,ROOM_H-1),"W":(0,ROOM_H//2),"E":(ROOM_W-1,ROOM_H//2)}
-    active=set(door_sides) if door_sides is not None else set(all_doors)
     doors=[all_doors[k] for k in ("N","S","W","E") if k in active]
     for x,y in doors:
         g[y][x]=0
@@ -240,7 +294,7 @@ def generate_room(seed=None, room_type="combat", biome="ruins", door_sides=None)
             if candidate in floor_set and candidate not in decoration_reserved:
                 player_spawn=candidate
                 break
-    return {"cols":ROOM_W,"rows":ROOM_H,"grid":g,"doors":doors,"player_spawn":player_spawn,"enemy_spawns":spawns[:10],"item_spawns":items[:8],"room_type":room_type,"biome":biome,"floor_surface":floor_surface,"secrets":secrets,"decorations":decorations}
+    return {"cols":ROOM_W,"rows":ROOM_H,"grid":g,"doors":doors,"player_spawn":player_spawn,"enemy_spawns":spawns[:10],"item_spawns":items[:8],"room_type":room_type,"biome":biome,"floor_surface":floor_surface,"secrets":secrets,"decorations":decorations,"shape":shape_name}
 
 
 def validate_layout(layout):
