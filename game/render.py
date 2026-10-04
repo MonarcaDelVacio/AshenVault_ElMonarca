@@ -1662,31 +1662,22 @@ class Renderer:
 
         # Estado del jugador sin panel de fondo. Los valores quedan separados
         # de las barras para que nunca se superpongan.
-        def status_bar(y, val, maximum, color, label):
+        def status_bar(y, val, maximum, color, kind):
             maximum = max(1, maximum)
-            self.text(screen, label, (12, y), (190, 199, 213), self.small)
-            bar_x, bar_y, bar_w, bar_h = 62, y + 2, 92, 8
             ratio = max(0.0, min(1.0, val / maximum))
-            if not self.ui_atlas.draw_bar(screen, pygame.Rect(bar_x, bar_y, bar_w, bar_h), ratio):
-                pygame.draw.rect(screen, (7, 9, 14), (bar_x, bar_y, bar_w, bar_h), border_radius=4)
-                fill_w = int((bar_w - 2) * ratio)
+            bar_rect = pygame.Rect(12, y, 150, 28)
+            if not self.ui_atlas.draw_bar(screen, bar_rect, ratio, kind=kind):
+                pygame.draw.rect(screen, (7, 9, 14), bar_rect, border_radius=4)
+                fill_w = int((bar_rect.width - 2) * ratio)
                 if fill_w:
-                    pygame.draw.rect(screen, color, (bar_x + 1, bar_y + 1, fill_w, bar_h - 2), border_radius=3)
-            self.text(screen, "%d/%d" % (math.ceil(val), maximum), (160, y - 1), (245, 246, 250), self.small)
+                    pygame.draw.rect(screen, color, (bar_rect.x + 1, bar_rect.y + 1, fill_w, bar_rect.height - 2), border_radius=3)
+            self.text(screen, "%d/%d" % (math.ceil(val), maximum), (174, y + 14), (245, 246, 250), self.small, center=True)
 
-        status_bar(12, p.hp, p.max_hp, (220, 65, 76), "VIDA")
-        # Un icono por punto de escudo actual; no se muestra valor numérico.
-        shield_count = max(0, int(math.ceil(p.shield - 1e-6)))
-        if self.shield_icon is not None:
-            icon_size = 15
-            for i in range(shield_count):
-                icon = pygame.transform.smoothscale(self.shield_icon, (icon_size, icon_size))
-                screen.blit(icon, (62 + i * (icon_size + 2), 30))
-        else:
-            for i in range(shield_count):
-                pygame.draw.polygon(screen, (75, 160, 240), [(65+i*13, 30), (70+i*13, 32), (69+i*13, 39), (65+i*13, 43), (61+i*13, 39), (60+i*13, 32)])
-        self.text(screen, "ESCUDO", (12, 30), (190, 199, 213), self.small)
-        status_bar(49, p.energy, p.max_energy, (232, 190, 75), "ENERGÍA")
+        # Las barras superiores usan ahora las cuatro piezas de estado del atlas:
+        # corazón/escudo/rayo integrados en la propia pieza, sin iconos duplicados.
+        status_bar(10, p.hp, p.max_hp, (220, 65, 76), "health")
+        status_bar(42, p.shield, p.max_shield, (75, 160, 240), "shield")
+        status_bar(74, p.energy, p.max_energy, (232, 190, 75), "energy")
 
         # Solo monedas en la esquina superior derecha.
         coins_label = "DUNGEON %d   MONEDAS  %d" % (getattr(sim,"difficulty",1), p.coins)
