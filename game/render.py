@@ -1641,6 +1641,18 @@ class Renderer:
                 self.ui_atlas.draw_icon(panel, (cx, cy), size=max(14, ms + 4), kind="skull")
             elif room.room_type=="shop":
                 self.ui_atlas.draw_icon(panel, (cx, cy), size=max(14, ms + 4), kind="key")
+            elif room.room_type=="treasure":
+                self.ui_atlas.draw_icon(panel, (cx, cy), size=max(14, ms + 4), kind="chest")
+            elif room.room_type=="healing":
+                self.ui_atlas.draw_icon(panel, (cx, cy), size=max(14, ms + 4), kind="heal")
+            elif room.room_type in ("elite", "miniboss"):
+                self.ui_atlas.draw_icon(panel, (cx, cy), size=max(14, ms + 4), kind="white_skull")
+            elif room.room_type=="challenge":
+                self.ui_atlas.draw_icon(panel, (cx, cy), size=max(14, ms + 4), kind="target")
+            elif room.room_type=="event":
+                self.ui_atlas.draw_icon(panel, (cx, cy), size=max(14, ms + 4), kind="exclamation")
+            elif room.room_type=="secret":
+                self.ui_atlas.draw_icon(panel, (cx, cy), size=max(14, ms + 4), kind="pin")
         if large:
             ly=height-24; self.ui_atlas.draw_icon(panel,(18,ly-1),size=16,kind="skull"); self.text(panel,"JEFE",(31,ly),(230,230,235),self.menu_small); self.text(panel,"PORTAL",(88,ly),(110,220,245),self.menu_small); self.ui_atlas.draw_icon(panel,(205,ly-1),size=16,kind="key"); self.text(panel,"TIENDA",(218,ly),(255,215,100),self.menu_small)
         screen.blit(panel,(x,y))
