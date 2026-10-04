@@ -245,9 +245,9 @@ class App:
 
     def _menu_rects(self):
         if self.state == MENU and not self.info:
-            return [(VIEW_W // 2 - 137, 128 + n * 76, 274, 66) for n in range(len(MENU_ITEMS))]
+            return [(VIEW_W // 2 - 120, 130 + n * 68, 240, 58) for n in range(len(MENU_ITEMS))]
         if self.state == PAUSE:
-            return [(VIEW_W // 2 - 129, 165 + n * 81, 258, 71) for n in range(len(PAUSE_ITEMS))]
+            return [(VIEW_W // 2 - 115, 165 + n * 73, 230, 63) for n in range(len(PAUSE_ITEMS))]
         if self.state == HUB and not self.info:
             return []
         return []
@@ -794,7 +794,7 @@ class App:
             else:
                 self.menu_visuals.draw(scr)
                 for n, it in enumerate(MENU_ITEMS):
-                    self.draw_option_card((VIEW_W // 2 - 137, 128 + n * 76, 274, 66), it, n == self.sel)
+                    self.draw_option_card((VIEW_W // 2 - 120, 130 + n * 68, 240, 58), it, n == self.sel)
                 self.r.text(scr, "W/S o flechas + Enter", (VIEW_W // 2, VIEW_H - 24), (180, 175, 190), self.r.small, True)
         elif self.state == STATUE:
             ov=pygame.Surface((VIEW_W,VIEW_H),pygame.SRCALPHA); ov.fill((2,5,10,185)); scr.blit(ov,(0,0))
@@ -826,7 +826,7 @@ class App:
             ov.fill((0, 0, 0, 160))
             scr.blit(ov, (0, 0))
             for n, it in enumerate(PAUSE_ITEMS):
-                self.draw_option_card((VIEW_W // 2 - 129, 165 + n * 81, 258, 71), it, n == self.sel)
+                self.draw_option_card((VIEW_W // 2 - 115, 165 + n * 73, 230, 63), it, n == self.sel)
             self.r.text(scr, "PAUSA", (VIEW_W // 2, 140), (240, 190, 80), self.r.menu_title, True)
         elif self.state == DEAD:
             ov = pygame.Surface((VIEW_W, VIEW_H), pygame.SRCALPHA)
