@@ -36,6 +36,7 @@ class Renderer:
         self.chest_images = {}
         self.chest_type_images = {}
         self.decoration_images = {}
+        self.decoration_frames = {}
         self.npc_frames = {}
         self.special_effect_frames = {}
         # Animaciones de movimiento de los seis personajes jugables. Cada spritesheet
@@ -344,6 +345,7 @@ class Renderer:
                     except (pygame.error, OSError):
                         pass
 
+        fountain_names = {"fountain_active", "fountain_inactive", "fountain_small"}
         for name in (
             "bench_large", "bench_small", "barrel_large", "signpost", "crate_stack", "crate_pair",
             "table", "counter", "wood_chest_decor", "fountain_active", "fountain_inactive",
@@ -352,11 +354,19 @@ class Renderer:
             "bush_6", "rock_1", "rock_2", "rock_3", "rock_4", "rock_5", "rock_6",
         ):
             path = decoration_dir / f"{name}.png"
-            if path.is_file():
-                try:
+            if not path.is_file():
+                continue
+            try:
+                if name in fountain_names:
+                    frames = self._load_sheet_frames(path)
+                    if frames:
+                        self.decoration_frames[name] = frames
+                        # Keep the first frame as fallback for code paths that expect an image.
+                        self.decoration_images[name] = frames[0]
+                else:
                     self.decoration_images[name] = pygame.image.load(str(path)).convert_alpha()
-                except (pygame.error, OSError):
-                    pass
+            except (pygame.error, OSError, ValueError):
+                pass
 
         npc_dir = self.asset_root / "npcs"
         for name, filename in {
@@ -1173,10 +1183,13 @@ class Renderer:
             "well_empty":104,"bench_large":92,"bench_small":66,"barrel_large":62,
             "signpost":70,"crate_stack":76,"crate_pair":68,"table":72,"counter":84,
             "wood_chest_decor":68,
-            "statue_goddess":170,"statue_archer":170,"statue_assassin":170,
-            "statue_knight":170,"statue_mage":170,
+            "statue_goddess":510,"statue_archer":510,"statue_assassin":510,
+            "statue_knight":510,"statue_mage":510,
             "bush":56,"rock":58,
         }.get(kind,56)
+        frames = self.decoration_frames.get(kind)
+        if frames:
+            image = frames[int(t * 8.0) % len(frames)]
         draw=self._fit_image(image,max_size)
         if kind=="fountain_active":
             pulse=0.97+0.03*math.sin(t*3.2)
@@ -1546,15 +1559,6 @@ class Renderer:
                 pygame.draw.circle(screen, pr.color, pos, int(pr.radius))
                 pygame.draw.circle(screen, (255, 255, 255), pos, max(1, int(pr.radius) - 2))
 
-        # El portal ya fue dibujado en la pasada de profundidad. Su etiqueta de
-        # interacción es UI y permanece por encima del escenario.
-        if sim.portal:
-            px, py = sim.portal_position[0] + ox, sim.portal_position[1] + oy
-            if math.hypot(sim.player.x - sim.portal_position[0], sim.player.y - sim.portal_position[1]) < 86:
-                self.text(screen, "E  ·  ENTRAR AL PORTAL", (px, py + 54), (150, 235, 255), self.small, center=True)
-            else:
-                self.text(screen, "PORTAL", (px, py - 54), (150, 235, 255), self.small, center=True)
-
         # Decoración más cercana a cámara: cubre parcialmente a los actores que
         # están físicamente detrás, respetando la profundidad por Y.
 
@@ -1622,9 +1626,10 @@ class Renderer:
             # margen suficiente para no competir con el HUD. La celda crece de
             # forma proporcional al número de salas y evita amontonamientos.
             cell=min(18,max(10,int(min(190/cols,92/rows))))
-            width,height=max(180, cols*cell+20),rows*cell+30
+            width,height=max(180, cols*cell+20),rows*cell+36
             x,y=VIEW_W-width-10,42
-            origin_y=7
+            content_x, content_y = 12, 10
+            origin_y=content_y
             panel=pygame.Surface((width,height),pygame.SRCALPHA);
             if not self.ui_atlas.draw_panel(panel, pygame.Rect(0,0,width,height), border=6):
                 pygame.draw.rect(panel,(8,12,22,205),panel.get_rect(),border_radius=6); pygame.draw.rect(panel,(82,100,125,220),panel.get_rect(),1,border_radius=6)
@@ -1663,12 +1668,12 @@ class Renderer:
             ly=height-24; self.ui_atlas.draw_icon(panel,(18,ly-1),size=16,kind="skull"); self.text(panel,"JEFE",(31,ly),(230,230,235),self.menu_small); self.text(panel,"PORTAL",(88,ly),(110,220,245),self.menu_small); self.ui_atlas.draw_icon(panel,(205,ly-1),size=16,kind="key"); self.text(panel,"TIENDA",(218,ly),(255,215,100),self.menu_small)
         else:
             # Leyenda mínima: solo los símbolos que no son obvios por color.
-            ly = height - 10
-            self.ui_atlas.draw_icon(panel, (12, ly), size=12, kind="skull")
-            self.text(panel, "JEFE", (22, ly - 5), (220, 225, 232), self.small)
-            self.text(panel, "P  PORTAL", (70, ly - 5), (110, 220, 245), self.small)
-            self.ui_atlas.draw_icon(panel, (126, ly), size=12, kind="key")
-            self.text(panel, "TIENDA", (136, ly - 5), (255, 215, 100), self.small)
+            ly = height - 13
+            self.ui_atlas.draw_icon(panel, (25, ly), size=11, kind="skull")
+            self.text(panel, "JEFE", (35, ly - 5), (220, 225, 232), self.small)
+            self.text(panel, "P  PORTAL", (82, ly - 5), (110, 220, 245), self.small)
+            self.ui_atlas.draw_icon(panel, (143, ly), size=11, kind="key")
+            self.text(panel, "TIENDA", (153, ly - 5), (255, 215, 100), self.small)
         screen.blit(panel,(x,y))
 
     def draw_hud(self, screen, sim, fx, mouse):
@@ -1754,10 +1759,10 @@ class Renderer:
         panel(weapon_rect, fill=(15, 17, 25, 218), border=(64, 70, 86))
         hud_weapon = self._fit_image(self.weapon_scaled_images.get(getattr(w.d, "id", "")), 28)
         if hud_weapon is not None:
-            screen.blit(hud_weapon, hud_weapon.get_rect(topleft=(18, VIEW_H - 62)))
-            self.text(screen, w.d.name, (52, VIEW_H - 62), (240, 241, 246), self.small)
+            screen.blit(hud_weapon, hud_weapon.get_rect(topleft=(27, VIEW_H - 61)))
+            self.text(screen, w.d.name, (61, VIEW_H - 61), (240, 241, 246), self.small)
         else:
-            self.text(screen, w.d.name, (18, VIEW_H - 62), (240, 241, 246), self.small)
+            self.text(screen, w.d.name, (27, VIEW_H - 61), (240, 241, 246), self.small)
         if w.reloading:
             ammo_text, ammo_color = "RECARGANDO", (240, 200, 90)
         else:
@@ -1766,13 +1771,13 @@ class Renderer:
 
         # Munición y estado de recarga quedan en una sola línea limpia. La barra
         # de progreso fue eliminada para evitar ruido visual en el panel.
-        ammo_pos = (18, VIEW_H - 34)
+        ammo_pos = (27, VIEW_H - 34)
         self.text(screen, ammo_text, ammo_pos, ammo_color, self.small)
 
         # Solo cuando el cargador está completamente vacío mostramos el icono de
         # recarga, pegado a la munición y dentro del mismo panel.
         if not w.reloading and w.ammo <= 0:
-            reload_center = (128, VIEW_H - 31)
+            reload_center = (145, VIEW_H - 31)
             if not self.ui_atlas.draw_icon(screen, reload_center, size=22, kind="refresh"):
                 pygame.draw.circle(screen, (240, 200, 90), reload_center, 9, 2)
                 self.text(screen, "R", reload_center, (240, 200, 90), self.small, center=True)
@@ -1840,24 +1845,21 @@ class Renderer:
         # Interacciones contextuales: se muestran pequeñas y ancladas al objeto
         # real con el que el jugador puede interactuar, en lugar de un botón fijo
         # en el centro de la pantalla.
-        def interaction_hint(world_x, world_y, label, color=(220, 230, 240), y_offset=24):
-            # draw_hud se ejecuta después de draw_world; reutilizamos la cámara
-            # calculada allí para convertir coordenadas del mundo a pantalla.
+        def interaction_hint(world_x, world_y, action, y_offset=24):
+            # Las interacciones usan exclusivamente los PNG de AshenVault_UI_Atlas.
+            # El botón se mantiene pequeño para no competir con el combate.
             cam_x, cam_y = getattr(self, "cam", (0, 0))
             hx = int(world_x + cam_x)
             hy = int(world_y + cam_y + y_offset)
-            hx = max(54, min(VIEW_W - 54, hx))
-            hy = max(18, min(VIEW_H - 14, hy))
-            text_surface = self.small.render(label, True, color)
-            pad_x, pad_y = 6, 3
-            bubble = pygame.Surface(
-                (text_surface.get_width() + pad_x * 2, text_surface.get_height() + pad_y * 2),
-                pygame.SRCALPHA,
+            button_w, button_h = 82, 19
+            hx = max(button_w // 2 + 6, min(VIEW_W - button_w // 2 - 6, hx))
+            hy = max(button_h // 2 + 6, min(VIEW_H - button_h // 2 - 6, hy))
+            self.ui_atlas.draw_button(
+                screen,
+                pygame.Rect(hx - button_w // 2, hy - button_h // 2, button_w, button_h),
+                action,
+                selected=False,
             )
-            pygame.draw.rect(bubble, (7, 10, 18, 205), bubble.get_rect(), border_radius=4)
-            pygame.draw.rect(bubble, (*color, 185), bubble.get_rect(), 1, border_radius=4)
-            bubble.blit(text_surface, (pad_x, pad_y))
-            screen.blit(bubble, bubble.get_rect(center=(hx, hy)))
 
         # La prioridad visual coincide con Sim._try_interact(): portal, estatua,
         # cofre, tienda y finalmente objeto recogible.
@@ -1874,20 +1876,20 @@ class Renderer:
         if getattr(sim, "portal", False):
             px, py = sim.portal_position
             if math.hypot(px - p.x, py - p.y) < 78:
-                interaction_hint(px, py, "E · ENTRAR", (150, 235, 255), 52)
+                interaction_hint(px, py, "Usar", 48)
                 shown_interaction = True
 
         if not shown_interaction:
             active_statue = getattr(sim, "_active_statue", lambda: None)()
             if active_statue:
                 _, _, sx, sy = active_statue
-                interaction_hint(sx, sy, "E · INTERACTUAR", (220, 215, 170), 42)
+                interaction_hint(sx, sy, "Interactuar", 48)
                 shown_interaction = True
 
         if not shown_interaction:
             chest = getattr(sim, "chest", None)
             if chest is not None and not chest.is_open and math.hypot(chest.x - p.x, chest.y - p.y) < 72:
-                interaction_hint(chest.x, chest.y, "E · ABRIR", (255, 220, 135), 30)
+                interaction_hint(chest.x, chest.y, "Interactuar", 38)
                 shown_interaction = True
 
         if not shown_interaction and getattr(sim, "room", None) is not None and getattr(sim.room, "room_type", "") == "shop":
@@ -1901,12 +1903,12 @@ class Renderer:
                     nearby_offer = offer
                     nearby_offer_dist = dist
             if nearby_offer is not None:
-                interaction_hint(nearby_offer.x, nearby_offer.y, "E · COMPRAR", (255, 220, 135), 28)
+                interaction_hint(nearby_offer.x, nearby_offer.y, "Interactuar", 38)
                 shown_interaction = True
 
         if not shown_interaction and nearest_item is not None:
             ix, iy = nearest_item.x, nearest_item.y
-            interaction_hint(ix, iy, "E · RECOGER", (170, 230, 220), 25)
+            interaction_hint(ix, iy, "Recoger", 30)
 
 
         # Mira discreta para no competir visualmente con enemigos y efectos.
