@@ -1622,7 +1622,7 @@ class Renderer:
             # margen suficiente para no competir con el HUD. La celda crece de
             # forma proporcional al número de salas y evita amontonamientos.
             cell=min(18,max(10,int(min(190/cols,92/rows))))
-            width,height=cols*cell+20,rows*cell+30
+            width,height=max(180, cols*cell+20),rows*cell+30
             x,y=VIEW_W-width-10,42
             origin_y=7
             panel=pygame.Surface((width,height),pygame.SRCALPHA);
@@ -1750,7 +1750,7 @@ class Renderer:
 
         # Panel inferior: arma y munición a la izquierda; habilidades a la derecha.
         w = p.weapon
-        weapon_rect = pygame.Rect(10, VIEW_H - 72, 292, 62)
+        weapon_rect = pygame.Rect(10, VIEW_H - 74, 270, 64)
         panel(weapon_rect, fill=(15, 17, 25, 218), border=(64, 70, 86))
         hud_weapon = self._fit_image(self.weapon_scaled_images.get(getattr(w.d, "id", "")), 28)
         if hud_weapon is not None:
@@ -1759,7 +1759,6 @@ class Renderer:
         else:
             self.text(screen, w.d.name, (18, VIEW_H - 62), (240, 241, 246), self.small)
         if w.reloading:
-            frac = max(0.0, min(1.0, 1 - w.reload_left / max(0.01, w.d.reload_time)))
             ammo_text, ammo_color = "RECARGANDO", (240, 200, 90)
         else:
             ammo_text = "MUNICIÓN  %d/%d" % (w.ammo, w.d.magazine)
