@@ -74,6 +74,9 @@ class Player:
         self.melee_attack_timer = 0.0
         self.alive = True
         self.frozen = 0.0
+        # Estados temporales mostrados en el HUD. La simulación los actualiza
+        # según el tipo de daño/curación recibido.
+        self.status_timers = {}
         self.coins = 0
         # Buffs de estatuas: solo memoria de la run, nunca se guardan en SaveData.
         self.statue_damage_taken_mult = 1.0
@@ -81,6 +84,11 @@ class Player:
         self.statue_ranged_mult = 1.0
         self.statue_ability_mult = 1.0
         self.statue_crit_damage_mult = 1.0
+
+    def set_status(self, kind, duration):
+        if duration <= 0:
+            return
+        self.status_timers[str(kind)] = max(float(duration), float(self.status_timers.get(str(kind), 0.0)))
 
     # ---- daño: primero escudo, luego vida ----
     def take_damage(self, amount):
@@ -115,6 +123,12 @@ class Player:
         self.ability_shot_timer = max(0.0, self.ability_shot_timer - dt)
         self.melee_attack_timer = max(0.0, self.melee_attack_timer - dt)
         self.frozen = max(0.0, self.frozen - dt)
+        for key in list(self.status_timers):
+            self.status_timers[key] = max(0.0, self.status_timers[key] - dt)
+            if self.status_timers[key] <= 0:
+                self.status_timers.pop(key, None)
+        if self.frozen > 0:
+            self.status_timers["freeze"] = max(self.status_timers.get("freeze", 0.0), self.frozen)
         # regeneración de escudo y energía
         if self.since_hit > c.shield_regen_delay and self.shield < self.max_shield:
             self.shield = min(self.max_shield, self.shield + self.shield_regen_rate * dt)
