@@ -299,7 +299,11 @@ class UIAtlas:
         if image is None:
             return False
         target = pygame.Rect(*map(int, rect))
-        self._blit_fit(screen, image, target)
+        # Button artwork is authored for a fixed aspect/label layout. Scale it
+        # to the actual button rect so the decorative frame occupies the full
+        # clickable area instead of leaving transparent margins.
+        sprite = pygame.transform.smoothscale(image, target.size)
+        screen.blit(sprite, target.topleft)
         if selected:
             # Selection is an interaction state, not a different authored sprite.
             # Add a restrained highlight without changing the atlas artwork.
