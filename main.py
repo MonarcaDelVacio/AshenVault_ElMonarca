@@ -986,7 +986,7 @@ class App:
             pygame.draw.rect(scr, (80, 223, 215) if self.settings_sel == 11 else (116, 132, 151), checkbox, 1, border_radius=3)
             if fullscreen:
                 pygame.draw.line(scr, (105, 235, 180), (144, 410), (148, 414), 2)
-                pygame.draw.line(scr, (148, 414), (155, 405), (105, 235, 180), 2)
+                pygame.draw.line(scr, (105, 235, 180), (148, 414), (155, 405), 2)
             self.r.text(scr, "PANTALLA COMPLETA", (170, 397), (225, 232, 240), self.r.menu_small)
             self.draw_option_card((VIEW_W // 2 - 82, 475, 164, 29), "Volver", self.settings_sel == 13)
             if self.rebind_action:
