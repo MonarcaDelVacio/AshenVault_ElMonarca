@@ -14,7 +14,7 @@ from game.intro import IntroPlayer
 from game.sim import Sim, Input
 
 INTRO, MENU, PLAY, PAUSE, MAP, DEAD, VICTORY, SETTINGS, CHAR_SELECT, HUB, STATUE = "intro", "menu", "play", "pause", "map", "dead", "victory", "settings", "char_select", "hub", "statue"
-MENU_ITEMS = ["Jugar", "Mejoras", "Personajes", "Configuracion", "Salir"]
+MENU_ITEMS = ["Jugar", "Mejoras", "Configuracion", "Salir"]
 PAUSE_ITEMS = ["Continuar", "Configuracion", "Reiniciar run", "Salir al menu"]
 SETTINGS_ITEMS = ["Volumen efectos", "Volumen musica", "Mover arriba", "Mover abajo", "Mover izquierda", "Mover derecha", "Dash", "Habilidad", "Recargar", "Pausa", "Minimapa", "Pantalla completa", "Restablecer", "Volver"]
 SETTING_KEYS = {"Mover arriba":"up", "Mover abajo":"down", "Mover izquierda":"left", "Mover derecha":"right", "Dash":"dash", "Habilidad":"ability", "Recargar":"reload", "Pausa":"pause", "Minimapa":"map"}
@@ -255,9 +255,9 @@ class App:
 
     def _menu_rects(self):
         if self.state == MENU and not self.info:
-            return [(VIEW_W // 2 - 92, 142 + n * 57, 184, 42) for n in range(len(MENU_ITEMS))]
+            return [(VIEW_W // 2 - 92, 220 + n * 57, 184, 42) for n in range(len(MENU_ITEMS))]
         if self.state == PAUSE:
-            return [(VIEW_W // 2 - 88, 155 + n * 66, 176, 44) for n in range(len(PAUSE_ITEMS))]
+            return [(VIEW_W // 2 - 88, 195 + n * 66, 176, 44) for n in range(len(PAUSE_ITEMS))]
         if self.state == HUB and not self.info:
             return []
         return []
@@ -316,13 +316,13 @@ class App:
             # Las zonas clicables coinciden exactamente con los elementos dibujados.
             for idx in (0, 1):
                 y = 177 + idx * 82
-                bar = pygame.Rect(140, y + 31, 238, 12)
+                bar = pygame.Rect(250, y + 13, 128, 10)
                 row_rect = pygame.Rect(126, y, 266, 58)
                 if row_rect.collidepoint(pos):
                     self.settings_sel = idx
-                    if click:
+                    if (click or pygame.mouse.get_pressed()[0]) and bar.collidepoint(pos):
                         field = "effects_volume" if idx == 0 else "music_volume"
-                        value = round(max(0.0, min(1.0, (pos[0] - bar.x) / bar.width)), 2) if bar.collidepoint(pos) else self.save.data["settings"].get(field, 0.6)
+                        value = round(max(0.0, min(1.0, (pos[0] - bar.x) / bar.width)), 2)
                         self.save.data["settings"][field] = value
                         if idx == 0: self.audio.set_effects_volume(value)
                         else: self.audio.set_music_volume(value)
@@ -676,14 +676,14 @@ class App:
         ox, oy = getattr(self.r, "cam", (0, 0))
         return mx - ox, my - oy
 
-    def draw_option_card(self, rect, label, selected=False, value=None, compact=False):
+    def draw_option_card(self, rect, label, selected=False, value=None, compact=False, use_atlas=True):
         """Opción de menú usando el atlas visual generado para Ashen Vault."""
         x, y, w, h = rect
         destructive = str(label).lower() in {"salir", "salir al menu", "abandonar", "eliminar", "cancelar", "cerrar"}
         atlas_label = label
         if self.state == PAUSE:
             atlas_label = {"Configuracion": "Configuracion pausa", "Mejoras": "Mejoras pausa"}.get(str(label), label)
-        used_atlas = self.ui_atlas.draw_button(self.screen, rect, atlas_label, selected=selected, destructive=destructive)
+        used_atlas = use_atlas and self.ui_atlas.draw_button(self.screen, rect, atlas_label, selected=selected, destructive=destructive)
 
         if not used_atlas:
             panel = pygame.Surface((w, h), pygame.SRCALPHA)
@@ -820,7 +820,7 @@ class App:
                 self.menu_visuals.draw(scr)
                 for n, it in enumerate(MENU_ITEMS):
                     self.draw_option_card(self._menu_rects()[n], it, n == self.sel)
-                self.r.text(scr, "W/S o flechas + Enter", (VIEW_W // 2, VIEW_H - 24), (180, 175, 190), self.r.small, True)
+                self.r.text(scr, "AshenVault - By ElMonarca", (14, VIEW_H - 13), (168, 176, 190), self.r.small)
         elif self.state == STATUE:
             ov=pygame.Surface((VIEW_W,VIEW_H),pygame.SRCALPHA); ov.fill((2,5,10,185)); scr.blit(ov,(0,0))
             offer=self.sim.statue_menu or {}
@@ -850,9 +850,9 @@ class App:
             ov = pygame.Surface((VIEW_W, VIEW_H), pygame.SRCALPHA)
             ov.fill((0, 0, 0, 160))
             scr.blit(ov, (0, 0))
+            self.r.text(scr, "PAUSA", (VIEW_W // 2, 140), (240, 190, 80), self.r.menu_title, True)
             for n, it in enumerate(PAUSE_ITEMS):
                 self.draw_option_card(self._menu_rects()[n], it, n == self.sel)
-            self.r.text(scr, "PAUSA", (VIEW_W // 2, 140), (240, 190, 80), self.r.menu_title, True)
         elif self.state == DEAD:
             ov = pygame.Surface((VIEW_W, VIEW_H), pygame.SRCALPHA)
             ov.fill((20, 0, 0, 190))
@@ -971,17 +971,23 @@ class App:
                 y = 160 + offset * 27
                 selected = self.settings_sel == idx
                 key_name = k[SETTING_KEYS[item]].upper()
-                self.draw_option_card((438, y, 392, 27), item, selected, key_name, compact=True)
+                self.draw_option_card((438, y, 392, 27), item, selected, key_name, compact=True, use_atlas=False)
 
             fullscreen = bool(settings.get("fullscreen", False))
-            reset_rect = pygame.Rect(126, 340, 266, 36)
+            reset_rect = pygame.Rect(170, 344, 150, 31)
             self.ui_atlas.draw_button(scr, reset_rect, "Restablecer", selected=self.settings_sel == 12)
+
             fullscreen_rect = pygame.Rect(126, 390, 266, 42)
             if self.settings_sel == 11:
                 pygame.draw.rect(scr, (20, 35, 45), fullscreen_rect, border_radius=6)
                 pygame.draw.rect(scr, (80, 223, 215), fullscreen_rect, 1, border_radius=6)
-            self.r.text(scr, "PANTALLA COMPLETA", (140, 397), (225, 232, 240), self.r.menu_small)
-            self.r.text(scr, "ACTIVADA" if fullscreen else "VENTANA", (378, 397), (110, 235, 175) if fullscreen else (174, 191, 204), self.r.menu_small, True)
+            checkbox = pygame.Rect(140, 401, 18, 18)
+            pygame.draw.rect(scr, (12, 16, 25), checkbox, border_radius=3)
+            pygame.draw.rect(scr, (80, 223, 215) if self.settings_sel == 11 else (116, 132, 151), checkbox, 1, border_radius=3)
+            if fullscreen:
+                pygame.draw.line(scr, (105, 235, 180), (144, 410), (148, 414), 2)
+                pygame.draw.line(scr, (148, 414), (155, 405), (105, 235, 180), 2)
+            self.r.text(scr, "PANTALLA COMPLETA", (170, 397), (225, 232, 240), self.r.menu_small)
             self.draw_option_card((VIEW_W // 2 - 82, 475, 164, 29), "Volver", self.settings_sel == 13)
             if self.rebind_action:
                 self.r.text(scr, "PULSA UNA TECLA PARA ASIGNAR · ESC CANCELA", (VIEW_W // 2, 514), (123, 238, 222), self.r.menu_small, True)
