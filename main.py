@@ -306,7 +306,7 @@ class App:
                     return
             actions=["Personajes","Volver al menu"]
             for n,item in enumerate(actions):
-                rect=pygame.Rect(260+n*230,442,200,34)
+                rect=pygame.Rect(250+n*240,438,220,44)
                 if rect.collidepoint(pos):
                     self.hub_sel=HUB_ITEMS.index(item)
                     if click: self.activate_hub(item)
@@ -794,7 +794,7 @@ class App:
                 cost=self.save.character_upgrade_cost(cid,kind); price="MEJORAR · %d FRAGMENTOS"%cost; color=(255,219,133) if s["meta_currency"]>=cost else (161,167,181)
             self.r.text(self.screen,price,(x+w//2,y+103),color,self.r.menu_small,True)
         for n,item in enumerate(("Personajes","Volver al menu")):
-            self.draw_option_card((260+n*230,442,200,34),item,self.hub_sel==HUB_ITEMS.index(item))
+            self.draw_option_card((250+n*240,438,220,44),item,self.hub_sel==HUB_ITEMS.index(item))
         self.r.text(self.screen,"Las mejoras son exclusivas de %s y afectan sus partidas."%c.name.split(",")[0],(VIEW_W//2,518),(150,165,180),self.r.menu_small,True)
 
     def draw(self):
