@@ -368,27 +368,42 @@ class UIAtlas:
             image = self._crop(full_key)
         if image is None:
             return False
+        # Draw the authored frame unchanged. Only the colored fill track is
+        # masked by the current value; the heart/shield/lightning and frame stay put.
         self._blit_fit(screen, image, target)
-
         ratio = max(0.0, min(1.0, float(ratio)))
-        if ratio < 1.0:
-            # Darken only the unfilled section while preserving the authored frame.
-            cover = pygame.Surface(target.size, pygame.SRCALPHA)
-            start = int(target.width * ratio)
-            pygame.draw.rect(cover, (3, 6, 12, 175), (start, 0, target.width - start, target.height))
-            screen.blit(cover, target.topleft)
+        # Track coordinates measured within each authored full-bar sprite.
+        track = {
+            "health": (36/221, 8/43, 151/221, 22/43),
+            "hp": (36/221, 8/43, 151/221, 22/43),
+            "shield": (37/221, 2/31, 150/221, 20/31),
+            "energy": (37/221, 10/43, 150/221, 21/43),
+            "mana": (38/221, 10/41, 147/221, 22/41),
+        }.get(kind, (36/221, 8/43, 151/221, 22/43))
+        tx = target.x + round(target.width * track[0])
+        ty = target.y + round(target.height * track[1])
+        tw = round(target.width * track[2])
+        th = max(1, round(target.height * track[3]))
+        remaining_x = tx + round(tw * ratio)
+        if ratio < 1.0 and remaining_x < tx + tw:
+            cover = pygame.Surface((tx + tw - remaining_x, th), pygame.SRCALPHA)
+            cover.fill((3, 6, 12, 205))
+            screen.blit(cover, (remaining_x, ty))
         return True
 
     def draw_slot(self, screen, rect, selected=False):
         if not self.available:
             return False
-        image = self._crop("equipment_slot")
+        target = pygame.Rect(*map(int, rect))
+        # The atlas' equipment glyph is narrow/vertical, not a square slot frame.
+        # Use a neutral scalable frame so each inventory cell is actually square.
+        image = self._crop("frame_gold" if selected else "frame_gray")
         if image is None:
             return False
-        target = pygame.Rect(*map(int, rect))
-        self._blit_fit(screen, image, target)
-        if selected:
-            pygame.draw.rect(screen, (255, 219, 133), target.inflate(3, 3), 1, border_radius=4)
+        out = self._nine_slice(image, target.size, border=max(3, min(7, target.width // 5)))
+        if out is None:
+            return False
+        screen.blit(out, target.topleft)
         return True
 
     def draw_icon(self, screen, center, size=24, kind="health"):
