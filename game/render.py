@@ -1260,14 +1260,40 @@ class Renderer:
             from types import SimpleNamespace
             fx = SimpleNamespace(particles=[], texts=[], shake=0.0, flash=0.0)
         arena, p = sim.arena, sim.player
-        # cámara centrada en el jugador con límites; el shake se suma al final
-        cx = max(0, min(arena.width - VIEW_W, p.x - VIEW_W / 2)) if arena.width > VIEW_W else -(VIEW_W - arena.width) / 2
-        cy = max(0, min(arena.height - VIEW_H, p.y - VIEW_H / 2)) if arena.height > VIEW_H else -(VIEW_H - arena.height) / 2
+        # Cámara libre: el jugador permanece siempre en el centro.
+        # No se limita a los bordes de la sala; el exterior queda negro y las
+        # salas vecinas pueden ocupar ese espacio cuando la cámara las alcanza.
+        cx = p.x - VIEW_W / 2
+        cy = p.y - VIEW_H / 2
         if fx.shake > 0.2:
             cx += math.sin(t * 90) * fx.shake
             cy += math.cos(t * 77) * fx.shake
         ox, oy = -int(cx), -int(cy)
-        screen.fill((14, 12, 18))
+        screen.fill((0, 0, 0))
+        # El jugador sigue centrado incluso al mirar fuera de la sala. Cuando existe
+        # una sala contigua, se muestra su arquitectura en continuidad con el mapa;
+        # cualquier hueco sin sala permanece completamente negro.
+        dungeon = getattr(sim, "dungeon", None)
+        if dungeon is not None:
+            for side, nrid in (
+                ("N", dungeon.neighbor(dungeon.current, "N")),
+                ("S", dungeon.neighbor(dungeon.current, "S")),
+                ("W", dungeon.neighbor(dungeon.current, "W")),
+                ("E", dungeon.neighbor(dungeon.current, "E")),
+            ):
+                neighbor = dungeon.rooms.get(nrid)
+                if neighbor is None:
+                    continue
+                nbg = self._background(neighbor.arena)
+                if side == "N":
+                    nox, noy = ox, oy + arena.height
+                elif side == "S":
+                    nox, noy = ox, oy - arena.height
+                elif side == "W":
+                    nox, noy = ox + arena.width, oy
+                else:
+                    nox, noy = ox - arena.width, oy
+                screen.blit(nbg, (nox, noy))
         screen.blit(self._background(arena), (ox, oy))
         # Corrección de color ambiental: baja ligeramente el brillo del escenario y
         # deja que las fuentes de luz cálidas/frías resalten sin saturar toda la sala.
