@@ -322,6 +322,8 @@ class Sim:
             old=self.player.hp; self.player.hp=min(self.player.max_hp,self.player.hp+3)
             self.player.shield=min(self.player.max_shield,self.player.shield+2)
             self.player.energy=min(self.player.max_energy,self.player.energy+25)
+            self.player.set_status("heal", 1.8)
+            self.player.set_status("shield", 2.2)
             self.emit("heal_room",cx,cy,self.player.hp-old)
         elif room.room_type=="event":
             # Evento de riesgo/recompensa: ofrece moneda y un objeto, sin bloquear la run.
@@ -386,9 +388,11 @@ class Sim:
         elif offer.kind == "heal":
             if p.hp >= p.max_hp: return False
             p.hp=min(p.max_hp,p.hp+offer.amount)
+            p.set_status("heal", 1.8)
         elif offer.kind == "shield":
             if p.shield >= p.max_shield: return False
             p.shield=min(p.max_shield,p.shield+offer.amount)
+            p.set_status("shield", 2.2)
         elif offer.kind == "energy":
             if p.energy >= p.max_energy: return False
             p.energy=min(p.max_energy,p.energy+offer.amount)
@@ -566,7 +570,7 @@ class Sim:
                         item.x, item.y = self._safe_drop_position(ix + 28, iy, 10.0)
                     self.emit('weapon_pickup',p.x,p.y,weapon_id); return
                 if getattr(item,'kind',None)=='heal':
-                    p.hp=min(p.max_hp,p.hp+2); self.items.remove(item); self.emit('item_pickup',p.x,p.y,'heal'); return
+                    p.hp=min(p.max_hp,p.hp+2); p.set_status("heal", 1.8); self.items.remove(item); self.emit('item_pickup',p.x,p.y,'heal'); return
                 if getattr(item,'kind',None)=='energy':
                     p.energy=min(p.max_energy,p.energy+30); self.items.remove(item); self.emit('item_pickup',p.x,p.y,'energy'); return
                 apply_item_bonuses(p,item); self.items.remove(item); self.emit('item_pickup',p.x,p.y,item.id); return
@@ -813,6 +817,9 @@ class Sim:
                             self.on_player_hit(pr.x-pr.vx,pr.y-pr.vy,pr.damage)
                             if pr.dtype == "ice":
                                 self._apply_freeze(p, pr.damage)
+                                p.set_status("freeze", 1.6)
+                            elif pr.dtype in ("fire", "poison", "electric"):
+                                p.set_status({"fire":"burn","poison":"poison","electric":"electric"}[pr.dtype], 2.4)
                             pr.active=False
                         break
     def _explode_projectile(self, pr):
@@ -891,7 +898,9 @@ class Sim:
             if h["tick"]<=0:
                 h["tick"]=0.65
                 if math.hypot(self.player.x-h["x"],self.player.y-h["y"])<=h["radius"]:
-                    if self.player.take_damage(h["damage"]): self.on_player_hit(h["x"],h["y"],h["damage"])
+                    if self.player.take_damage(h["damage"]):
+                        self.player.set_status({"fire":"burn","poison":"poison","electric":"electric"}.get(h["dtype"], h["dtype"]), 1.3)
+                        self.on_player_hit(h["x"],h["y"],h["damage"])
                 for e in self.enemies:
                     if e.alive and math.hypot(e.x-h["x"],e.y-h["y"])<=h["radius"]:
                         e.hurt(h["damage"],math.atan2(e.y-h["y"],e.x-h["x"]))
