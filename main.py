@@ -670,7 +670,13 @@ class App:
 
         font = self.r.menu_font if selected else self.r.menu_small
         color = (244, 252, 250) if selected else (195, 205, 220)
-        if value is None:
+        # Las piezas del atlas ya contienen el texto/iconografía de sus botones.
+        # Solo dibujamos el texto cuando la opción no existe como sprite completo.
+        if used_atlas:
+            if value is not None:
+                val_img = font.render(str(value), True, (93, 235, 222) if selected else (205, 210, 224))
+                self.screen.blit(val_img, val_img.get_rect(midright=(x + w - 14, y + h // 2)))
+        elif value is None:
             self.r.text(self.screen, label, (x + w // 2, y + h // 2), color, font, True)
         else:
             label_img = font.render(label, True, color)
