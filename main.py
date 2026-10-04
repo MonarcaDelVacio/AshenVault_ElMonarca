@@ -9,6 +9,7 @@ from game.audio import Audio
 from game.fx import Fx
 from game.render import Renderer, VIEW_W, VIEW_H
 from game.menu_visuals import MenuVisuals
+from game.ui_atlas import UIAtlas
 from game.intro import IntroPlayer
 from game.sim import Sim, Input
 
@@ -56,6 +57,7 @@ class App:
         # El HUD refleja también las teclas reasignadas desde Configuración.
         self.r.key_bindings = self.save.data["settings"].get("keys", {})
         self.menu_visuals = MenuVisuals((VIEW_W, VIEW_H))
+        self.ui_atlas = UIAtlas()
         self.intro = IntroPlayer((VIEW_W, VIEW_H), music_volume=self.audio.music_volume)
         self.fx = Fx()
         self.inp = Input()
@@ -653,22 +655,21 @@ class App:
         return mx - ox, my - oy
 
     def draw_option_card(self, rect, label, selected=False, value=None, compact=False):
-        """Opción de menú con estética de panel tecnológico de AshenVault."""
+        """Opción de menú usando el atlas visual generado para Ashen Vault."""
         x, y, w, h = rect
-        panel = pygame.Surface((w, h), pygame.SRCALPHA)
-        fill = (18, 20, 31, 224) if selected else (12, 14, 23, 190)
-        pygame.draw.rect(panel, fill, (0, 0, w, h), border_radius=5)
-        border = (74, 226, 220, 245) if selected else (102, 108, 130, 190)
-        pygame.draw.rect(panel, border, (0, 0, w, h), 2 if selected else 1, border_radius=5)
-        if selected:
-            pygame.draw.rect(panel, (74, 226, 220, 230), (0, 5, 4, h - 10), border_radius=2)
-            pygame.draw.line(panel, (74, 226, 220, 100), (12, h - 3), (w - 12, h - 3), 1)
-        self.screen.blit(panel, (x, y))
+        destructive = str(label).lower() in {"salir", "salir al menu", "abandonar", "eliminar", "cancelar", "cerrar"}
+        used_atlas = self.ui_atlas.draw_button(self.screen, rect, label, selected=selected, destructive=destructive)
+
+        if not used_atlas:
+            panel = pygame.Surface((w, h), pygame.SRCALPHA)
+            fill = (18, 20, 31, 224) if selected else (12, 14, 23, 190)
+            pygame.draw.rect(panel, fill, (0, 0, w, h), border_radius=5)
+            border = (74, 226, 220, 245) if selected else (102, 108, 130, 190)
+            pygame.draw.rect(panel, border, (0, 0, w, h), 2 if selected else 1, border_radius=5)
+            self.screen.blit(panel, (x, y))
+
         font = self.r.menu_font if selected else self.r.menu_small
         color = (244, 252, 250) if selected else (195, 205, 220)
-        # Sin glifos decorativos que algunas fuentes sustituyen por signos de interrogación.
-        # Las opciones normales se centran exactamente en el panel; las filas con valor
-        # (por ejemplo, las teclas asignadas) mantienen etiqueta a la izquierda y valor a la derecha.
         if value is None:
             self.r.text(self.screen, label, (x + w // 2, y + h // 2), color, font, True)
         else:
