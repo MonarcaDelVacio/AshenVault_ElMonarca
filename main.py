@@ -14,7 +14,7 @@ from game.intro import IntroPlayer
 from game.sim import Sim, Input
 
 INTRO, MENU, PLAY, PAUSE, MAP, DEAD, VICTORY, SETTINGS, CHAR_SELECT, HUB, STATUE = "intro", "menu", "play", "pause", "map", "dead", "victory", "settings", "char_select", "hub", "statue"
-MENU_ITEMS = ["Jugar", "Mejoras", "Configuracion", "Salir"]
+MENU_ITEMS = ["Jugar", "Mejoras", "Personajes", "Configuracion", "Salir"]
 PAUSE_ITEMS = ["Continuar", "Configuracion", "Reiniciar run", "Salir al menu"]
 SETTINGS_ITEMS = ["Volumen efectos", "Volumen musica", "Mover arriba", "Mover abajo", "Mover izquierda", "Mover derecha", "Dash", "Habilidad", "Recargar", "Pausa", "Minimapa", "Pantalla completa", "Volver"]
 SETTING_KEYS = {"Mover arriba":"up", "Mover abajo":"down", "Mover izquierda":"left", "Mover derecha":"right", "Dash":"dash", "Habilidad":"ability", "Recargar":"reload", "Pausa":"pause", "Minimapa":"map"}
@@ -597,6 +597,10 @@ class App:
             self.go(PLAY)
         elif item == "Mejoras":
             self.hub_sel=2; self.go(HUB)
+        elif item == "Personajes":
+            self.back_state = MENU
+            self.char_sel = self.char_ids.index(self.char_id)
+            self.go(CHAR_SELECT)
         elif item == "Configuracion":
             self.back_state = self.state
             self.settings_sel = 0
