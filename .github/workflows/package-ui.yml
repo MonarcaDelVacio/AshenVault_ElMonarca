@@ -1,0 +1,18 @@
+name: Build AshenVault ZIP
+on:
+  push:
+    branches:
+      - ui-atlas-v1-temp
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Remove temporary workflow from package
+        run: rm -f .github/workflows/package-ui.yml
+      - name: Package source
+        run: zip -r AshenVault_UI_Version.zip . -x ".git/*" "__pycache__/*" "*.pyc"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AshenVault_UI_Version
+          path: AshenVault_UI_Version.zip
