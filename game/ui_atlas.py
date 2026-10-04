@@ -331,7 +331,9 @@ class UIAtlas:
         base_rect = pygame.Rect(*map(int, rect))
         if selected:
             target = base_rect.inflate(max(4, base_rect.width // 14), max(4, base_rect.height // 10))
-        sprite = pygame.transform.smoothscale(image, target.size)
+        # Nunca deformamos un PNG del atlas: se ajusta dentro del rectángulo
+        # disponible conservando exactamente su proporción original.
+        sprite = self._fit(image, target.size)
         dst = sprite.get_rect(center=base_rect.center)
         screen.blit(sprite, dst)
         if selected:
