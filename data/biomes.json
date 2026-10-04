@@ -1,0 +1,261 @@
+{
+  "ruins": {
+    "name": "Ruinas Antiguas",
+    "floor_a": [
+      52,
+      48,
+      56
+    ],
+    "floor_b": [
+      58,
+      54,
+      62
+    ],
+    "wall": [
+      96,
+      88,
+      100
+    ],
+    "wall_top": [
+      128,
+      118,
+      132
+    ],
+    "pillar": [
+      112,
+      98,
+      84
+    ],
+    "pillar_top": [
+      150,
+      134,
+      112
+    ],
+    "enemy_pool": [
+      "scavenger",
+      "gunner",
+      "charger",
+      "grunt",
+      "spreader",
+      "gargoyle",
+      "undead_swordsman",
+      "arcane_acolyte"
+    ]
+  },
+  "forest": {
+    "name": "Bosque Umbrío",
+    "floor_a": [
+      38,
+      60,
+      42
+    ],
+    "floor_b": [
+      44,
+      70,
+      48
+    ],
+    "wall": [
+      52,
+      76,
+      55
+    ],
+    "wall_top": [
+      80,
+      105,
+      75
+    ],
+    "pillar": [
+      65,
+      82,
+      45
+    ],
+    "pillar_top": [
+      95,
+      115,
+      65
+    ],
+    "enemy_pool": [
+      "charger",
+      "flyer",
+      "spitter",
+      "runner",
+      "wisp",
+      "gargoyle",
+      "ice_monkey"
+    ]
+  },
+  "dungeon": {
+    "name": "Mazmorra Profunda",
+    "floor_a": [
+      45,
+      45,
+      48
+    ],
+    "floor_b": [
+      52,
+      52,
+      55
+    ],
+    "wall": [
+      72,
+      70,
+      76
+    ],
+    "wall_top": [
+      105,
+      100,
+      110
+    ],
+    "pillar": [
+      80,
+      65,
+      52
+    ],
+    "pillar_top": [
+      112,
+      90,
+      70
+    ],
+    "enemy_pool": [
+      "melee_guard",
+      "gunner",
+      "sniper",
+      "brute",
+      "summoner",
+      "undead_swordsman",
+      "undead_knight",
+      "stone_golem"
+    ]
+  },
+  "laboratory": {
+    "name": "Laboratorio Helix",
+    "floor_a": [
+      42,
+      52,
+      64
+    ],
+    "floor_b": [
+      48,
+      60,
+      74
+    ],
+    "wall": [
+      70,
+      82,
+      96
+    ],
+    "wall_top": [
+      110,
+      130,
+      145
+    ],
+    "pillar": [
+      55,
+      70,
+      80
+    ],
+    "pillar_top": [
+      90,
+      115,
+      130
+    ],
+    "enemy_pool": [
+      "gunner",
+      "sniper",
+      "drone",
+      "wisp",
+      "summoner",
+      "arcane_acolyte",
+      "stone_golem"
+    ]
+  },
+  "volcanic": {
+    "name": "Falla Ígnea",
+    "floor_a": [
+      70,
+      42,
+      34
+    ],
+    "floor_b": [
+      82,
+      48,
+      35
+    ],
+    "wall": [
+      75,
+      55,
+      52
+    ],
+    "wall_top": [
+      120,
+      75,
+      60
+    ],
+    "pillar": [
+      95,
+      60,
+      38
+    ],
+    "pillar_top": [
+      150,
+      90,
+      45
+    ],
+    "enemy_pool": [
+      "charger",
+      "bomber",
+      "armored",
+      "grunt",
+      "spreader",
+      "ogre",
+      "giant_minotaur"
+    ]
+  },
+  "final": {
+    "name": "Núcleo del Vacío",
+    "floor_a": [
+      35,
+      32,
+      50
+    ],
+    "floor_b": [
+      43,
+      38,
+      60
+    ],
+    "wall": [
+      65,
+      58,
+      85
+    ],
+    "wall_top": [
+      105,
+      90,
+      135
+    ],
+    "pillar": [
+      72,
+      48,
+      92
+    ],
+    "pillar_top": [
+      120,
+      80,
+      150
+    ],
+    "enemy_pool": [
+      "armored",
+      "sniper",
+      "drone",
+      "bomber",
+      "summoner",
+      "wisp",
+      "undead_knight",
+      "ice_monkey",
+      "ogre",
+      "giant_minotaur",
+      "stone_golem",
+      "arcane_acolyte"
+    ]
+  }
+}

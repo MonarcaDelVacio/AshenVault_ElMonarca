@@ -1,2 +1,37 @@
-# Auto detect text files and perform LF normalization
+# Archivos de texto: finales de línea consistentes
 * text=auto
+
+# Código Python
+*.py text eol=lf
+
+# Scripts de Windows
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Archivos de configuración y documentación
+*.ini text
+*.cfg text
+*.json text
+*.toml text
+*.md text
+*.txt text
+
+# Instalador de Inno Setup
+*.iss text
+
+# Recursos binarios: no modificar
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.gif binary
+*.ico binary
+*.wav binary
+*.ogg binary
+*.mp3 binary
+*.mp4 binary
+*.ttf binary
+*.otf binary
+*.exe binary
+*.dll binary
+*.zip binary

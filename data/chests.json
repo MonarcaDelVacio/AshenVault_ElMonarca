@@ -1,0 +1,22 @@
+{
+  "common": {
+    "rarity": "common",
+    "key_cost": 0
+  },
+  "rare": {
+    "rarity": "rare",
+    "key_cost": 1
+  },
+  "legendary": {
+    "rarity": "legendary",
+    "key_cost": 2
+  },
+  "weapon": {
+    "rarity": "weapon",
+    "key_cost": 1
+  },
+  "item": {
+    "rarity": "item",
+    "key_cost": 1
+  }
+}

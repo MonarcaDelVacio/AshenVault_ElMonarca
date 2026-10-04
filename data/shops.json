@@ -1,0 +1,9 @@
+{
+  "weapon_prices": {"common": 12, "uncommon": 20, "rare": 32, "epic": 48, "legendary": 70},
+  "items": [
+    {"kind":"heal", "name":"Kit de campo", "price":14, "amount":2},
+    {"kind":"shield", "name":"Celda de escudo", "price":16, "amount":2},
+    {"kind":"energy", "name":"Batería", "price":12, "amount":30}
+  ],
+  "slots": 3
+}

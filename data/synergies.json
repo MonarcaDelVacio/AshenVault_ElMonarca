@@ -1,0 +1,45 @@
+{
+  "inferno_core": {
+    "name": "Núcleo Infernal",
+    "requires": [
+      "incendiary",
+      "overclock"
+    ],
+    "effects": {
+      "damage_mult": 0.1
+    }
+  },
+  "fortress": {
+    "name": "Fortaleza",
+    "requires": [
+      "aegis",
+      "vitality"
+    ],
+    "effects": {
+      "max_shield": 1,
+      "shield_regen_rate": 0.2
+    }
+  },
+  "velocity": {
+    "name": "Impulso Cinético",
+    "requires": [
+      "swift",
+      "coolant"
+    ],
+    "effects": {
+      "move_speed_mult": 0.08,
+      "attack_speed_mult": 0.08
+    }
+  },
+  "hunter": {
+    "name": "Cazador",
+    "requires": [
+      "piercing",
+      "magnetic"
+    ],
+    "effects": {
+      "crit_chance": 0.05,
+      "coin_radius": 30
+    }
+  }
+}

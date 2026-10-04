@@ -1,0 +1,46 @@
+{
+  "combat": {
+    "name": "Combate",
+    "enemy_budget": 5
+  },
+  "elite": {
+    "name": "Élite",
+    "enemy_budget": 9
+  },
+  "treasure": {
+    "name": "Tesoro",
+    "enemy_budget": 0
+  },
+  "shop": {
+    "name": "Mercado",
+    "enemy_budget": 0
+  },
+  "event": {
+    "name": "Evento",
+    "enemy_budget": 0
+  },
+  "healing": {
+    "name": "Santuario",
+    "enemy_budget": 0
+  },
+  "challenge": {
+    "name": "Desafío",
+    "enemy_budget": 8
+  },
+  "secret": {
+    "name": "Sala Secreta",
+    "enemy_budget": 0
+  },
+  "start": {
+    "name": "Entrada",
+    "enemy_budget": 0
+  },
+  "boss": {
+    "name": "Jefe",
+    "enemy_budget": 0
+  },
+  "miniboss": {
+    "name": "Mini-Jefe",
+    "enemy_budget": 1
+  }
+}

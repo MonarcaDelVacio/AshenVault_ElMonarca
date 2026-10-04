@@ -1,0 +1,191 @@
+{
+  "soldier": {
+    "name": "Kael, el Soldado",
+    "description": "Equilibrado. Escudo temporal para resistir una emboscada.",
+    "max_hp": 6,
+    "max_shield": 5,
+    "max_energy": 100,
+    "speed": 170,
+    "energy_regen": 10,
+    "shield_regen_delay": 3.0,
+    "shield_regen_rate": 0.8,
+    "damage_mult": 1.0,
+    "crit_chance": 0.05,
+    "radius": 10,
+    "start_weapon": "plasma_pistol",
+    "color": [
+      90,
+      160,
+      230
+    ],
+    "dash": {
+      "speed": 480,
+      "duration": 0.16,
+      "cooldown": 1.0
+    },
+    "ability": {
+      "name": "Bastion",
+      "kind": "shield",
+      "cooldown": 9.0,
+      "amount": 4,
+      "invuln": 0.8
+    }
+  },
+  "medic": {
+    "name": "Iria, la Médica",
+    "description": "Resistencia menor, pero recupera vida con una habilidad de emergencia.",
+    "max_hp": 7,
+    "max_shield": 3,
+    "max_energy": 110,
+    "speed": 165,
+    "energy_regen": 12,
+    "shield_regen_delay": 3.5,
+    "shield_regen_rate": 0.7,
+    "damage_mult": 0.9,
+    "crit_chance": 0.05,
+    "radius": 10,
+    "start_weapon": "volt_smg",
+    "color": [
+      90,
+      220,
+      150
+    ],
+    "dash": {
+      "speed": 460,
+      "duration": 0.16,
+      "cooldown": 1.1
+    },
+    "ability": {
+      "name": "Reanimar",
+      "kind": "heal",
+      "cooldown": 10.0,
+      "amount": 3
+    }
+  },
+  "vanguard": {
+    "name": "Rook, la Vanguardia",
+    "description": "Lento y resistente; libera una onda de choque cercana.",
+    "max_hp": 8,
+    "max_shield": 7,
+    "max_energy": 90,
+    "speed": 145,
+    "energy_regen": 8,
+    "shield_regen_delay": 2.5,
+    "shield_regen_rate": 1.0,
+    "damage_mult": 1.1,
+    "crit_chance": 0.04,
+    "radius": 11,
+    "start_weapon": "thorn_shotgun",
+    "color": [
+      220,
+      150,
+      80
+    ],
+    "dash": {
+      "speed": 430,
+      "duration": 0.18,
+      "cooldown": 1.25
+    },
+    "ability": {
+      "name": "Impacto",
+      "kind": "burst",
+      "cooldown": 8.0,
+      "radius": 125,
+      "damage": 24
+    }
+  },
+  "pyromancer": {
+    "name": "Veyra, la Ignita",
+    "description": "Rápida y frágil; congela el tiempo de los enemigos cercanos.",
+    "max_hp": 5,
+    "max_shield": 4,
+    "max_energy": 130,
+    "speed": 180,
+    "energy_regen": 15,
+    "shield_regen_delay": 3.0,
+    "shield_regen_rate": 0.7,
+    "damage_mult": 1.15,
+    "crit_chance": 0.08,
+    "radius": 10,
+    "start_weapon": "frost_orb",
+    "color": [
+      230,
+      90,
+      55
+    ],
+    "dash": {
+      "speed": 500,
+      "duration": 0.15,
+      "cooldown": 0.9
+    },
+    "ability": {
+      "name": "Estasis",
+      "kind": "freeze",
+      "cooldown": 9.0,
+      "radius": 190,
+      "duration": 3.0
+    }
+  },
+  "striker": {
+    "name": "Nox, el Corredor",
+    "description": "Muy veloz; activa una sobrecarga temporal de movimiento.",
+    "max_hp": 5,
+    "max_shield": 4,
+    "max_energy": 105,
+    "speed": 205,
+    "energy_regen": 11,
+    "shield_regen_delay": 3.2,
+    "shield_regen_rate": 0.8,
+    "damage_mult": 1.0,
+    "crit_chance": 0.12,
+    "radius": 9,
+    "start_weapon": "arc_blade",
+    "color": [
+      190,
+      110,
+      240
+    ],
+    "dash": {
+      "speed": 560,
+      "duration": 0.14,
+      "cooldown": 0.75
+    },
+    "ability": {
+      "name": "Sobremarcha",
+      "kind": "haste",
+      "cooldown": 7.0,
+      "duration": 5.0
+    }
+  },
+  "engineer": {
+    "name": "Mira, la Ingeniera",
+    "description": "Especialista en control; despliega drones de apoyo durante la sala.",
+    "max_hp": 6,
+    "max_shield": 5,
+    "max_energy": 120,
+    "speed": 155,
+    "energy_regen": 13,
+    "shield_regen_delay": 3.0,
+    "shield_regen_rate": 0.9,
+    "damage_mult": 0.95,
+    "crit_chance": 0.06,
+    "radius": 10,
+    "start_weapon": "cinder_rifle",
+    "color": [
+      90,
+      200,
+      210
+    ],
+    "dash": {
+      "speed": 450,
+      "duration": 0.16,
+      "cooldown": 1.0
+    },
+    "ability": {
+      "name": "Dron",
+      "kind": "drone",
+      "cooldown": 8.0,
+      "max_drones": 2
+    }
+  }
+}

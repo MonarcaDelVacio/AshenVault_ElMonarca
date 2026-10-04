@@ -1,0 +1,62 @@
+{
+  "incendiary": {
+    "name": "Munición Incendiaria",
+    "effects": {
+      "damage_mult": 0.12
+    }
+  },
+  "overclock": {
+    "name": "Sobrecarga",
+    "effects": {
+      "damage_mult": 0.08
+    }
+  },
+  "splitter": {
+    "name": "Divisor",
+    "effects": {
+      "projectile_count": 1
+    }
+  },
+  "piercing": {
+    "name": "Núcleo Perforante",
+    "effects": {
+      "pierce": 1
+    }
+  },
+  "aegis": {
+    "name": "Aegis",
+    "effects": {
+      "max_shield": 1
+    }
+  },
+  "vitality": {
+    "name": "Vitalidad",
+    "effects": {
+      "max_hp": 1
+    }
+  },
+  "swift": {
+    "name": "Impulso",
+    "effects": {
+      "move_speed_mult": 0.12
+    }
+  },
+  "reservoir": {
+    "name": "Reservorio",
+    "effects": {
+      "max_energy": 20
+    }
+  },
+  "magnetic": {
+    "name": "Imán de Monedas",
+    "effects": {
+      "coin_radius": 40
+    }
+  },
+  "coolant": {
+    "name": "Refrigerante",
+    "effects": {
+      "attack_speed_mult": 0.1
+    }
+  }
+}
