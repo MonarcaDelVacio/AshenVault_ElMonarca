@@ -304,9 +304,9 @@ class App:
                     self.hub_sel=n+2
                     if click: self.activate_hub("UPGRADE:"+kind)
                     return
-            actions=["Iniciar run","Personajes","Volver al menu"]
+            actions=["Personajes","Volver al menu"]
             for n,item in enumerate(actions):
-                rect=pygame.Rect(60+n*285,440,270,36)
+                rect=pygame.Rect(260+n*230,442,200,34)
                 if rect.collidepoint(pos):
                     self.hub_sel=HUB_ITEMS.index(item)
                     if click: self.activate_hub(item)
@@ -516,7 +516,7 @@ class App:
             if k == pygame.K_ESCAPE:
                 self.go(MENU); return
             from game.save import CHARACTER_UPGRADES
-            dynamic=["Iniciar run","Personajes"]+["UPGRADE:"+kind for kind in CHARACTER_UPGRADES.get(self.char_id,{})]+["Volver al menu"]
+            dynamic=["Personajes"]+["UPGRADE:"+kind for kind in CHARACTER_UPGRADES.get(self.char_id,{})]+["Volver al menu"]
             if k in (pygame.K_UP, pygame.K_w):
                 self.hub_sel=(self.hub_sel-1)%len(dynamic); return
             if k in (pygame.K_DOWN, pygame.K_s):
@@ -793,8 +793,8 @@ class App:
             else:
                 cost=self.save.character_upgrade_cost(cid,kind); price="MEJORAR · %d FRAGMENTOS"%cost; color=(255,219,133) if s["meta_currency"]>=cost else (161,167,181)
             self.r.text(self.screen,price,(x+w//2,y+103),color,self.r.menu_small,True)
-        for n,item in enumerate(("Iniciar run","Personajes","Volver al menu")):
-            self.draw_option_card((60+n*285,440,270,36),item,self.hub_sel==HUB_ITEMS.index(item))
+        for n,item in enumerate(("Personajes","Volver al menu")):
+            self.draw_option_card((260+n*230,442,200,34),item,self.hub_sel==HUB_ITEMS.index(item))
         self.r.text(self.screen,"Las mejoras son exclusivas de %s y afectan sus partidas."%c.name.split(",")[0],(VIEW_W//2,518),(150,165,180),self.r.menu_small,True)
 
     def draw(self):
