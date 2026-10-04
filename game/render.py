@@ -1614,10 +1614,15 @@ class Renderer:
             margin_x,margin_y=92,68; cell=max(38,min(72,int(min((VIEW_W-2*margin_x)/cols,(VIEW_H-2*margin_y)/rows))))
             width,height=cols*cell+44,rows*cell+74; x,y=(VIEW_W-width)//2,(VIEW_H-height)//2; origin_y=42
             panel=pygame.Surface((width,height),pygame.SRCALPHA);
-            if not self.ui_atlas.draw_panel(panel, pygame.Rect(0,0,width,height), border=12):\n                pygame.draw.rect(panel,(7,10,18,245),panel.get_rect(),border_radius=14); pygame.draw.rect(panel,(88,108,132,235),panel.get_rect(),2,border_radius=14)\n            self.text(panel,"MAPA DE LA DUNGEON",(width//2,22),(240,205,120),self.menu_font,center=True)
+            if not self.ui_atlas.draw_panel(panel, pygame.Rect(0,0,width,height), border=12):
+                pygame.draw.rect(panel,(7,10,18,245),panel.get_rect(),border_radius=14); pygame.draw.rect(panel,(88,108,132,235),panel.get_rect(),2,border_radius=14)
+            self.text(panel,"MAPA DE LA DUNGEON",(width//2,22),(240,205,120),self.menu_font,center=True)
         else:
             cell=min(12,max(7,int(min(128/cols,76/rows)))); width,height=cols*cell+12,rows*cell+12; x,y=VIEW_W-width-10,42; origin_y=6
-            panel=pygame.Surface((width,height),pygame.SRCALPHA);\n            if not self.ui_atlas.draw_panel(panel, pygame.Rect(0,0,width,height), border=6):\n                pygame.draw.rect(panel,(8,12,22,205),panel.get_rect(),border_radius=6); pygame.draw.rect(panel,(82,100,125,220),panel.get_rect(),1,border_radius=6)\n        for rid in rooms:
+            panel=pygame.Surface((width,height),pygame.SRCALPHA);
+            if not self.ui_atlas.draw_panel(panel, pygame.Rect(0,0,width,height), border=6):
+                pygame.draw.rect(panel,(8,12,22,205),panel.get_rect(),border_radius=6); pygame.draw.rect(panel,(82,100,125,220),panel.get_rect(),1,border_radius=6)
+        for rid in rooms:
             rx=6+(rid[0]-min_x)*cell; ry=origin_y+(rid[1]-min_y)*cell; cx,cy=rx+cell//2,ry+cell//2
             for nr in ((rid[0]+1,rid[1]),(rid[0],rid[1]+1)):
                 if nr in rooms:
