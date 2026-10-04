@@ -680,7 +680,10 @@ class App:
         """Opción de menú usando el atlas visual generado para Ashen Vault."""
         x, y, w, h = rect
         destructive = str(label).lower() in {"salir", "salir al menu", "abandonar", "eliminar", "cancelar", "cerrar"}
-        used_atlas = self.ui_atlas.draw_button(self.screen, rect, label, selected=selected, destructive=destructive)
+        atlas_label = label
+        if self.state == PAUSE:
+            atlas_label = {"Configuracion": "Configuracion pausa", "Mejoras": "Mejoras pausa"}.get(str(label), label)
+        used_atlas = self.ui_atlas.draw_button(self.screen, rect, atlas_label, selected=selected, destructive=destructive)
 
         if not used_atlas:
             panel = pygame.Surface((w, h), pygame.SRCALPHA)
@@ -816,7 +819,7 @@ class App:
             else:
                 self.menu_visuals.draw(scr)
                 for n, it in enumerate(MENU_ITEMS):
-                    self.draw_option_card((VIEW_W // 2 - 120, 130 + n * 68, 240, 58), it, n == self.sel)
+                    self.draw_option_card(self._menu_rects()[n], it, n == self.sel)
                 self.r.text(scr, "W/S o flechas + Enter", (VIEW_W // 2, VIEW_H - 24), (180, 175, 190), self.r.small, True)
         elif self.state == STATUE:
             ov=pygame.Surface((VIEW_W,VIEW_H),pygame.SRCALPHA); ov.fill((2,5,10,185)); scr.blit(ov,(0,0))
@@ -848,7 +851,7 @@ class App:
             ov.fill((0, 0, 0, 160))
             scr.blit(ov, (0, 0))
             for n, it in enumerate(PAUSE_ITEMS):
-                self.draw_option_card((VIEW_W // 2 - 115, 165 + n * 73, 230, 63), it, n == self.sel)
+                self.draw_option_card(self._menu_rects()[n], it, n == self.sel)
             self.r.text(scr, "PAUSA", (VIEW_W // 2, 140), (240, 190, 80), self.r.menu_title, True)
         elif self.state == DEAD:
             ov = pygame.Surface((VIEW_W, VIEW_H), pygame.SRCALPHA)
