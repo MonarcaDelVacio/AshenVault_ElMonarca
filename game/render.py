@@ -1736,7 +1736,7 @@ class Renderer:
 
         # Panel inferior: arma y munición a la izquierda; habilidades a la derecha.
         w = p.weapon
-        weapon_rect = pygame.Rect(10, VIEW_H - 65, 245, 55)
+        weapon_rect = pygame.Rect(10, VIEW_H - 65, 340, 55)
         panel(weapon_rect, fill=(15, 17, 25, 218), border=(64, 70, 86))
         hud_weapon = self._fit_image(self.weapon_scaled_images.get(getattr(w.d, "id", "")), 28)
         if hud_weapon is not None:
@@ -1755,6 +1755,13 @@ class Renderer:
         if w.reloading:
             pygame.draw.rect(screen, (38, 40, 50), (130, VIEW_H - 31, 112, 5), border_radius=2)
             pygame.draw.rect(screen, (240, 200, 90), (130, VIEW_H - 31, int(112 * frac), 5), border_radius=2)
+
+        # La acción de recarga vive dentro del mismo panel de arma, inmediatamente
+        # a la derecha de la barra, y solo aparece cuando realmente hace falta.
+        if not w.reloading and w.ammo < w.d.magazine:
+            reload_rect = pygame.Rect(252, VIEW_H - 43, 84, 23)
+            if not self.ui_atlas.draw_button(screen, reload_rect, "Recargar", selected=False):
+                self.text(screen, "R · RECARGAR", reload_rect.center, (240, 200, 90), self.small, center=True)
 
         # Inventario manual de tres armas; el borde cálido marca el arma activa.
         inv_slot, inv_gap = 48, 8
@@ -1816,33 +1823,74 @@ class Renderer:
         icon_panel(ability_x, self.ability_shield_image, (105, 205, 170), acd)
         icon_panel(dash_x, self.dash_icon, (95, 195, 125), cd)
 
-        # Acción contextual: usa los botones auténticos del atlas en lugar de
-        # texto plano cuando el jugador puede hacer algo en ese momento.
-        context = None
-        if w.reloading:
-            context = None
-        elif w.ammo < w.d.magazine:
-            context = "Recargar"
-        else:
-            nearby_item = any(math.hypot(getattr(it, "x", 99999) - p.x, getattr(it, "y", 99999) - p.y) < 48 for it in getattr(sim, "items", []))
-            nearby_interaction = False
+        # Interacciones contextuales: se muestran pequeñas y ancladas al objeto
+        # real con el que el jugador puede interactuar, en lugar de un botón fijo
+        # en el centro de la pantalla.
+        def interaction_hint(world_x, world_y, label, color=(220, 230, 240), y_offset=24):
+            hx = int(world_x + ox)
+            hy = int(world_y + oy + y_offset)
+            hx = max(54, min(VIEW_W - 54, hx))
+            hy = max(18, min(VIEW_H - 14, hy))
+            text_surface = self.small.render(label, True, color)
+            pad_x, pad_y = 6, 3
+            bubble = pygame.Surface(
+                (text_surface.get_width() + pad_x * 2, text_surface.get_height() + pad_y * 2),
+                pygame.SRCALPHA,
+            )
+            pygame.draw.rect(bubble, (7, 10, 18, 205), bubble.get_rect(), border_radius=4)
+            pygame.draw.rect(bubble, (*color, 185), bubble.get_rect(), 1, border_radius=4)
+            bubble.blit(text_surface, (pad_x, pad_y))
+            screen.blit(bubble, bubble.get_rect(center=(hx, hy)))
+
+        # La prioridad visual coincide con Sim._try_interact(): portal, estatua,
+        # cofre, tienda y finalmente objeto recogible.
+        nearest_item = None
+        nearest_item_dist = 48.0
+        for item in getattr(sim, "items", []):
+            ix, iy = getattr(item, "x", 99999), getattr(item, "y", 99999)
+            dist = math.hypot(ix - p.x, iy - p.y)
+            if dist < nearest_item_dist:
+                nearest_item = item
+                nearest_item_dist = dist
+
+        shown_interaction = False
+        if getattr(sim, "portal", False):
+            px, py = sim.portal_position
+            if math.hypot(px - p.x, py - p.y) < 78:
+                interaction_hint(px, py, "E · ENTRAR", (150, 235, 255), 52)
+                shown_interaction = True
+
+        if not shown_interaction:
+            active_statue = getattr(sim, "_active_statue", lambda: None)()
+            if active_statue:
+                _, _, sx, sy = active_statue
+                interaction_hint(sx, sy, "E · INTERACTUAR", (220, 215, 170), 42)
+                shown_interaction = True
+
+        if not shown_interaction:
             chest = getattr(sim, "chest", None)
-            if chest is not None and not chest.is_open:
-                nearby_interaction = math.hypot(chest.x-p.x, chest.y-p.y) < 72
-            if getattr(sim, "portal", False):
-                px, py = sim.portal_position
-                nearby_interaction = nearby_interaction or math.hypot(px-p.x, py-p.y) < 78
-            if getattr(sim, "room", None) is not None and getattr(sim.room, "room_type", "") == "shop":
-                nearby_interaction = nearby_interaction or any(
-                    not getattr(o, "sold", False) and math.hypot(o.x-p.x, o.y-p.y) < 55
-                    for o in getattr(sim, "shop_offers", [])
-                )
-            if nearby_item:
-                context = "Recoger"
-            elif nearby_interaction or getattr(sim, "_active_statue", lambda: None)():
-                context = "Interactuar"
-        if context:
-            self.ui_atlas.draw_button(screen, pygame.Rect(VIEW_W//2-92, VIEW_H-104, 184, 39), context, selected=False)
+            if chest is not None and not chest.is_open and math.hypot(chest.x - p.x, chest.y - p.y) < 72:
+                interaction_hint(chest.x, chest.y, "E · ABRIR", (255, 220, 135), 30)
+                shown_interaction = True
+
+        if not shown_interaction and getattr(sim, "room", None) is not None and getattr(sim.room, "room_type", "") == "shop":
+            nearby_offer = None
+            nearby_offer_dist = 55.0
+            for offer in getattr(sim, "shop_offers", []):
+                if getattr(offer, "sold", False):
+                    continue
+                dist = math.hypot(offer.x - p.x, offer.y - p.y)
+                if dist < nearby_offer_dist:
+                    nearby_offer = offer
+                    nearby_offer_dist = dist
+            if nearby_offer is not None:
+                interaction_hint(nearby_offer.x, nearby_offer.y, "E · COMPRAR", (255, 220, 135), 28)
+                shown_interaction = True
+
+        if not shown_interaction and nearest_item is not None:
+            ix, iy = nearest_item.x, nearest_item.y
+            interaction_hint(ix, iy, "E · RECOGER", (170, 230, 220), 25)
+
 
         # Mira discreta para no competir visualmente con enemigos y efectos.
         mx, my = mouse
