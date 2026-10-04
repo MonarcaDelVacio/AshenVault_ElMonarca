@@ -1286,13 +1286,13 @@ class Renderer:
                     continue
                 nbg = self._background(neighbor.arena)
                 if side == "N":
-                    nox, noy = ox, oy + arena.height
-                elif side == "S":
                     nox, noy = ox, oy - arena.height
+                elif side == "S":
+                    nox, noy = ox, oy + arena.height
                 elif side == "W":
-                    nox, noy = ox + arena.width, oy
-                else:
                     nox, noy = ox - arena.width, oy
+                else:
+                    nox, noy = ox + arena.width, oy
                 screen.blit(nbg, (nox, noy))
         screen.blit(self._background(arena), (ox, oy))
         # Corrección de color ambiental: baja ligeramente el brillo del escenario y
