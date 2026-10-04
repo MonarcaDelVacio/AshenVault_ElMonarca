@@ -14,12 +14,14 @@ def use_ability(sim):
         if p.hp >= p.max_hp and p.shield >= p.max_shield:
             return False
         p.hp = min(p.max_hp, p.hp + amount)
+        p.set_status("heal", 1.8)
         sim.emit("ability_heal", p.x, p.y, amount)
     elif kind == "shield":
         amount = a.get("amount", 4) * ability_mult
         p.shield = min(p.max_shield, p.shield + amount)
         p.invuln = max(p.invuln, a.get("invuln", 0.8))
         p.ability_shield_fx = max(p.ability_shield_fx, a.get("invuln", 0.8) * ability_mult)
+        p.set_status("shield", max(2.2, a.get("invuln", 0.8) * ability_mult))
         sim.emit("ability_shield", p.x, p.y)
     elif kind == "burst":
         radius = a.get("radius", 120) * (0.9 + 0.1*ability_mult)
