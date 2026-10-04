@@ -1638,15 +1638,11 @@ class Renderer:
                 else:
                     pts=[(cx,cy-ms//2),(cx+ms//2,cy),(cx,cy+ms//2),(cx-ms//2,cy)]; pygame.draw.polygon(panel,(100,220,255),pts); pygame.draw.polygon(panel,(205,245,255),pts,1)
             elif room.room_type=="boss":
-                skull=self.skull_font.render("💀",True,(238,238,242)); sc=min((ms+5)/max(1,skull.get_width()),(ms+7)/max(1,skull.get_height()))
-                if sc<1: skull=pygame.transform.smoothscale(skull,(max(1,int(skull.get_width()*sc)),max(1,int(skull.get_height()*sc))))
-                panel.blit(skull,skull.get_rect(center=(cx,cy)))
+                self.ui_atlas.draw_icon(panel, (cx, cy), size=max(14, ms + 4), kind="skull")
             elif room.room_type=="shop":
-                if self.coin_frames:
-                    img=pygame.transform.smoothscale(self.coin_frames[0],(ms,ms)); panel.blit(img,img.get_rect(center=(cx,cy)))
-                else: pygame.draw.circle(panel,(255,215,70),(cx,cy),max(3,ms//2))
+                self.ui_atlas.draw_icon(panel, (cx, cy), size=max(14, ms + 4), kind="key")
         if large:
-            ly=height-24; self.text(panel,"💀 JEFE",(18,ly),(230,230,235),self.menu_small); self.text(panel,"PORTAL",(118,ly),(110,220,245),self.menu_small); self.text(panel,"MONEDA",(226,ly),(255,215,100),self.menu_small)
+            ly=height-24; self.ui_atlas.draw_icon(panel,(18,ly-1),size=16,kind="skull"); self.text(panel,"JEFE",(31,ly),(230,230,235),self.menu_small); self.text(panel,"PORTAL",(88,ly),(110,220,245),self.menu_small); self.ui_atlas.draw_icon(panel,(205,ly-1),size=16,kind="key"); self.text(panel,"TIENDA",(218,ly),(255,215,100),self.menu_small)
         screen.blit(panel,(x,y))
 
     def draw_hud(self, screen, sim, fx, mouse):
@@ -1660,24 +1656,36 @@ class Renderer:
             pygame.draw.rect(layer, (*border, 235), layer.get_rect(), 1, border_radius=7)
             screen.blit(layer, rect.topleft)
 
-        # Estado del jugador sin panel de fondo. Los valores quedan separados
-        # de las barras para que nunca se superpongan.
+        # Estado del jugador: las barras conservan el marco/icono del atlas y
+        # los estados temporales aparecen en una columna inmediatamente a su izquierda.
         def status_bar(y, val, maximum, color, kind):
             maximum = max(1, maximum)
             ratio = max(0.0, min(1.0, val / maximum))
-            bar_rect = pygame.Rect(12, y, 150, 28)
+            bar_rect = pygame.Rect(50, y, 150, 28)
             if not self.ui_atlas.draw_bar(screen, bar_rect, ratio, kind=kind):
                 pygame.draw.rect(screen, (7, 9, 14), bar_rect, border_radius=4)
                 fill_w = int((bar_rect.width - 2) * ratio)
                 if fill_w:
                     pygame.draw.rect(screen, color, (bar_rect.x + 1, bar_rect.y + 1, fill_w, bar_rect.height - 2), border_radius=3)
-            self.text(screen, "%d/%d" % (math.ceil(val), maximum), (174, y + 14), (245, 246, 250), self.small, center=True)
+            self.text(screen, "%d/%d" % (math.ceil(val), maximum), (210, y + 14), (245, 246, 250), self.small, center=True)
 
-        # Las barras superiores usan ahora las cuatro piezas de estado del atlas:
-        # corazón/escudo/rayo integrados en la propia pieza, sin iconos duplicados.
         status_bar(10, p.hp, p.max_hp, (220, 65, 76), "health")
         status_bar(42, p.shield, p.max_shield, (75, 160, 240), "shield")
         status_bar(74, p.energy, p.max_energy, (232, 190, 75), "energy")
+
+        active_statuses = []
+        timers = getattr(p, "status_timers", {})
+        for kind, icon in (
+            ("heal", "heal"), ("shield", "shield"), ("burn", "fire"),
+            ("poison", "poison"), ("electric", "energy"), ("freeze", "freeze")
+        ):
+            if float(timers.get(kind, 0.0)) > 0:
+                active_statuses.append(icon)
+        # Un escudo también se considera estado visual mientras tenga carga real.
+        if p.shield > 0 and "shield" not in active_statuses:
+            active_statuses.insert(0, "shield")
+        for index, icon in enumerate(active_statuses[:5]):
+            self.ui_atlas.draw_icon(screen, (25, 12 + index * 24), size=21, kind=icon)
 
         # Solo monedas en la esquina superior derecha.
         coins_label = "DUNGEON %d   MONEDAS  %d" % (getattr(sim,"difficulty",1), p.coins)
@@ -1795,6 +1803,34 @@ class Renderer:
         cd = max(0.0, min(1.0, p.dash_cd / max(0.01, p.c.dash["cooldown"])))
         icon_panel(ability_x, self.ability_shield_image, (105, 205, 170), acd)
         icon_panel(dash_x, self.dash_icon, (95, 195, 125), cd)
+
+        # Acción contextual: usa los botones auténticos del atlas en lugar de
+        # texto plano cuando el jugador puede hacer algo en ese momento.
+        context = None
+        if w.reloading:
+            context = None
+        elif w.ammo < w.d.magazine:
+            context = "Recargar"
+        else:
+            nearby_item = any(math.hypot(getattr(it, "x", 99999) - p.x, getattr(it, "y", 99999) - p.y) < 48 for it in getattr(sim, "items", []))
+            nearby_interaction = False
+            chest = getattr(sim, "chest", None)
+            if chest is not None and not chest.is_open:
+                nearby_interaction = math.hypot(chest.x-p.x, chest.y-p.y) < 72
+            if getattr(sim, "portal", False):
+                px, py = sim.portal_position
+                nearby_interaction = nearby_interaction or math.hypot(px-p.x, py-p.y) < 78
+            if getattr(sim, "room", None) is not None and getattr(sim.room, "room_type", "") == "shop":
+                nearby_interaction = nearby_interaction or any(
+                    not getattr(o, "sold", False) and math.hypot(o.x-p.x, o.y-p.y) < 55
+                    for o in getattr(sim, "shop_offers", [])
+                )
+            if nearby_item:
+                context = "Recoger"
+            elif nearby_interaction or getattr(sim, "_active_statue", lambda: None)():
+                context = "Interactuar"
+        if context:
+            self.ui_atlas.draw_button(screen, pygame.Rect(VIEW_W//2-92, VIEW_H-104, 184, 39), context, selected=False)
 
         # Mira discreta para no competir visualmente con enemigos y efectos.
         mx, my = mouse
