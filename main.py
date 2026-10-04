@@ -245,9 +245,9 @@ class App:
 
     def _menu_rects(self):
         if self.state == MENU and not self.info:
-            return [(VIEW_W // 2 - 120, 130 + n * 68, 240, 58) for n in range(len(MENU_ITEMS))]
+            return [(VIEW_W // 2 - 92, 142 + n * 57, 184, 42) for n in range(len(MENU_ITEMS))]
         if self.state == PAUSE:
-            return [(VIEW_W // 2 - 115, 165 + n * 73, 230, 63) for n in range(len(PAUSE_ITEMS))]
+            return [(VIEW_W // 2 - 88, 155 + n * 66, 176, 44) for n in range(len(PAUSE_ITEMS))]
         if self.state == HUB and not self.info:
             return []
         return []
