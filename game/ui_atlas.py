@@ -214,8 +214,16 @@ class UIAtlas:
         try:
             if ATLAS_PATH.is_file():
                 self.atlas = pygame.image.load(str(ATLAS_PATH)).convert_alpha()
-                # The supplied atlas uses pure black as its empty/background color.
+                # Convert the atlas' black matte into real transparency so
+                # cropped sprites retain only their visible silhouette.
                 self.atlas.set_colorkey((0, 0, 0))
+                self.atlas = self.atlas.copy()
+                self.atlas.set_colorkey(None)
+                rgb = pygame.surfarray.pixels3d(self.atlas)
+                alpha = pygame.surfarray.pixels_alpha(self.atlas)
+                black_pixels = (rgb[:, :, 0] == 0) & (rgb[:, :, 1] == 0) & (rgb[:, :, 2] == 0)
+                alpha[black_pixels] = 0
+                del rgb, alpha
                 self.regions = dict(self.REGIONS)
                 self.available = self.atlas.get_width() == 1536 and self.atlas.get_height() == 1024
         except (pygame.error, OSError, ValueError):
@@ -228,9 +236,11 @@ class UIAtlas:
         if name in self.cache:
             return self.cache[name]
         try:
-            rect = pygame.Rect(self.regions[name])
+            rect = pygame.Rect(self.regions[name]).clip(self.atlas.get_rect())
             image = self.atlas.subsurface(rect).copy()
-            image.set_colorkey((0, 0, 0))
+            visible = image.get_bounding_rect(min_alpha=8)
+            if visible.width and visible.height:
+                image = image.subsurface(visible).copy()
             self.cache[name] = image
             return image
         except (pygame.error, ValueError):
@@ -299,17 +309,19 @@ class UIAtlas:
         if image is None:
             return False
         target = pygame.Rect(*map(int, rect))
-        # Button artwork is authored for a fixed aspect/label layout. Scale it
-        # to the actual button rect so the decorative frame occupies the full
-        # clickable area instead of leaving transparent margins.
-        sprite = pygame.transform.smoothscale(image, target.size)
-        screen.blit(sprite, target.topleft)
+        base_rect = pygame.Rect(*map(int, rect))
         if selected:
-            # Selection is an interaction state, not a different authored sprite.
-            # Add a restrained highlight without changing the atlas artwork.
-            glow = pygame.Surface(target.size, pygame.SRCALPHA)
-            pygame.draw.rect(glow, (120, 225, 255, 45), glow.get_rect(), 2, border_radius=5)
-            screen.blit(glow, target.topleft)
+            target = base_rect.inflate(max(4, base_rect.width // 14), max(4, base_rect.height // 10))
+        sprite = pygame.transform.smoothscale(image, target.size)
+        dst = sprite.get_rect(center=base_rect.center)
+        screen.blit(sprite, dst)
+        if selected:
+            mask = pygame.mask.from_surface(sprite, 8)
+            outline = mask.outline()
+            if outline:
+                glow = pygame.Surface(sprite.get_size(), pygame.SRCALPHA)
+                pygame.draw.polygon(glow, (120, 225, 255, 210), outline, width=2)
+                screen.blit(glow, dst.topleft)
         return True
 
     def draw_panel(self, screen, rect, border=8, variant="blue"):
