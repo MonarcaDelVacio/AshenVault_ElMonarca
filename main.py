@@ -4,7 +4,7 @@ from pathlib import Path
 import pygame
 
 from game.data import GameData
-from game.save import SaveData
+from game.save import SaveData, DEFAULT
 from game.audio import Audio
 from game.fx import Fx
 from game.render import Renderer, VIEW_W, VIEW_H
@@ -16,7 +16,7 @@ from game.sim import Sim, Input
 INTRO, MENU, PLAY, PAUSE, MAP, DEAD, VICTORY, SETTINGS, CHAR_SELECT, HUB, STATUE = "intro", "menu", "play", "pause", "map", "dead", "victory", "settings", "char_select", "hub", "statue"
 MENU_ITEMS = ["Jugar", "Mejoras", "Personajes", "Configuracion", "Salir"]
 PAUSE_ITEMS = ["Continuar", "Configuracion", "Reiniciar run", "Salir al menu"]
-SETTINGS_ITEMS = ["Volumen efectos", "Volumen musica", "Mover arriba", "Mover abajo", "Mover izquierda", "Mover derecha", "Dash", "Habilidad", "Recargar", "Pausa", "Minimapa", "Pantalla completa", "Volver"]
+SETTINGS_ITEMS = ["Volumen efectos", "Volumen musica", "Mover arriba", "Mover abajo", "Mover izquierda", "Mover derecha", "Dash", "Habilidad", "Recargar", "Pausa", "Minimapa", "Pantalla completa", "Restablecer", "Volver"]
 SETTING_KEYS = {"Mover arriba":"up", "Mover abajo":"down", "Mover izquierda":"left", "Mover derecha":"right", "Dash":"dash", "Habilidad":"ability", "Recargar":"reload", "Pausa":"pause", "Minimapa":"map"}
 HUB_ITEMS = ["Iniciar run", "Personajes", "Mejoras", "Volver al menu"]
 
@@ -214,6 +214,16 @@ class App:
             self.save.data["settings"]["fullscreen"] = False
             self.save.save()
 
+    def _reset_settings(self):
+        """Restablece únicamente las preferencias configurables; conserva progreso."""
+        defaults = DEFAULT["settings"]
+        self.save.data["settings"] = __import__("copy").deepcopy(defaults)
+        self.audio.set_effects_volume(defaults["effects_volume"])
+        self.audio.set_music_volume(defaults["music_volume"])
+        self._apply_fullscreen(defaults["fullscreen"])
+        self.rebind_action = None
+        self.save.save()
+
     def _set_window_icon(self):
         """Carga el icono PNG del juego para la ventana de Pygame.
 
@@ -331,6 +341,12 @@ class App:
                 self.settings_sel = 11
                 if click:
                     self._apply_fullscreen(not self.save.data["settings"].get("fullscreen", False))
+                return
+            reset_rect = pygame.Rect(126, 340, 266, 36)
+            if reset_rect.collidepoint(pos):
+                self.settings_sel = 12
+                if click:
+                    self._reset_settings()
                 return
             back = pygame.Rect(VIEW_W // 2 - 82, 475, 164, 29)
             if back.collidepoint(pos) and click:
@@ -557,6 +573,8 @@ class App:
                     self.go(self.back_state)
                 elif item == "Pantalla completa":
                     self._apply_fullscreen(not self.save.data["settings"].get("fullscreen", False))
+                elif item == "Restablecer":
+                    self._reset_settings()
                 elif item not in ("Volumen efectos","Volumen musica"):
                     self.rebind_action=SETTING_KEYS[item]
             return
@@ -928,16 +946,16 @@ class App:
             self.r.text(scr, "AUDIO", (left_rect.centerx, 137), (92, 226, 218), self.r.menu_font, True)
             self.r.text(scr, "CONTROLES", (right_rect.centerx, 137), (92, 226, 218), self.r.menu_font, True)
 
-            for idx, (label, value) in enumerate((("EFECTOS", v), ("MUSICA", mv))):
+            for idx, (label, value, atlas_label) in enumerate((("EFECTOS", v, "Sonido"), ("MUSICA", mv, "Musica"))):
                 y = 177 + idx * 82
                 selected = self.settings_sel == idx
                 row_rect = pygame.Rect(126, y, 266, 58)
                 if selected:
                     pygame.draw.rect(scr, (20, 35, 45), row_rect, border_radius=6)
                     pygame.draw.rect(scr, (80, 223, 215), row_rect, 1, border_radius=6)
-                self.r.text(scr, label, (140, y + 6), (225, 232, 240), self.r.menu_small)
+                self.ui_atlas.draw_button(scr, pygame.Rect(132, y + 2, 112, 31), atlas_label, selected=selected)
                 self.r.text(scr, "%d%%" % round(value * 100), (378, y + 6), (240, 245, 247) if selected else (174, 191, 204), self.r.menu_small, True)
-                bar_rect = pygame.Rect(140, y + 31, 238, 12)
+                bar_rect = pygame.Rect(250, y + 13, 128, 10)
                 pygame.draw.rect(scr, (35, 42, 56), bar_rect, border_radius=4)
                 fill_rect = pygame.Rect(bar_rect.x, bar_rect.y, int(bar_rect.width * value), bar_rect.height)
                 if fill_rect.width:
@@ -953,13 +971,15 @@ class App:
                 self.draw_option_card((438, y, 392, 27), item, selected, key_name, compact=True)
 
             fullscreen = bool(settings.get("fullscreen", False))
+            reset_rect = pygame.Rect(126, 340, 266, 36)
+            self.ui_atlas.draw_button(scr, reset_rect, "Restablecer", selected=self.settings_sel == 12)
             fullscreen_rect = pygame.Rect(126, 390, 266, 42)
-            if self.settings_sel == 10:
+            if self.settings_sel == 11:
                 pygame.draw.rect(scr, (20, 35, 45), fullscreen_rect, border_radius=6)
                 pygame.draw.rect(scr, (80, 223, 215), fullscreen_rect, 1, border_radius=6)
             self.r.text(scr, "PANTALLA COMPLETA", (140, 397), (225, 232, 240), self.r.menu_small)
             self.r.text(scr, "ACTIVADA" if fullscreen else "VENTANA", (378, 397), (110, 235, 175) if fullscreen else (174, 191, 204), self.r.menu_small, True)
-            self.draw_option_card((VIEW_W // 2 - 82, 475, 164, 29), "Volver", self.settings_sel == 12)
+            self.draw_option_card((VIEW_W // 2 - 82, 475, 164, 29), "Volver", self.settings_sel == 13)
             if self.rebind_action:
                 self.r.text(scr, "PULSA UNA TECLA PARA ASIGNAR · ESC CANCELA", (VIEW_W // 2, 514), (123, 238, 222), self.r.menu_small, True)
             else:
