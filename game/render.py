@@ -1613,7 +1613,8 @@ class Renderer:
         if large:
             margin_x,margin_y=92,68; cell=max(38,min(72,int(min((VIEW_W-2*margin_x)/cols,(VIEW_H-2*margin_y)/rows))))
             width,height=cols*cell+44,rows*cell+74; x,y=(VIEW_W-width)//2,(VIEW_H-height)//2; origin_y=42
-            panel=pygame.Surface((width,height),pygame.SRCALPHA);\n            if not self.ui_atlas.draw_panel(panel, pygame.Rect(0,0,width,height), border=12):\n                pygame.draw.rect(panel,(7,10,18,245),panel.get_rect(),border_radius=14); pygame.draw.rect(panel,(88,108,132,235),panel.get_rect(),2,border_radius=14)\n            self.text(panel,"MAPA DE LA DUNGEON",(width//2,22),(240,205,120),self.menu_font,center=True)
+            panel=pygame.Surface((width,height),pygame.SRCALPHA);
+            if not self.ui_atlas.draw_panel(panel, pygame.Rect(0,0,width,height), border=12):\n                pygame.draw.rect(panel,(7,10,18,245),panel.get_rect(),border_radius=14); pygame.draw.rect(panel,(88,108,132,235),panel.get_rect(),2,border_radius=14)\n            self.text(panel,"MAPA DE LA DUNGEON",(width//2,22),(240,205,120),self.menu_font,center=True)
         else:
             cell=min(12,max(7,int(min(128/cols,76/rows)))); width,height=cols*cell+12,rows*cell+12; x,y=VIEW_W-width-10,42; origin_y=6
             panel=pygame.Surface((width,height),pygame.SRCALPHA);\n            if not self.ui_atlas.draw_panel(panel, pygame.Rect(0,0,width,height), border=6):\n                pygame.draw.rect(panel,(8,12,22,205),panel.get_rect(),border_radius=6); pygame.draw.rect(panel,(82,100,125,220),panel.get_rect(),1,border_radius=6)\n        for rid in rooms:
@@ -1647,6 +1648,8 @@ class Renderer:
         p = sim.player
 
         def panel(rect, fill=(15, 17, 25, 226), border=(72, 78, 94)):
+            if self.ui_atlas.draw_panel(screen, rect, border=min(8, rect.width // 2, rect.height // 2)):
+                return
             layer = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA)
             pygame.draw.rect(layer, fill, layer.get_rect(), border_radius=7)
             pygame.draw.rect(layer, (*border, 235), layer.get_rect(), 1, border_radius=7)
@@ -1658,11 +1661,12 @@ class Renderer:
             maximum = max(1, maximum)
             self.text(screen, label, (12, y), (190, 199, 213), self.small)
             bar_x, bar_y, bar_w, bar_h = 62, y + 2, 92, 8
-            pygame.draw.rect(screen, (7, 9, 14), (bar_x, bar_y, bar_w, bar_h), border_radius=4)
             ratio = max(0.0, min(1.0, val / maximum))
-            fill_w = int((bar_w - 2) * ratio)
-            if fill_w:
-                pygame.draw.rect(screen, color, (bar_x + 1, bar_y + 1, fill_w, bar_h - 2), border_radius=3)
+            if not self.ui_atlas.draw_bar(screen, pygame.Rect(bar_x, bar_y, bar_w, bar_h), ratio):
+                pygame.draw.rect(screen, (7, 9, 14), (bar_x, bar_y, bar_w, bar_h), border_radius=4)
+                fill_w = int((bar_w - 2) * ratio)
+                if fill_w:
+                    pygame.draw.rect(screen, color, (bar_x + 1, bar_y + 1, fill_w, bar_h - 2), border_radius=3)
             self.text(screen, "%d/%d" % (math.ceil(val), maximum), (160, y - 1), (245, 246, 250), self.small)
 
         status_bar(12, p.hp, p.max_hp, (220, 65, 76), "VIDA")
@@ -1702,13 +1706,14 @@ class Renderer:
             phase_color = {1: (211, 92, 84), 2: (231, 133, 65), 3: (240, 184, 83)}[phase]
             self.text(screen, "FASE %d/3" % phase, (bx + bw - 62, by + 4), phase_color, self.small)
             track = pygame.Rect(bx + 10, by + 22, bw - 20, 9)
-            pygame.draw.rect(screen, (6, 7, 12), track, border_radius=4)
             hp_ratio = max(0.0, min(1.0, boss.hp / max(1.0, boss.max_hp)))
-            fill_w = int((track.width - 2) * hp_ratio)
-            if fill_w > 0:
-                fill = pygame.Rect(track.x + 1, track.y + 1, fill_w, track.height - 2)
-                pygame.draw.rect(screen, (157, 43, 58), fill, border_radius=3)
-                pygame.draw.line(screen, (236, 105, 102), (fill.x + 2, fill.y + 1), (max(fill.x + 2, fill.right - 2), fill.y + 1), 1)
+            if not self.ui_atlas.draw_bar(screen, track, hp_ratio):
+                pygame.draw.rect(screen, (6, 7, 12), track, border_radius=4)
+                fill_w = int((track.width - 2) * hp_ratio)
+                if fill_w > 0:
+                    fill = pygame.Rect(track.x + 1, track.y + 1, fill_w, track.height - 2)
+                    pygame.draw.rect(screen, (157, 43, 58), fill, border_radius=3)
+                    pygame.draw.line(screen, (236, 105, 102), (fill.x + 2, fill.y + 1), (max(fill.x + 2, fill.right - 2), fill.y + 1), 1)
             for mark in (1 / 3, 2 / 3):
                 mx = track.x + int(track.width * mark)
                 pygame.draw.line(screen, (29, 22, 29), (mx, track.y + 1), (mx, track.bottom - 1), 2)
@@ -1746,7 +1751,8 @@ class Renderer:
             selected = occupied and p.inventory[slot_index] is p.weapon
             fill = (28, 26, 32, 225) if occupied else (12, 15, 22, 170)
             border = (255, 203, 105) if selected else ((86, 145, 168) if occupied else (54, 61, 75))
-            panel(rect, fill=fill, border=border)
+            if not self.ui_atlas.draw_slot(screen, rect, selected):
+                panel(rect, fill=fill, border=border)
             if occupied:
                 weapon_state = p.inventory[slot_index]
                 icon = self._fit_image(self.weapon_scaled_images.get(getattr(weapon_state.d, "id", "")), 31)
@@ -1776,7 +1782,8 @@ class Renderer:
 
         def icon_panel(x, image, fallback_color, cooldown_ratio):
             rect = pygame.Rect(x, panel_y, panel_size, panel_size)
-            panel(rect, fill=(15, 17, 25, 218), border=(82, 88, 104))
+            if not self.ui_atlas.draw_slot(screen, rect, False):
+                panel(rect, fill=(15, 17, 25, 218), border=(82, 88, 104))
             if image is not None:
                 scaled = pygame.transform.smoothscale(image, (icon_size, icon_size))
                 screen.blit(scaled, scaled.get_rect(center=rect.center))
