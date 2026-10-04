@@ -1618,7 +1618,13 @@ class Renderer:
                 pygame.draw.rect(panel,(7,10,18,245),panel.get_rect(),border_radius=14); pygame.draw.rect(panel,(88,108,132,235),panel.get_rect(),2,border_radius=14)
             self.text(panel,"MAPA DE LA DUNGEON",(width//2,22),(240,205,120),self.menu_font,center=True)
         else:
-            cell=min(12,max(7,int(min(128/cols,76/rows)))); width,height=cols*cell+12,rows*cell+12; x,y=VIEW_W-width-10,42; origin_y=6
+            # El minimapa compacto ocupa algo más de pantalla, pero mantiene un
+            # margen suficiente para no competir con el HUD. La celda crece de
+            # forma proporcional al número de salas y evita amontonamientos.
+            cell=min(18,max(10,int(min(190/cols,92/rows))))
+            width,height=cols*cell+20,rows*cell+30
+            x,y=VIEW_W-width-10,42
+            origin_y=7
             panel=pygame.Surface((width,height),pygame.SRCALPHA);
             if not self.ui_atlas.draw_panel(panel, pygame.Rect(0,0,width,height), border=6):
                 pygame.draw.rect(panel,(8,12,22,205),panel.get_rect(),border_radius=6); pygame.draw.rect(panel,(82,100,125,220),panel.get_rect(),1,border_radius=6)
@@ -1631,7 +1637,7 @@ class Renderer:
             rx=6+(rid[0]-min_x)*cell; ry=origin_y+(rid[1]-min_y)*cell; rect=pygame.Rect(rx+2,ry+2,max(8,cell-4),max(8,cell-4)); current=tuple(rid)==tuple(dungeon.current)
             color=(255,202,102) if current else ((83,174,184) if getattr(room,"entered",False) else (48,58,72)); pygame.draw.rect(panel,color,rect,border_radius=4)
             if current: pygame.draw.rect(panel,(255,232,150),rect.inflate(4,4),1,border_radius=4)
-            cx,cy=rect.center; ms=max(12,min(20,int(cell*.34))) if large else max(5,min(9,int(cell*.55)))
+            cx,cy=rect.center; ms=max(12,min(20,int(cell*.34))) if large else max(9,min(13,int(cell*.55)))
             if getattr(room,"portal_room",False):
                 if self.portal_frames:
                     img=pygame.transform.smoothscale(self.portal_frames[0],(ms,ms)); panel.blit(img,img.get_rect(center=(cx,cy)))
@@ -1655,6 +1661,14 @@ class Renderer:
                 self.ui_atlas.draw_icon(panel, (cx, cy), size=max(14, ms + 4), kind="pin")
         if large:
             ly=height-24; self.ui_atlas.draw_icon(panel,(18,ly-1),size=16,kind="skull"); self.text(panel,"JEFE",(31,ly),(230,230,235),self.menu_small); self.text(panel,"PORTAL",(88,ly),(110,220,245),self.menu_small); self.ui_atlas.draw_icon(panel,(205,ly-1),size=16,kind="key"); self.text(panel,"TIENDA",(218,ly),(255,215,100),self.menu_small)
+        else:
+            # Leyenda mínima: solo los símbolos que no son obvios por color.
+            ly = height - 10
+            self.ui_atlas.draw_icon(panel, (12, ly), size=12, kind="skull")
+            self.text(panel, "JEFE", (22, ly - 5), (220, 225, 232), self.small)
+            self.text(panel, "P  PORTAL", (70, ly - 5), (110, 220, 245), self.small)
+            self.ui_atlas.draw_icon(panel, (126, ly), size=12, kind="key")
+            self.text(panel, "TIENDA", (136, ly - 5), (255, 215, 100), self.small)
         screen.blit(panel,(x,y))
 
     def draw_hud(self, screen, sim, fx, mouse):
@@ -1736,32 +1750,33 @@ class Renderer:
 
         # Panel inferior: arma y munición a la izquierda; habilidades a la derecha.
         w = p.weapon
-        weapon_rect = pygame.Rect(10, VIEW_H - 65, 340, 55)
+        weapon_rect = pygame.Rect(10, VIEW_H - 72, 292, 62)
         panel(weapon_rect, fill=(15, 17, 25, 218), border=(64, 70, 86))
         hud_weapon = self._fit_image(self.weapon_scaled_images.get(getattr(w.d, "id", "")), 28)
         if hud_weapon is not None:
-            screen.blit(hud_weapon, hud_weapon.get_rect(topleft=(17, VIEW_H - 57)))
-            self.text(screen, w.d.name, (51, VIEW_H - 57), (240, 241, 246), self.small)
+            screen.blit(hud_weapon, hud_weapon.get_rect(topleft=(18, VIEW_H - 62)))
+            self.text(screen, w.d.name, (52, VIEW_H - 62), (240, 241, 246), self.small)
         else:
-            self.text(screen, w.d.name, (18, VIEW_H - 57), (240, 241, 246), self.small)
+            self.text(screen, w.d.name, (18, VIEW_H - 62), (240, 241, 246), self.small)
         if w.reloading:
             frac = max(0.0, min(1.0, 1 - w.reload_left / max(0.01, w.d.reload_time)))
             ammo_text, ammo_color = "RECARGANDO", (240, 200, 90)
         else:
-            frac = 1.0
             ammo_text = "MUNICIÓN  %d/%d" % (w.ammo, w.d.magazine)
             ammo_color = (255, 120, 120) if w.ammo <= 3 else (210, 218, 230)
-        self.text(screen, ammo_text, (18, VIEW_H - 34), ammo_color, self.small)
-        if w.reloading:
-            pygame.draw.rect(screen, (38, 40, 50), (130, VIEW_H - 31, 112, 5), border_radius=2)
-            pygame.draw.rect(screen, (240, 200, 90), (130, VIEW_H - 31, int(112 * frac), 5), border_radius=2)
 
-        # La acción de recarga vive dentro del mismo panel de arma, inmediatamente
-        # a la derecha de la barra, y solo aparece cuando realmente hace falta.
-        if not w.reloading and w.ammo < w.d.magazine:
-            reload_rect = pygame.Rect(252, VIEW_H - 43, 84, 23)
-            if not self.ui_atlas.draw_button(screen, reload_rect, "Recargar", selected=False):
-                self.text(screen, "R · RECARGAR", reload_rect.center, (240, 200, 90), self.small, center=True)
+        # Munición y estado de recarga quedan en una sola línea limpia. La barra
+        # de progreso fue eliminada para evitar ruido visual en el panel.
+        ammo_pos = (18, VIEW_H - 34)
+        self.text(screen, ammo_text, ammo_pos, ammo_color, self.small)
+
+        # Solo cuando el cargador está completamente vacío mostramos el icono de
+        # recarga, pegado a la munición y dentro del mismo panel.
+        if not w.reloading and w.ammo <= 0:
+            reload_center = (128, VIEW_H - 31)
+            if not self.ui_atlas.draw_icon(screen, reload_center, size=22, kind="refresh"):
+                pygame.draw.circle(screen, (240, 200, 90), reload_center, 9, 2)
+                self.text(screen, "R", reload_center, (240, 200, 90), self.small, center=True)
 
         # Inventario manual de tres armas; el borde cálido marca el arma activa.
         inv_slot, inv_gap = 48, 8
@@ -1827,8 +1842,11 @@ class Renderer:
         # real con el que el jugador puede interactuar, en lugar de un botón fijo
         # en el centro de la pantalla.
         def interaction_hint(world_x, world_y, label, color=(220, 230, 240), y_offset=24):
-            hx = int(world_x + ox)
-            hy = int(world_y + oy + y_offset)
+            # draw_hud se ejecuta después de draw_world; reutilizamos la cámara
+            # calculada allí para convertir coordenadas del mundo a pantalla.
+            cam_x, cam_y = getattr(self, "cam", (0, 0))
+            hx = int(world_x + cam_x)
+            hy = int(world_y + cam_y + y_offset)
             hx = max(54, min(VIEW_W - 54, hx))
             hy = max(18, min(VIEW_H - 14, hy))
             text_surface = self.small.render(label, True, color)
