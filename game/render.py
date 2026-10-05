@@ -581,14 +581,16 @@ class Renderer:
                 if image is not None:
                     self.projectile_images[projectile_path] = image
         new_weapon_dir = self.asset_root / "weapons" / "new"
-        for key, filename in (("ranged","modelosarmas.png"),("melee","modelosarmasmelee.png")):
-            path = new_weapon_dir / filename
-            if path.is_file():
-                frames = self._load_component_frames(path, minimum=18, merge_gap=1)
-                if not frames:
-                    frames = self._load_sheet_frames(path)
-                if frames:
-                    self.weapon_variant_frames[key] = frames
+        ranged_atlas = new_weapon_dir / "modelosarmas.png"
+        melee_atlas = new_weapon_dir / "modelosarmasmelee.png"
+        if ranged_atlas.is_file():
+            frames = self._load_ranged_weapon_atlas(ranged_atlas)
+            if frames:
+                self.weapon_variant_frames["ranged"] = frames
+        if melee_atlas.is_file():
+            frames = self._load_melee_weapon_atlas(melee_atlas)
+            if frames:
+                self.weapon_variant_frames["melee"] = frames
 
         self.default_projectiles = {
             "physical": "assets/projectiles/projectile_06.png",
@@ -630,6 +632,64 @@ class Renderer:
                 runs.append((start,i-1)); start=None
         if start is not None: runs.append((start,len(values)-1))
         return runs
+
+    def _load_ranged_weapon_atlas(self, path):
+        """Extrae cada arma del atlas de distancia sin separar sus piezas."""
+        try:
+            image = pygame.image.load(str(path)).convert_alpha()
+            mask = pygame.mask.from_surface(image, threshold=8)
+            components = mask.connected_components(minimum=18)
+            rects = [
+                rect
+                for component in components
+                for rect in component.get_bounding_rects()
+            ]
+            rects = [r for r in rects if r.width >= 2 and r.height >= 2]
+            # Algunas armas están formadas por varias piezas opacas que se
+            # superponen (o se tocan). Esas piezas pertenecen al mismo modelo.
+            changed = True
+            while changed:
+                changed = False
+                for i in range(len(rects)):
+                    a = rects[i]
+                    for j in range(i + 1, len(rects)):
+                        b = rects[j]
+                        overlap = a.colliderect(b)
+                        gap_x = max(b.left - a.right, a.left - b.right, 0)
+                        gap_y = max(b.top - a.bottom, a.top - b.bottom, 0)
+                        if overlap or (max(gap_x, gap_y) <= 2 and min(a.width * a.height, b.width * b.height) <= max(a.width * a.height, b.width * b.height) * 0.35):
+                            rects[i] = a.union(b)
+                            rects.pop(j)
+                            changed = True
+                            break
+                    if changed:
+                        break
+            rects.sort(key=lambda r: (r.top, r.left))
+            return [image.subsurface(r).copy() for r in rects]
+        except (pygame.error, OSError, ValueError):
+            return []
+
+    def _load_melee_weapon_atlas(self, path):
+        """El atlas melee está organizado como una cuadrícula 6x6; cada celda es un arma."""
+        try:
+            image = pygame.image.load(str(path)).convert_alpha()
+            cols, rows = 6, 6
+            cell_w = image.get_width() / cols
+            cell_h = image.get_height() / rows
+            frames = []
+            for row in range(rows):
+                for col in range(cols):
+                    left = round(col * cell_w)
+                    top = round(row * cell_h)
+                    right = round((col + 1) * cell_w)
+                    bottom = round((row + 1) * cell_h)
+                    cell = image.subsurface(pygame.Rect(left, top, right - left, bottom - top)).copy()
+                    bbox = cell.get_bounding_rect(min_alpha=8)
+                    if bbox.width and bbox.height:
+                        frames.append(cell.subsurface(bbox).copy())
+            return frames
+        except (pygame.error, OSError, ValueError):
+            return []
 
     def _load_grid_frames(self, path, cols, rows):
         """Recorta una cuadrícula conocida y elimina el espacio transparente de cada celda."""
