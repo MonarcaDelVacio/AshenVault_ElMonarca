@@ -43,7 +43,7 @@ class Enemy:
         self.cooldown=r.uniform(0.3,1.0); self.alive=True; self.flash=0.0
         self.attack_anim_time=99.0
         self.kx=self.ky=0.0; self.facing=0.0; self.strafe=r.choice((-1,1))
-        self.spawn_delay=0.6; self.frozen=0.0; self.summon_timer=0.0
+        self.spawn_delay=0.6; self.frozen=0.0; self.summon_timer=0.0; self.boss_pulse_cd=2.2
         self.is_boss=False; self.is_miniboss=False; self.is_summoned=False
         self.weapon_id=getattr(edef, "weapon_id", None)
         self.shield_integrity=float(getattr(edef, "shield_durability", 48.0)) if getattr(edef, "shielded", False) else 0.0
