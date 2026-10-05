@@ -224,10 +224,10 @@ class Boss(Enemy):
                 sim.emit("boss_shield",self.x,self.y,True)
             # Shield is active only during the first portion of each cycle.
             self.shield_active = self.shield_timer > max(0.0,getattr(self.d,"shield_interval",5.5)-getattr(self.d,"shield_duration",2.2))
-        if self.boss_style == "colossus":
+        if float(getattr(self.d,"radius",0)) >= 28:
             self.stomp_timer-=dt
             if self.stomp_timer<=0 and self.state not in ("windup","recover"):
-                self.state="windup"; self.timer=0.9; self._special_windup="stomp"
+                self.state="windup"; self.timer=max(0.55,0.9-0.08*self.phase); self._special_windup="stomp"
                 self.stomp_timer=getattr(self.d,"stomp_interval",4.8)
         hp_ratio = self.hp / self.max_hp if self.max_hp else 0
         new_phase = 1 if hp_ratio > 0.66 else 2 if hp_ratio > 0.33 else 3
@@ -249,11 +249,11 @@ class Boss(Enemy):
             if k in pd:
                 value=pd[k]
                 if k in ("cooldown", "speed", "projectile_speed", "preferred_distance"):
-                    if k == "cooldown": value=max(0.28, float(value)/(1+0.08*(scale-1)))
-                    elif k == "speed": value=float(value)*(1+0.035*(scale-1))
-                    elif k == "projectile_speed": value=float(value)*(1+0.05*(scale-1))
+                    if k == "cooldown": value=max(0.22, float(value)/(1+0.08*(scale-1)+0.14*(self.phase-1)))
+                    elif k == "speed": value=float(value)*(1+0.035*(scale-1)+0.07*(self.phase-1))
+                    elif k == "projectile_speed": value=float(value)*(1+0.05*(scale-1)+0.08*(self.phase-1))
                 setattr(self.d, k, value)
-        self.d.damage = getattr(self.d, "base_boss_damage", getattr(self.d, "damage", 3)) * (1+0.16*(scale-1))
+        self.d.damage = getattr(self.d, "base_boss_damage", getattr(self.d, "damage", 3)) * (1+0.16*(scale-1)+0.12*(self.phase-1))
 
         # Cada arquetipo ocupa el espacio de forma distinta: presión cercana,
         # control a distancia, o invocación para obligar al jugador a reposicionarse.
