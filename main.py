@@ -389,7 +389,7 @@ class App:
                         else: self.audio.set_music_volume(value)
                         self.save.save()
                     return
-            sens_rect = pygame.Rect(126, 326, 266, 42)
+            sens_rect = pygame.Rect(126, 318, 266, 24)
             if sens_rect.collidepoint(pos):
                 self.settings_sel = 2
                 if click:
@@ -1071,15 +1071,15 @@ class App:
                     pygame.draw.rect(scr, (73, 221, 211) if selected else (90, 157, 164), fill_rect, border_radius=4)
                 pygame.draw.rect(scr, (126, 151, 171), bar_rect, 1, border_radius=4)
 
-            self.r.text(scr, "SENSIBILIDAD", (145, 319), (205, 215, 225), self.r.menu_small)
+            self.r.text(scr, "SENSIBILIDAD", (145, 312), (205, 215, 225), self.r.menu_small)
             sens=settings.get("mouse_sensitivity",1.0)
             sens_selected=self.settings_sel==2
             sens_rect=pygame.Rect(126,326,266,42)
             if sens_selected:
                 pygame.draw.rect(scr,(20,35,45),sens_rect,border_radius=6)
                 pygame.draw.rect(scr,(80,223,215),sens_rect,1,border_radius=6)
-            self.r.text(scr, "MOUSE", (145,347), (240,245,247) if sens_selected else (174,191,204), self.r.menu_small, True)
-            self.r.text(scr, "%.2fx"%sens, (365,347), (240,245,247) if sens_selected else (174,191,204), self.r.menu_small, True)
+            self.r.text(scr, "MOUSE", (145,330), (240,245,247) if sens_selected else (174,191,204), self.r.menu_small, True)
+            self.r.text(scr, "%.2fx"%sens, (365,330), (240,245,247) if sens_selected else (174,191,204), self.r.menu_small, True)
 
             control_items = SETTINGS_ITEMS[3:12]
             for offset, item in enumerate(control_items):
