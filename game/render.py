@@ -1234,13 +1234,16 @@ class Renderer:
         if character_frames:
             moving = getattr(p, "is_moving", False)
             frame_index = int(p.walk_time * 9) % len(character_frames) if moving else 0
-            sprite = character_frames[frame_index]
-            if p.facing_x < 0:
-                key=(getattr(p.c,"id","player"),frame_index)
-                sprite=self._player_flip_cache.get(key)
-                if sprite is None:
-                    sprite=pygame.transform.flip(character_frames[frame_index],True,False)
-                    self._player_flip_cache[key]=sprite
+            sprite_key=(getattr(p.c,"id","player"),frame_index,p.facing_x<0)
+            sprite=self._player_flip_cache.get(sprite_key)
+            if sprite is None:
+                sprite=character_frames[frame_index]
+                bbox=sprite.get_bounding_rect(min_alpha=8)
+                if bbox.width and bbox.height:
+                    sprite=sprite.subsurface(bbox).copy()
+                if p.facing_x < 0:
+                    sprite=pygame.transform.flip(sprite,True,False)
+                self._player_flip_cache[sprite_key]=sprite
             flash_kind=None
             flash_alpha=0
             if getattr(p,"hurt_flash",0.0)>0:
