@@ -134,6 +134,17 @@ class Renderer:
         # Sprites de cajas y barriles destructibles. Coloca los PNG en assets/props/.
         # Si falta alguno o no puede cargarse, el renderizado usa el dibujo provisional.
         self.prop_images = {}
+        # Modelo dedicado de cargador: no existe un PNG de munición entre los
+        # assets actuales, así que se construye una pequeña silueta pixel-art
+        # transparente con la misma paleta del juego.
+        self.ammo_magazine_image = pygame.Surface((24,30), pygame.SRCALPHA)
+        pygame.draw.rect(self.ammo_magazine_image,(18,22,29,255),(4,1,16,28),border_radius=3)
+        pygame.draw.rect(self.ammo_magazine_image,(62,70,84,255),(6,3,12,23),border_radius=2)
+        pygame.draw.rect(self.ammo_magazine_image,(95,104,118,255),(8,4,8,21))
+        for yy in (6,11,16,21):
+            pygame.draw.rect(self.ammo_magazine_image,(214,169,70,255),(9,yy,6,2))
+            pygame.draw.rect(self.ammo_magazine_image,(245,211,118,255),(10,yy,4,1))
+        pygame.draw.rect(self.ammo_magazine_image,(15,19,25,255),(5,25,14,4))
         prop_dir = self.asset_root / "props"
         prop_files = {
             "crate": "caja.png",
@@ -1841,8 +1852,8 @@ class Renderer:
                     pygame.draw.circle(screen, (235, 90, 105) if it.kind == "heal" else (85, 180, 255), (px, py), 7)
             elif getattr(it, "kind", "item") == "ammo":
                 pygame.draw.circle(screen, (18, 24, 35), (px, py), 16)
-                pygame.draw.rect(screen, (224, 174, 64), (px-8, py-10, 16, 20), border_radius=3)
-                pygame.draw.rect(screen, (245, 218, 118), (px-5, py-7, 10, 14), border_radius=2)
+                mag=self.ammo_magazine_image
+                screen.blit(mag,mag.get_rect(center=(px,py)))
                 self.text(screen, str(getattr(it, "magazines", 1)), (px, py+22), (245, 225, 150), self.small, True)
             else:
                 pygame.draw.circle(screen, (20, 20, 25), (px, py), 12)
