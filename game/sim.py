@@ -292,9 +292,7 @@ class Sim:
             roll=self.rng.random()
             if roll<0.12: self.items.append(type("Loot",(),{"kind":"heal","x":x,"y":y})())
             elif roll<0.20: self.items.append(type("Loot",(),{"kind":"energy","x":x,"y":y})())
-            elif roll<0.25:
-                cx,cy=self._safe_drop_position(x+self.rng.uniform(-6,6),y+self.rng.uniform(-6,6),6.0)
-                self.pickups.append([cx,cy])
+            # Las esferas amarillas fueron retiradas.
         else:
             dtype={"fire":"fire","poison":"poison","electric":"electric"}[kind]
             color={"fire":(245,70,45),"poison":(70,220,85),"electric":(175,70,255)}[dtype]
@@ -418,6 +416,12 @@ class Sim:
         chest_type = self._chest_type_for_room(self.room.room_type)
         if chest_type:
             self._spawn_chest(chest_type)
+            if self.chest is not None:
+                if math.hypot(self.chest.x-self.player.x,self.chest.y-self.player.y) < TILE*1.35:
+                    for ox,oy in ((TILE*2,0),(-TILE*2,0),(0,TILE*2),(0,-TILE*2)):
+                        qx,qy=self._safe_drop_position(self.chest.x+ox,self.chest.y+oy,14.0)
+                        if math.hypot(qx-self.player.x,qy-self.player.y) >= TILE*1.35:
+                            self.chest.x,self.chest.y=qx,qy; break
         if self.room.room_type=="boss" and self.room.arena.biome=="final":
             # El portal y el cofre final comparten la sala, pero nunca el mismo punto.
             cx,cy=self.arena.width/2,self.arena.height/2
@@ -455,11 +459,7 @@ class Sim:
             wx,wy=self._safe_drop_position(self.chest.x+42,self.chest.y,10.0)
             it=type("WeaponPickup",(),{"id":wid,"name":self.data.weapons[wid].name,"kind":"weapon","weapon_id":wid,"x":wx,"y":wy})()
             self.items.append(it); self.stats["items"]+=1; self.emit("weapon_drop",it.x,it.y,wid)
-        amount=self.rng.randint(1,5)
-        for _ in range(amount):
-            cx,cy=self._safe_drop_position(self.chest.x+self.rng.uniform(-18,18), self.chest.y+self.rng.uniform(-14,14), 6.0)
-            self.pickups.append([cx,cy])
-        self.emit("chest_coins",self.chest.x,self.chest.y,amount)
+        self.emit("chest_coins",self.chest.x,self.chest.y,0)
         return True
 
     def _drop_room_reward(self,guaranteed=False,quality=0,position=None):
@@ -657,9 +657,7 @@ class Sim:
                 drop_coins = is_boss or self.rng.random() < min(0.48, 0.08 + coin_value * 0.07)
                 if drop_coins:
                     amount = coin_value if is_boss else self.rng.randint(1, coin_value)
-                    for _ in range(amount):
-                        cx,cy=self._safe_drop_position(e.x + self.rng.uniform(-8, 8), e.y + self.rng.uniform(-8, 8), 6.0)
-                        self.pickups.append([cx,cy])
+                    # Las monedas/esferas físicas fueron retiradas del suelo.
             if not getattr(e,"is_boss",False) and not getattr(e,"is_miniboss",False):
                 self.enemy_pool.append(e)
         self.enemies=[e for e in self.enemies if e.alive]
@@ -698,8 +696,9 @@ class Sim:
         self.emit("freeze", target.x, target.y, duration)
 
     def perform_melee_attack(self, p, d):
-        reach=d.range + p.radius
-        arc=getattr(d,"melee_arc",1.2)
+        # El hitbox cubre toda la zona visible del corte, con margen de seguridad.
+        reach=max(float(d.range)+p.radius, float(d.range)*1.20+p.radius)
+        arc=max(float(getattr(d,"melee_arc",1.2)), 1.80)
         hit=0
         for e in self.enemies:
             if not e.alive: continue
@@ -913,10 +912,4 @@ class Sim:
         self.wave_attacks=[w for w in self.wave_attacks if w["life"]>0]
 
     def _update_pickups(self,dt):
-        p=self.player;keep=[]
-        for c in self.pickups:
-            d=math.hypot(c[0]-p.x,c[1]-p.y)
-            if d<90:c[0]+=(p.x-c[0])/(d or 1)*260*dt;c[1]+=(p.y-c[1])/(d or 1)*260*dt
-            if d<14:p.coins+=1;self.stats["coins"]+=1;self.emit("coin",c[0],c[1])
-            else:keep.append(c)
-        self.pickups=keep
+        self.pickups=[]
