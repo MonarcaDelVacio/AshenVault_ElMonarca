@@ -1450,8 +1450,10 @@ class Sim:
                                 if pr.dtype == "ice":
                                     self._apply_freeze(p, pr.damage)
                                     p.set_status("freeze", 1.6)
-                                elif pr.dtype in ("fire","poison","electric"):
-                                    p.set_status({"fire":"burn","poison":"poison","electric":"electric"}[pr.dtype], 2.4)
+                                elif pr.dtype in ("fire","poison"):
+                                    self._apply_dot(p,pr.dtype,4.0,pr.damage)
+                                elif pr.dtype == "electric":
+                                    p.set_status("electric",2.4)
                                 pr.active=False
                         break
                     w=w.d
@@ -1477,8 +1479,10 @@ class Sim:
                             if pr.dtype == "ice":
                                 self._apply_freeze(p, pr.damage)
                                 p.set_status("freeze", 1.6)
-                            elif pr.dtype in ("fire", "poison", "electric"):
-                                p.set_status({"fire":"burn","poison":"poison","electric":"electric"}[pr.dtype], 2.4)
+                            elif pr.dtype in ("fire","poison"):
+                                self._apply_dot(p,pr.dtype,4.0,pr.damage)
+                            elif pr.dtype == "electric":
+                                p.set_status("electric",2.4)
                             pr.active=False
                         break
     def _explode_projectile(self, pr):
