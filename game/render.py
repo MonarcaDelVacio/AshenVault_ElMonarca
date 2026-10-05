@@ -792,6 +792,21 @@ class Renderer:
                 if pillar_image is not None:
                     rect = pillar_image.get_rect(midbottom=(tx * TILE + TILE // 2, (ty + 1) * TILE))
                     surf.blit(pillar_image, rect)
+        shape = getattr(arena, "shape", "rectangle")
+        if shape in ("octagon", "diamond", "chamfer"):
+            edge = max(6, TILE // 3)
+            if shape == "diamond":
+                pts = [(arena.width/2, 0), (arena.width, arena.height/2),
+                       (arena.width/2, arena.height), (0, arena.height/2)]
+            else:
+                cut = 4 * TILE
+                pts = [(cut, 0), (arena.width-cut, 0), (arena.width, cut),
+                       (arena.width, arena.height-cut), (arena.width-cut, arena.height),
+                       (cut, arena.height), (0, arena.height-cut), (0, cut)]
+            edge_color = self.data.biomes[arena.biome]["wall_top"]
+            for a, z in zip(pts, pts[1:] + pts[:1]):
+                pygame.draw.line(surf, edge_color, a, z, edge)
+                pygame.draw.line(surf, tuple(min(255, c + 18) for c in edge_color), a, z, 2)
         self._bg_cache, self._bg_key = surf, key
         return surf
 
@@ -1268,7 +1283,7 @@ class Renderer:
         if fx.shake > 0.2:
             cx += math.sin(t * 90) * fx.shake
             cy += math.cos(t * 77) * fx.shake
-        ox, oy = -int(cx), -int(cy)
+        ox, oy = -cx, -cy
         screen.fill((0, 0, 0))
         # El jugador sigue centrado incluso al mirar fuera de la sala. Cuando existe
         # una sala contigua, se muestra su arquitectura en continuidad con el mapa;
@@ -1660,10 +1675,10 @@ class Renderer:
             if not self.ui_atlas.draw_panel(panel, pygame.Rect(0,0,width,height), border=6):
                 pygame.draw.rect(panel,(8,12,22,205),panel.get_rect(),border_radius=6); pygame.draw.rect(panel,(82,100,125,220),panel.get_rect(),1,border_radius=6)
         for rid in rooms:
-            rx=6+(rid[0]-min_x)*cell; ry=origin_y+(rid[1]-min_y)*cell; cx,cy=rx+cell//2,ry+cell//2
+            rx=content_x+(rid[0]-min_x)*cell; ry=origin_y+(rid[1]-min_y)*cell; cx,cy=rx+cell//2,ry+cell//2
             for nr in ((rid[0]+1,rid[1]),(rid[0],rid[1]+1)):
                 if nr in rooms:
-                    nx=6+(nr[0]-min_x)*cell+cell//2; ny=origin_y+(nr[1]-min_y)*cell+cell//2; pygame.draw.line(panel,(47,59,74),(cx,cy),(nx,ny),max(1,cell//10))
+                    nx=content_x+(nr[0]-min_x)*cell+cell//2; ny=origin_y+(nr[1]-min_y)*cell+cell//2; pygame.draw.line(panel,(47,59,74),(cx,cy),(nx,ny),max(1,cell//10))
         for rid,room in rooms.items():
             rx=6+(rid[0]-min_x)*cell; ry=origin_y+(rid[1]-min_y)*cell; rect=pygame.Rect(rx+2,ry+2,max(8,cell-4),max(8,cell-4)); current=tuple(rid)==tuple(dungeon.current)
             color=(255,202,102) if current else ((83,174,184) if getattr(room,"entered",False) else (48,58,72)); pygame.draw.rect(panel,color,rect,border_radius=4)
@@ -1690,16 +1705,7 @@ class Renderer:
                 self.ui_atlas.draw_icon(panel, (cx, cy), size=max(14, ms + 4), kind="exclamation")
             elif room.room_type=="secret":
                 self.ui_atlas.draw_icon(panel, (cx, cy), size=max(14, ms + 4), kind="pin")
-        if large:
-            ly=height-24; self.ui_atlas.draw_icon(panel,(18,ly-1),size=16,kind="skull"); self.text(panel,"JEFE",(31,ly),(230,230,235),self.menu_small); self.text(panel,"PORTAL",(88,ly),(110,220,245),self.menu_small); self.ui_atlas.draw_icon(panel,(205,ly-1),size=16,kind="key"); self.text(panel,"TIENDA",(218,ly),(255,215,100),self.menu_small)
-        else:
-            # Leyenda mínima: solo los símbolos que no son obvios por color.
-            ly = height - 13
-            self.ui_atlas.draw_icon(panel, (25, ly), size=11, kind="skull")
-            self.text(panel, "JEFE", (35, ly - 5), (220, 225, 232), self.small)
-            self.text(panel, "P  PORTAL", (82, ly - 5), (110, 220, 245), self.small)
-            self.ui_atlas.draw_icon(panel, (143, ly), size=11, kind="key")
-            self.text(panel, "TIENDA", (153, ly - 5), (255, 215, 100), self.small)
+        # La leyenda se eliminó: los iconos de cada sala son autoexplicativos.
         screen.blit(panel,(x,y))
 
     def draw_hud(self, screen, sim, fx, mouse):
@@ -1781,14 +1787,14 @@ class Renderer:
 
         # Panel inferior: arma y munición a la izquierda; habilidades a la derecha.
         w = p.weapon
-        weapon_rect = pygame.Rect(10, VIEW_H - 74, 270, 64)
+        weapon_rect = pygame.Rect(10, VIEW_H - 74, 218, 64)
         panel(weapon_rect, fill=(15, 17, 25, 218), border=(64, 70, 86))
         hud_weapon = self._fit_image(self.weapon_scaled_images.get(getattr(w.d, "id", "")), 28)
         if hud_weapon is not None:
-            screen.blit(hud_weapon, hud_weapon.get_rect(topleft=(27, VIEW_H - 61)))
-            self.text(screen, w.d.name, (61, VIEW_H - 61), (240, 241, 246), self.small)
+            screen.blit(hud_weapon, hud_weapon.get_rect(topleft=(21, VIEW_H - 61)))
+            self.text(screen, w.d.name, (55, VIEW_H - 61), (240, 241, 246), self.small)
         else:
-            self.text(screen, w.d.name, (27, VIEW_H - 61), (240, 241, 246), self.small)
+            self.text(screen, w.d.name, (21, VIEW_H - 61), (240, 241, 246), self.small)
         if w.reloading:
             ammo_text, ammo_color = "RECARGANDO", (240, 200, 90)
         else:
@@ -1797,13 +1803,13 @@ class Renderer:
 
         # Munición y estado de recarga quedan en una sola línea limpia. La barra
         # de progreso fue eliminada para evitar ruido visual en el panel.
-        ammo_pos = (27, VIEW_H - 34)
+        ammo_pos = (21, VIEW_H - 34)
         self.text(screen, ammo_text, ammo_pos, ammo_color, self.small)
 
         # Solo cuando el cargador está completamente vacío mostramos el icono de
         # recarga, pegado a la munición y dentro del mismo panel.
         if not w.reloading and w.ammo <= 0:
-            reload_center = (145, VIEW_H - 31)
+            reload_center = (124, VIEW_H - 31)
             if not self.ui_atlas.draw_icon(screen, reload_center, size=22, kind="refresh"):
                 pygame.draw.circle(screen, (240, 200, 90), reload_center, 9, 2)
                 self.text(screen, "R", reload_center, (240, 200, 90), self.small, center=True)
