@@ -31,7 +31,8 @@ class Player:
         elif cid == "striker":
             self.speed += lv("speed")*6; self.crit_chance += lv("crit")*.02; self.damage_mult *= 1 + lv("damage")*.04
         elif cid == "engineer":
-            self.max_energy += lv("energy")*10; self.speed += lv("speed")*4; self.damage_mult *= 1 + lv("damage")*.03
+            self.drone_count_bonus = lv("drone_count"); self.drone_damage_mult = 1.0 + lv("drone_damage")*.25
+            self.drone_attack_speed_mult = 1.0 + lv("drone_attack_speed")*.12; self.drone_hp_bonus = lv("drone_durability")*5
         self.hp = self.max_hp
         self.shield = float(self.max_shield)
         self.energy = float(self.max_energy)
@@ -44,7 +45,11 @@ class Player:
             self.ability["radius"] = self.ability.get("radius",125) + lv("ability")*8
         elif cid == "pyromancer": self.ability["duration"] = self.ability.get("duration",3.0) + lv("ability")*.35
         elif cid == "striker": self.ability["duration"] = self.ability.get("duration",5.0) + lv("ability")*.5
-        elif cid == "engineer": self.ability["max_drones"] = self.ability.get("max_drones",2) + lv("ability")
+        elif cid == "engineer":
+            self.ability["max_drones"] = self.ability.get("base_drones",2) + lv("drone_count")
+            self.ability["drone_damage_mult"] = self.drone_damage_mult
+            self.ability["drone_attack_interval"] = 0.62 / max(0.1,self.drone_attack_speed_mult)
+            self.ability["drone_hp"] = 18 + self.drone_hp_bonus
         self.weapon = WeaponState(wdef)
         self.inventory = [self.weapon]
         self.items = []
@@ -69,8 +74,12 @@ class Player:
         self.ability_cd = 0.0
         self.ability_buff = 0.0
         self.ability_shield_fx = 0.0
-        self.drones = 0
+        self.drones = []
         self.ability_shot_timer = 0.0
+        self.drone_count_bonus = 0
+        self.drone_damage_mult = 1.0
+        self.drone_attack_speed_mult = 1.0
+        self.drone_hp_bonus = 0
         # Ventana breve en la que el golpe cuerpo a cuerpo puede interceptar proyectiles.
         # Apuntar por sí solo nunca activa esta protección.
         self.melee_attack_timer = 0.0
