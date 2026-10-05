@@ -440,7 +440,7 @@ class App:
 
     def new_run(self):
         self.sim = Sim(self.data, self.char_id, meta_upgrades=self.save.data.get("upgrades", {}), character_progress=self.save.data.get("character_progress", {}).get(self.char_id, {}))
-        self.sim.decoration_collider_provider = self.r.decoration_collider
+        self.sim.decoration_collider_provider = self.r
         self.fx = Fx()
         self.inp = Input()
         self.state = PLAY
