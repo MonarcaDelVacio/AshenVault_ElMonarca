@@ -1,11 +1,14 @@
 """Estado de arma y lógica de disparo, incluidas armas arrojadizas con carga."""
-import math
+import math, random
 from .world import TILE
 
 
 class WeaponState:
     def __init__(self, wdef):
         self.d = wdef
+        # Cada instancia conserva su variante visual; así un mismo tipo de arma
+        # puede utilizar cualquier modelo individual del atlas sin cambiar durante el render.
+        self.sprite_variant_seed = random.random()
         self.damage_mult = 1.0
         self.ammo = wdef.magazine
         self.reserve_magazines = int(getattr(wdef, "max_magazines", 5))
