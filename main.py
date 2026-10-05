@@ -398,8 +398,8 @@ class App:
             sens_rect = pygame.Rect(126, 257, 266, 74)
             if sens_rect.collidepoint(pos):
                 self.settings_sel = 2
-                if click:
-                    bar=pygame.Rect(145,307,228,8)
+                bar=pygame.Rect(145,307,228,8)
+                if (click or pygame.mouse.get_pressed()[0]) and bar.collidepoint(pos):
                     v=max(0.25,min(2.0,(pos[0]-bar.x)/bar.width*1.75+0.25))
                     self.save.data["settings"]["mouse_sensitivity"]=round(v,2)
                     self.save.save()
