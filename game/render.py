@@ -1062,6 +1062,23 @@ class Renderer:
         return
 
 
+    def _draw_drone_actor(self, screen, drone, ox, oy, t):
+        x=int(drone["x"]+ox); y=int(drone["y"]+oy)
+        bob=math.sin(float(drone.get("phase",0.0)))*3.0
+        pygame.draw.ellipse(screen,(12,14,20,120),(x-13,y+8,x+13-(x-13),9))
+        frames=self.enemy_sprites.get("drone",{})
+        frames=frames.get("idle") or frames.get("run") or frames.get("walk") or next(iter(frames.values()),[])
+        if frames:
+            frame=frames[int(t*8.0)%len(frames)]
+            frame=self._fit_image(frame,42)
+            screen.blit(frame,frame.get_rect(center=(x,int(y+bob))))
+        else:
+            pygame.draw.circle(screen,(80,190,205),(x,int(y+bob)),10)
+            pygame.draw.circle(screen,(185,245,250),(x,int(y+bob)),4)
+        ratio=max(0.0,min(1.0,float(drone.get("hp",0))/max(1.0,float(drone.get("max_hp",1)))))
+        pygame.draw.rect(screen,(15,18,25),(x-13,int(y-22+bob),26,3),border_radius=2)
+        pygame.draw.rect(screen,(85,220,225),(x-13,int(y-22+bob),int(26*ratio),3),border_radius=2)
+
     def _draw_enemy_actor(self, screen, e, arena, sim, ox, oy, decor_lights, t):
         x, y = int(e.x + ox), int(e.y + oy)
         if e.spawn_delay > 0:   # aviso de aparición
@@ -1509,6 +1526,8 @@ class Renderer:
         for e in sim.enemies:
             if e.alive:
                 actors.append((e.y, "enemy", e))
+        for drone in getattr(sim, "drones", []):
+            actors.append((float(drone.get("y",0)), "drone", drone))
                 # "enemy", e
         for prop in getattr(sim,"props",[]):
             if prop.get("broken") and prop.get("fade",0)<=0: continue
@@ -1543,6 +1562,7 @@ class Renderer:
         for actor_y,kind,obj in actors:
             if kind=="player": self._draw_player_actor(screen,obj,ox,oy,t)
             elif kind=="enemy": self._draw_enemy_actor(screen,obj,arena,sim,ox,oy,decor_lights,t)
+            elif kind=="drone": self._draw_drone_actor(screen,obj,ox,oy,t)
             elif kind=="merchant":
                 intro=obj["idle"]; elapsed=max(0.0,t-float(obj.get("intro_start",t)))
                 if intro and elapsed < 0.72:
