@@ -1759,6 +1759,7 @@ class Renderer:
                 py=wave["y"]+math.sin(ang)*max(0.0,limit)+oy
                 point=(int(px),int(py))
                 if blocked:
+                    current.append(point)
                     if len(current)>1: segments.append(current)
                     current=[]
                 else:
