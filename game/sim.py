@@ -537,8 +537,28 @@ class Sim:
         pool=[self.data.enemies[eid] for eid in biome_pool if eid in self.data.enemies and self.data.enemies[eid].min_wave<=self.wave]
         if not pool: pool=[e for e in self.data.enemies.values() if e.min_wave<=self.wave]
         spots=list(self.arena.enemy_spawns) or [self.arena.player_spawn]; self.rng.shuffle(spots); weights=[e.weight for e in pool]
+        used=[]
         for i in range(min(budget,len(spots))):
-            e=self.rng.choices(pool,weights)[0]; sx,sy=spots[i]; self.enemies.append(self._new_enemy(e,sx,sy)); self.emit("spawn",sx,sy)
+            e=self.rng.choices(pool,weights)[0]
+            candidates=spots[i:]+spots[:i]
+            chosen=None
+            for sx,sy in candidates:
+                if math.hypot(sx-self.player.x,sy-self.player.y)<120: continue
+                if self.arena.point_solid(sx,sy): continue
+                if self._decoration_collision(sx,sy,float(e.radius)): continue
+                if any(math.hypot(sx-ux,sy-uy)<e.radius+ur+10 for ux,uy,ur in used): continue
+                chosen=(sx,sy); break
+            if chosen is None:
+                for _ in range(30):
+                    sx=self.rng.uniform(e.radius+16,self.arena.width-e.radius-16)
+                    sy=self.rng.uniform(e.radius+16,self.arena.height-e.radius-16)
+                    if self.arena.point_solid(sx,sy) or self._decoration_collision(sx,sy,float(e.radius)): continue
+                    if math.hypot(sx-self.player.x,sy-self.player.y)<120: continue
+                    chosen=(sx,sy); break
+            if chosen is not None:
+                sx,sy=chosen
+                used.append((sx,sy,float(e.radius)))
+                self.enemies.append(self._new_enemy(e,sx,sy)); self.emit("spawn",sx,sy)
     def _setup_shop(self):
         self.shop_offers=[]
         cx,cy=self.arena.width/2,self.arena.height/2
@@ -736,6 +756,26 @@ class Sim:
             p.crit_chance += value
             p.statue_crit_damage_mult *= 1.0 + value*1.8
 
+    def break_weapon(self, player, weapon):
+        if weapon in player.inventory:
+            player.inventory.remove(weapon)
+        if player.weapon is weapon:
+            if player.inventory:
+                player.weapon=player.inventory[min(0,len(player.inventory)-1)]
+            else:
+                from types import SimpleNamespace
+                fist=SimpleNamespace(name="Puños",class_="melee")
+                fist.__dict__.update({"id":"fists","class":"melee","rarity":"common","damage":1.5,
+                    "fire_interval":0.42,"auto":False,"magazine":999999,"reload_time":0,
+                    "projectile_speed":0,"spread":0,"recoil":0,"damage_type":"physical",
+                    "energy_cost":0,"pellets":1,"range":30,"pierce":0,"bounces":0,
+                    "projectile_radius":1,"color":(205,180,150),"weapon_sprite":None,
+                    "projectile_sprite":None,"melee_arc":1.8,"durability":999999})
+                player.weapon=WeaponState(fist)
+                player.inventory=[]
+        self.emit("weapon_break",player.x,player.y)
+        return True
+
     def _try_interact(self):
         p=self.player
         if self.portal:
@@ -758,7 +798,17 @@ class Sim:
             if math.hypot(ix-p.x,iy-p.y)<48:
                 if getattr(item,'kind','item')=='weapon':
                     weapon_id = item.weapon_id
-                    if len(p.inventory) < 3:
+                    existing = next((w for w in p.inventory if w.d.id == weapon_id), None)
+                    if existing is not None:
+                        incoming = WeaponState(self.data.weapons[weapon_id])
+                        if getattr(existing.d,"class","") == "melee":
+                            existing.durability=min(existing.max_durability, existing.durability+incoming.durability)
+                        else:
+                            existing.ammo=min(existing.d.magazine, existing.ammo+incoming.ammo)
+                            existing.reserve_magazines=min(existing.max_reserve_magazines,
+                                existing.reserve_magazines+incoming.reserve_magazines)
+                        self.items.remove(item)
+                    elif len(p.inventory) < 3:
                         new_weapon = WeaponState(self.data.weapons[weapon_id])
                         p.inventory.append(new_weapon)
                         p.weapon = new_weapon
