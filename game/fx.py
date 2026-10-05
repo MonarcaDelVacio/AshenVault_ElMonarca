@@ -177,6 +177,9 @@ class Fx:
         elif k.startswith("ability_"):
             _, x, y, *_ = ev
             self.burst(x, y, (180, 120, 255), 18, 130, 0.45, 3)
+            # El paquete nuevo incluye un atlas específico de efectos de habilidad.
+            # Se usa como animación adicional sin sustituir las partículas existentes.
+            self._special("new_ability_atlas", x, y, 0.0, 0.45, 96.0)
 
     def _special(self, kind, x, y, angle, duration, size):
         if len(self.special_effects) >= 36:
