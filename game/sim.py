@@ -1209,8 +1209,8 @@ class Sim:
                     pull=420.0*dt
                     step=min(dist-13.0,max(0.0,pull))
                     if dist > 0.001:
-                        pickup["x"] += dx/dist*step
-                        pickup["y"] += dy/dist*step
+                        pickup["x"] -= dx/dist*step
+                        pickup["y"] -= dy/dist*step
                     kept.append(pickup)
                     continue
                 amount=max(1,int(pickup.get("amount",1)))
