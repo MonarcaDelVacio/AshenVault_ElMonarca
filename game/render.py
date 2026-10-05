@@ -1314,8 +1314,10 @@ class Renderer:
             # Collider is the lower footprint, not the whole visual height.
             rx=max(7.0,visible_w*0.36)
             ry=max(6.0,min(visible_h*0.18,visible_w*0.30))
-            ox=(bbox.centerx-image.get_width()/2)*scale
-            oy=(bbox.bottom-image.get_height())*scale*0.12
+            # _fit_image() recorta el bbox antes de dibujarlo, por lo que el
+            # punto de anclaje físico coincide con el centro de la base visible.
+            ox=0.0
+            oy=0.0
             self._decoration_collider_cache[key]=(rx,ry,ox,oy)
         cx=float(deco.get("x",0))*TILE+TILE/2+ox
         cy=float(deco.get("y",0))*TILE+TILE+oy
