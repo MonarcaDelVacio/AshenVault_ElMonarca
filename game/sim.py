@@ -44,6 +44,16 @@ class Sim:
         scaled_def.hp=float(edef.hp)*scale
         scaled_def.damage=float(edef.damage)*scale
         scaled_def.speed=float(edef.speed)*(1.0 + 0.035*(self.difficulty-1))
+        # Si el enemigo tiene un proyectil visual propio (bola de fuego, roca, etc.),
+        # su arquetipo debe ser a distancia aunque un dato antiguo lo haya marcado
+        # como melee. Esto evita que el comportamiento contradiga la animación.
+        if getattr(edef, "projectile_asset_sheet", None):
+            scaled_def.ai = "ranged"
+        else:
+            weapon_id = getattr(edef, "weapon_id", None)
+            weapon_def = self.data.weapons.get(weapon_id) if weapon_id else None
+            if weapon_def is not None and getattr(weapon_def, "projectile_sprite", None) and getattr(weapon_def, "class", "") != "melee":
+                scaled_def.ai = "ranged"
         if self.enemy_pool:
             e=self.enemy_pool.pop()
             e.reset(scaled_def,x,y,self.rng)
