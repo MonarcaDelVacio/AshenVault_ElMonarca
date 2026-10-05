@@ -30,6 +30,7 @@ class Enemy:
         self.frozen = 0.0
         self.summon_timer = 0.0
         self.boss_pulse_cd = 2.2
+        self.miniboss_pulse_cd = 3.0
         self.is_boss = False
         self.is_miniboss = False
         self.weapon_id = getattr(edef, "weapon_id", None)
@@ -43,8 +44,8 @@ class Enemy:
         self.cooldown=r.uniform(0.3,1.0); self.alive=True; self.flash=0.0
         self.attack_anim_time=99.0
         self.kx=self.ky=0.0; self.facing=0.0; self.strafe=r.choice((-1,1))
-        self.spawn_delay=0.6; self.frozen=0.0; self.summon_timer=0.0; self.boss_pulse_cd=2.2
-        self.is_boss=False; self.is_miniboss=False; self.is_summoned=False
+        self.spawn_delay=0.6; self.frozen=0.0; self.summon_timer=0.0; self.boss_pulse_cd=2.2; self.miniboss_pulse_cd=3.0
+        self.is_boss=False; self.is_miniboss=False; self.is_summoned=False; self.is_boss_guard=False
         self.weapon_id=getattr(edef, "weapon_id", None)
         self.shield_integrity=float(getattr(edef, "shield_durability", 48.0)) if getattr(edef, "shielded", False) else 0.0
         return self
@@ -72,6 +73,7 @@ class Enemy:
         self.frozen = max(0.0, self.frozen - dt)
         self.summon_timer = max(0.0, self.summon_timer - dt)
         self.boss_pulse_cd = max(0.0, self.boss_pulse_cd - dt)
+        self.miniboss_pulse_cd = max(0.0, self.miniboss_pulse_cd - dt)
         self.attack_anim_time = min(8.0, self.attack_anim_time + dt)
         if self.frozen > 0:
             return
@@ -107,6 +109,13 @@ class Enemy:
             p.rvy += math.sin(self.facing) * push
             self.boss_pulse_cd = 2.8
             sim.emit("boss_shockwave", self.x, self.y, 118.0, getattr(d, "color", (220, 100, 100)))
+
+        if self.is_miniboss and dist <= 96 and self.miniboss_pulse_cd <= 0:
+            push = 250.0
+            p.rvx += math.cos(self.facing) * push
+            p.rvy += math.sin(self.facing) * push
+            self.miniboss_pulse_cd = float(getattr(d, "miniboss_pulse_interval", 4.2))
+            sim.emit("miniboss_shockwave", self.x, self.y, 96.0, getattr(d, "color", (190, 110, 220)))
 
         if self.state == WINDUP:
             self.timer -= dt
