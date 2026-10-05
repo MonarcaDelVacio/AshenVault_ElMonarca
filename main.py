@@ -14,7 +14,7 @@ from game.intro import IntroPlayer
 from game.sim import Sim, Input
 
 INTRO, MENU, PLAY, PAUSE, MAP, DEAD, VICTORY, SETTINGS, CHAR_SELECT, HUB, STATUE = "intro", "menu", "play", "pause", "map", "dead", "victory", "settings", "char_select", "hub", "statue"
-MENU_ITEMS = ["Jugar", "Mejoras", "Configuracion", "Salir"]
+MENU_ITEMS = ["Jugar", "Configuracion", "Salir"]
 PAUSE_ITEMS = ["Continuar", "Configuracion", "Reiniciar run", "Salir al menu"]
 SETTINGS_ITEMS = ["Volumen efectos", "Volumen musica", "Mover arriba", "Mover abajo", "Mover izquierda", "Mover derecha", "Dash", "Habilidad", "Recargar", "Pausa", "Minimapa", "Pantalla completa", "Restablecer", "Volver"]
 SETTING_KEYS = {"Mover arriba":"up", "Mover abajo":"down", "Mover izquierda":"left", "Mover derecha":"right", "Dash":"dash", "Habilidad":"ability", "Recargar":"reload", "Pausa":"pause", "Minimapa":"map"}
@@ -37,7 +37,7 @@ class App:
         # Ventana física redimensionable + lienzo lógico fijo. El lienzo se escala
         # al tamaño disponible al presentar cada frame, evitando que la vista quede
         # pequeña al agrandar la ventana y conservando la proporción 16:9.
-        self.window = pygame.display.set_mode((VIEW_W, VIEW_H), pygame.RESIZABLE, vsync=1)
+        self.window = pygame.display.set_mode((VIEW_W, VIEW_H), pygame.RESIZABLE, vsync=0)
         self.screen = pygame.Surface((VIEW_W, VIEW_H)).convert()
         self._set_window_icon()
         pygame.mouse.set_visible(False)
@@ -242,14 +242,51 @@ class App:
             # El juego puede iniciar aunque todavía no exista el icono.
             pass
 
+    @staticmethod
+    def _remove_portrait_background(image):
+        """Elimina fondos blancos/negros sólidos conectados al borde del PNG."""
+        if image is None:
+            return None
+        out = image.convert_alpha()
+        w, h = out.get_size()
+        samples = [out.get_at((x, y))[:3] for x, y in ((0,0),(w-1,0),(0,h-1),(w-1,h-1))]
+        avg = tuple(sum(c[i] for c in samples)//len(samples) for i in range(3))
+        if min(avg) > 220:
+            bg, tol = (255,255,255), 28
+        elif max(avg) < 35:
+            bg, tol = (0,0,0), 22
+        else:
+            return out
+        px = out.load()
+        seen = set()
+        stack = []
+        for x in range(w):
+            stack.extend(((x,0),(x,h-1)))
+        for y in range(h):
+            stack.extend(((0,y),(w-1,y)))
+        while stack:
+            x,y = stack.pop()
+            if (x,y) in seen or not (0 <= x < w and 0 <= y < h):
+                continue
+            r,g,b,a = px[x,y]
+            if a == 0:
+                seen.add((x,y)); continue
+            if max(abs(r-bg[0]), abs(g-bg[1]), abs(b-bg[2])) > tol:
+                continue
+            seen.add((x,y))
+            px[x,y] = (r,g,b,0)
+            stack.extend(((x-1,y),(x+1,y),(x,y-1),(x,y+1)))
+        return out
+
     def _load_character_portraits(self):
-        """Carga retratos opcionales desde assets/characters/portraits/."""
+        """Carga retratos y elimina fondos sólidos que vengan incrustados en los PNG."""
         folder = Path(__file__).resolve().parent / "assets" / "characters" / "portraits"
         for filename in ("Kael.png", "Iria.png", "Rook.png", "Veyra.png", "Nox.png", "Mira.png"):
             path = folder / filename
             if path.is_file():
                 try:
-                    self.character_portraits[filename[:-4].lower()] = pygame.image.load(str(path)).convert_alpha()
+                    image = pygame.image.load(str(path)).convert_alpha()
+                    self.character_portraits[filename[:-4].lower()] = self._remove_portrait_background(image)
                 except (pygame.error, OSError):
                     pass
 
@@ -276,23 +313,25 @@ class App:
                 self.sim.close_statue_menu(); self.go(PLAY)
             return
         if self.state == CHAR_SELECT:
-            # Seis tarjetas en una cuadrícula 3x2, con retrato/nombre a la izquierda
-            # y descripción en un panel separado a la derecha.
             for n in range(len(self.char_ids)):
                 col, row = n % 3, n // 3
                 rect = pygame.Rect(20 + col * 310, 108 + row * 184, 300, 174)
                 if rect.collidepoint(pos):
                     self.char_sel = n
                     if click:
-                        # Un solo clic elige y confirma el personaje. Antes no había un
-                        # botón de confirmación visible, por lo que el clic parecía no funcionar.
                         self.char_id = self.char_ids[n]
                         self.audio.play("ui", self.t)
                         self.confirm_character_selection()
                     return
-            if click and pos[1] >= VIEW_H - 55:
-                self.char_id = self.char_ids[self.char_sel]
-                self.confirm_character_selection()
+            back_rect = pygame.Rect(16, 488, 150, 34)
+            upgrades_rect = pygame.Rect(VIEW_W - 166, 488, 150, 34)
+            if click and back_rect.collidepoint(pos):
+                self.go(HUB if self.back_state == HUB else MENU)
+                return
+            if click and upgrades_rect.collidepoint(pos):
+                self.hub_sel = 0
+                self.go(HUB)
+                return
             return
         if self.state == HUB and not self.info:
             from game.save import CHARACTER_UPGRADES
@@ -505,6 +544,8 @@ class App:
             return
         if self.state == CHAR_SELECT:
             if k in (pygame.K_ESCAPE,): self.go(HUB if self.back_state==HUB else MENU); return
+            if k in (pygame.K_LEFT, pygame.K_a) and self.char_sel % 3 == 0: self.go(HUB if self.back_state==HUB else MENU); return
+            if k in (pygame.K_RIGHT, pygame.K_d) and self.char_sel % 3 == 2: self.go(HUB); return
             if k in (pygame.K_UP, pygame.K_w): self.char_sel=(self.char_sel-1)%len(self.char_ids); return
             if k in (pygame.K_DOWN, pygame.K_s): self.char_sel=(self.char_sel+1)%len(self.char_ids); return
             if k in (pygame.K_RETURN, pygame.K_SPACE): self.char_id=self.char_ids[self.char_sel]; self.confirm_character_selection(); return
@@ -887,7 +928,8 @@ class App:
 
                 # Retrato amplio, recortado proporcionalmente y centrado en su propio panel.
                 portrait = pygame.Rect(x + 10, y + 10, 82, 105)
-                pygame.draw.rect(scr, (5, 8, 16), portrait, border_radius=6)
+                # El retrato conserva transparencia real; no se coloca ningún fondo
+                # blanco/negro detrás del PNG.
                 pygame.draw.rect(scr, (82, 143, 158) if selected else (65, 78, 99), portrait, 1, border_radius=6)
                 portrait_key = {"soldier":"kael", "medic":"iria", "vanguard":"rook", "pyromancer":"veyra", "striker":"nox", "engineer":"mira"}.get(cid, cid.lower())
                 image = self.character_portraits.get(portrait_key)
@@ -929,8 +971,8 @@ class App:
                     self.r.text(scr, line, (desc_panel.x + 8, desc_panel.y + 12 + line_i * 18), (218, 226, 237) if selected else (173, 188, 204), desc_font)
                 scr.set_clip(old_clip)
             c = self.data.characters[self.char_ids[self.char_sel]]
-            self.r.text(scr, "HABILIDAD: %s  ·  CD %.1fs" % (c.ability["name"], c.ability["cooldown"]), (VIEW_W//2, 484), (150,220,200), self.r.menu_small, True)
-            self.r.text(scr, "CLIC EN UN PERSONAJE PARA CONTINUAR · ESC VOLVER", (VIEW_W//2, 514), (150,150,165), self.r.menu_small, True)
+            self.ui_atlas.draw_button(scr, pygame.Rect(16, 488, 150, 34), "Volver", selected=False)
+            self.ui_atlas.draw_button(scr, pygame.Rect(VIEW_W - 166, 488, 150, 34), "Mejoras", selected=False)
         elif self.state == SETTINGS:
             self.draw_menu_bg()
             self.r.text(scr, "CONFIGURACION", (VIEW_W // 2, 43), (240, 195, 105), self.r.menu_title, True)
@@ -1010,7 +1052,7 @@ class App:
 
     def run(self):
         while self.running:
-            dt = self.clock.tick(60) / 1000.0
+            dt = self.clock.tick_busy_loop(120) / 1000.0
             self.t += dt
             self.poll()
             if self.state == PLAY:
