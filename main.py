@@ -122,10 +122,22 @@ class App:
                     bbox = icon.get_bounding_rect(min_alpha=8)
                     if bbox.width > 0 and bbox.height > 0:
                         icon = icon.subsurface(bbox).copy()
-                    opaque=pygame.Surface(icon.get_size()).convert()
-                    opaque.fill((0,0,0))
-                    opaque.blit(icon,(0,0))
-                    icon=opaque
+                    # Construye una capa negra siguiendo la silueta real del
+                    # PNG, en lugar de convertir el bounding box completo en un rectángulo negro.
+                    # Así el contorno funciona como una "capa trasera" alrededor del modelo.
+                    mask = pygame.mask.from_surface(icon, 8)
+                    pad = 8
+                    outlined = pygame.Surface((icon.get_width()+pad*2, icon.get_height()+pad*2), pygame.SRCALPHA)
+                    outline_color = (0, 0, 0, 255)
+                    for ox in range(-pad, pad+1):
+                        for oy in range(-pad, pad+1):
+                            if ox*ox + oy*oy <= pad*pad:
+                                outlined.blit(
+                                    mask.to_surface(setcolor=outline_color, unsetcolor=(0,0,0,0)),
+                                    (pad+ox, pad+oy)
+                                )
+                    outlined.blit(icon, (pad, pad))
+                    icon = outlined
                 except (pygame.error, OSError):
                     icon = None
 
@@ -773,7 +785,16 @@ class App:
     def world_mouse(self):
         mx, my = self._logical_mouse_pos()
         ox, oy = getattr(self.r, "cam", (0, 0))
-        sensitivity=float(self.save.data["settings"].get("mouse_sensitivity",1.0)); mx=VIEW_W*0.5+(mx-VIEW_W*0.5)*sensitivity; my=VIEW_H*0.5+(my-VIEW_H*0.5)*sensitivity
+        # Sensibilidad aplicada sobre el desplazamiento respecto al centro lógico.
+        # Se mantiene 1.00x como referencia y el rango 0.25x-2.00x se conserva,
+        # pero se calcula una única vez para que el ajuste afecte realmente al aim.
+        sensitivity=max(0.25,min(2.0,float(self.save.data["settings"].get("mouse_sensitivity",1.0))))
+        if sensitivity < 1.0:
+            gain=0.45 + sensitivity*0.55
+        else:
+            gain=1.0 + (sensitivity-1.0)*1.0
+        mx=VIEW_W*0.5+(mx-VIEW_W*0.5)*gain
+        my=VIEW_H*0.5+(my-VIEW_H*0.5)*gain
         return mx - ox, my - oy
 
     def draw_option_card(self, rect, label, selected=False, value=None, compact=False, use_atlas=True):
