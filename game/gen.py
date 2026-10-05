@@ -84,16 +84,9 @@ def _choose_floor_surface(seed, room_type, biome):
         "volcanic": ("rocanegra", "roca"),
         "final": ("rocanegra", "ladrillosdepiedra"),
     }
-    special = {
-        "shop": ("madera", "ladrillos"),
-        "treasure": ("ladrillosdepiedra", "ladrillos"),
-        "healing": ("hierba", "roca"),
-        "event": ("arena", "hierba"),
-        "secret": ("roca", "rocanegra"),
-        "challenge": ("roca", "ladrillosdepiedra"),
-        "boss": ("rocanegra", "roca"),
-    }
-    options = special.get(room_type) or families.get(biome, ("roca",))
+    # El tipo de sala ya no cambia el bioma visual. Todas las habitaciones de
+    # una misma dungeon comparten la familia de suelo de su temática.
+    options = families.get(biome, ("roca",))
     value = int(seed or 0) * 1664525 + 1013904223 + sum(ord(c) for c in str(room_type)) * 97 + sum(ord(c) for c in str(biome))
     return options[abs(value) % len(options)]
 
