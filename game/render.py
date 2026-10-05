@@ -422,6 +422,8 @@ class Renderer:
             path = merchant_dir / f"merchant{index}.png"
             if path.is_file():
                 frames = self._load_component_frames(path, minimum=30, merge_gap=5, exclude_large=(index == 1))
+                if not frames:
+                    frames = self._load_sheet_frames(path)
                 if frames:
                     self.merchant_variants.append(frames)
         if not self.merchant_variants:
@@ -453,6 +455,8 @@ class Renderer:
             path = biome_decor_dir / filename
             if path.is_file():
                 frames = self._load_component_frames(path, minimum=12, merge_gap=8)
+                if not frames:
+                    frames = self._load_sheet_frames(path)
                 if frames:
                     self.decoration_frames[kind] = frames
                     self.decoration_images[kind] = frames[0]
@@ -498,6 +502,8 @@ class Renderer:
         ability_atlas_path = new_effect_dir / "spritesheesdeeffectosparahabilidades.png"
         if ability_atlas_path.is_file():
             frames = self._load_component_frames(ability_atlas_path, minimum=8, merge_gap=10)
+            if not frames:
+                frames = self._load_sheet_frames(ability_atlas_path)
             if frames:
                 self.special_effect_frames["new_ability_atlas"] = frames
 
@@ -572,6 +578,8 @@ class Renderer:
             path = new_weapon_dir / filename
             if path.is_file():
                 frames = self._load_component_frames(path, minimum=18, merge_gap=5)
+                if not frames:
+                    frames = self._load_sheet_frames(path)
                 if frames:
                     self.weapon_variant_frames[key] = frames
 
