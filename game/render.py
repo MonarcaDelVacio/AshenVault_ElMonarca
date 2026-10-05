@@ -1600,6 +1600,15 @@ class Renderer:
             rx,ry,ox,oy=self._decoration_collider_cache[key]
         else:
             image=self.decoration_images.get(kind)
+            frames=self.decoration_frames.get(kind)
+            if frames and kind.startswith("biome_"):
+                raw_variant = deco.get("variant", 0)
+                try:
+                    variant_seed = float(raw_variant)
+                except (TypeError, ValueError):
+                    variant_seed = 0.0
+                index = int(variant_seed * len(frames)) % len(frames) if 0.0 <= variant_seed <= 1.0 else int(raw_variant) % len(frames)
+                image = frames[index]
             if image is None and kind in ("bush","rock"):
                 image=self.decoration_images.get(f"{kind}_{variant%6+1}")
             if image is None:
@@ -1613,6 +1622,8 @@ class Renderer:
                 "crate_pair":68,"table":72,"counter":84,"wood_chest_decor":68,
                 "statue_goddess":640,"statue_archer":640,"statue_assassin":640,"statue_knight":640,"statue_mage":640,
                 "bush":56,"rock":58,
+                "biome_red_bush":86,"biome_lava_rock":88,
+                "biome_lava_rock_purple":82,"biome_shared_rock":88,
             }.get(kind,56)
             scale=max_size/max(1,image.get_width(),image.get_height())
             visible_w=bbox.width*scale; visible_h=bbox.height*scale
@@ -1650,6 +1661,8 @@ class Renderer:
             "statue_goddess":510,"statue_archer":510,"statue_assassin":510,
             "statue_knight":510,"statue_mage":510,
             "bush":56,"rock":58,
+            "biome_red_bush":86,"biome_lava_rock":88,
+            "biome_lava_rock_purple":82,"biome_shared_rock":88,
         }.get(kind,56)
         frames = self.decoration_frames.get(kind)
         if frames:
