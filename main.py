@@ -257,7 +257,7 @@ class App:
             bg, tol = (0,0,0), 22
         else:
             return out
-        px = out.load()
+        px = pygame.PixelArray(out)
         seen = set()
         stack = []
         for x in range(w):
@@ -268,14 +268,16 @@ class App:
             x,y = stack.pop()
             if (x,y) in seen or not (0 <= x < w and 0 <= y < h):
                 continue
-            r,g,b,a = px[x,y]
+            rgba = out.unmap_rgb(px[x, y])
+            r,g,b,a = rgba.r, rgba.g, rgba.b, rgba.a
             if a == 0:
                 seen.add((x,y)); continue
             if max(abs(r-bg[0]), abs(g-bg[1]), abs(b-bg[2])) > tol:
                 continue
             seen.add((x,y))
-            px[x,y] = (r,g,b,0)
+            px[x,y] = out.map_rgba((r,g,b,0))
             stack.extend(((x-1,y),(x+1,y),(x,y-1),(x,y+1)))
+        del px
         return out
 
     def _load_character_portraits(self):
@@ -294,7 +296,7 @@ class App:
         if self.state == MENU and not self.info:
             return [(VIEW_W // 2 - 92, 220 + n * 57, 184, 42) for n in range(len(MENU_ITEMS))]
         if self.state == PAUSE:
-            return [(VIEW_W // 2 - 88, 195 + n * 66, 176, 44) for n in range(len(PAUSE_ITEMS))]
+            return [(VIEW_W // 2 - 105, 190 + n * 62, 210, 52) for n in range(len(PAUSE_ITEMS))]
         if self.state == HUB and not self.info:
             return []
         return []
