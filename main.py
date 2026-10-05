@@ -610,6 +610,10 @@ class App:
         size = (max(1, int(VIEW_W * scale)), max(1, int(VIEW_H * scale)))
         if size == (VIEW_W, VIEW_H):
             scaled = self.screen
+        elif size[0] % VIEW_W == 0 and size[1] % VIEW_H == 0:
+            # Fullscreen desktop is commonly an exact 2x/3x scale. Nearest scaling
+            # is substantially cheaper than smoothscale and is ideal for pixel art.
+            scaled = pygame.transform.scale(self.screen, size)
         else:
             scaled = pygame.transform.smoothscale(self.screen, size)
         self.window.blit(scaled, ((ww - size[0]) // 2, (wh - size[1]) // 2))
@@ -1494,7 +1498,7 @@ class App:
 
     def run(self):
         while self.running:
-            dt = self.clock.tick_busy_loop(120) / 1000.0
+            dt = self.clock.tick(120) / 1000.0
             self.t += dt
             self.poll()
             if self.state == PLAY:
