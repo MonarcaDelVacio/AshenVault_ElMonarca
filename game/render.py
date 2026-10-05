@@ -32,6 +32,8 @@ class Renderer:
             self.skull_font = self.menu_font
         self._bg_cache = None
         self._bg_key = None
+        self._merchant_intro_room = None
+        self._merchant_intro_start = 0.0
         self._decor_light_cache = {}
         self.chest_images = {}
         self.chest_type_images = {}
@@ -1395,11 +1397,24 @@ class Renderer:
                 actors.append((float(light["y"]), "bonfire", light))
         for deco in getattr(arena,"decorations",[]):
             actors.append((float(deco.get("y",0))*TILE+TILE,"deco",deco))
+        for pickup in getattr(sim, "pickups", []):
+            if pickup.get("kind") == "coin":
+                actors.append((float(pickup.get("y", 0)), "coin", pickup))
         if arena.room_type=="shop":
-            merchant=self.npc_frames.get("merchant_near" if math.hypot(p.x-arena.width/2,p.y-arena.height/2)<155 else "merchant_idle")
-            if merchant:
-                actors.append((arena.height/2-48, "merchant", merchant))
-                # "merchant",merchant
+            room_key=tuple(getattr(sim.room, "id", getattr(arena, "room_id", (0,0))))
+            if self._merchant_intro_room != room_key:
+                self._merchant_intro_room = room_key
+                self._merchant_intro_start = t
+            merchant_idle=self.npc_frames.get("merchant_idle", [])
+            merchant_near=self.npc_frames.get("merchant_near", [])
+            near = math.hypot(p.x-arena.width/2,p.y-arena.height/2)<155
+            actors.append((arena.height/2-48, "merchant", {
+                "idle": merchant_idle,
+                "near": merchant_near,
+                "near_active": near,
+                "intro_start": self._merchant_intro_start,
+            }))
+            # La animación de entrada (capa -> se la quita) solo ocurre una vez por sala.
             pet_names=("pet_tiger","pet_demon1","pet_demon2","pet_demon3","pet_dragon","pet_ghost")
             pet=self.npc_frames.get(pet_names[(getattr(arena,"room_id",(0,0))[0]+getattr(arena,"room_id",(0,0))[1])%len(pet_names)])
             if pet:
@@ -1410,7 +1425,33 @@ class Renderer:
             if kind=="player": self._draw_player_actor(screen,obj,ox,oy,t)
             elif kind=="enemy": self._draw_enemy_actor(screen,obj,arena,sim,ox,oy,decor_lights,t)
             elif kind=="merchant":
-                frame=obj[int(t*7.0)%len(obj)]; frame=self._fit_image(frame,70); screen.blit(frame,frame.get_rect(midbottom=(int(arena.width/2+ox),int(arena.height/2-48+oy))))
+                intro=obj["idle"]; elapsed=max(0.0,t-float(obj.get("intro_start",t)))
+                if intro and elapsed < 0.72:
+                    # Los cuatro primeros frames contienen la capa; los siguientes
+                    # muestran cómo el comerciante queda listo para atender.
+                    idx=min(len(intro)-1,int(elapsed*7.0))
+                    frame=intro[idx]
+                else:
+                    frames=obj["near"] if obj.get("near_active") and obj.get("near") else obj["idle"]
+                    if frames:
+                        start=4 if len(frames)>4 else 0
+                        frame=frames[start + (int(t*7.0) % max(1,len(frames)-start))]
+                    else:
+                        frame=None
+                if frame is not None:
+                    frame=self._fit_image(frame,70)
+                    screen.blit(frame,frame.get_rect(midbottom=(int(arena.width/2+ox),int(arena.height/2-48+oy))))
+            elif kind=="coin":
+                frames=self.coin_frames
+                if frames:
+                    phase=float(obj.get("phase",0.0))
+                    frame=frames[int((t*8.0+phase)%len(frames))]
+                    screen.blit(frame,frame.get_rect(center=(int(obj["x"]+ox),int(obj["y"]+oy))))
+                else:
+                    pulse=1.0+0.08*math.sin(t*8.0+float(obj.get("phase",0.0)))
+                    rr=max(5,int(7*pulse))
+                    pygame.draw.circle(screen,(238,190,55),(int(obj["x"]+ox),int(obj["y"]+oy)),rr)
+                    pygame.draw.circle(screen,(255,232,120),(int(obj["x"]+ox),int(obj["y"]+oy)),rr,1)
             elif kind=="pet":
                 frame=obj[int(t*8.0)%len(obj)]; frame=self._fit_image(frame,34); screen.blit(frame,frame.get_rect(midbottom=(int(arena.width/2+55+ox),int(arena.height/2+10+oy))))
             elif kind=="prop": self._draw_world_prop(screen,obj,ox,oy)
@@ -1620,7 +1661,7 @@ class Renderer:
                                       "assets/weapons/snipers/sniper5" in sprite_path)
                 if scaled.get_width() > scaled.get_height() * 1.35 or directional_sprite:
                     angle = math.degrees(math.atan2(pr.vy, pr.vx)) if not pr.stuck else math.degrees(pr.stuck_angle)
-                    correction = 45.0 if "assets/weapons/melee/lanza" in sprite_path else 0.0
+                    correction = 35.0 if "assets/weapons/melee/lanza" in sprite_path else 0.0
                     scaled = pygame.transform.rotate(scaled, correction - angle)
                 if pr.stuck and pr.stuck_timer < 1.0:
                     scaled = scaled.copy()
@@ -1700,9 +1741,10 @@ class Renderer:
             # margen suficiente para no competir con el HUD. La celda crece de
             # forma proporcional al número de salas y evita amontonamientos.
             cell=min(18,max(10,int(min(190/cols,92/rows))))
-            width,height=max(180, cols*cell+20),rows*cell+36
+            width,height=max(200, cols*cell+36),rows*cell+36
             x,y=VIEW_W-width-10,42
-            content_x, content_y = 12, 10
+            content_x = (width - cols*cell)//2
+            content_y = 10
             origin_y=content_y
             panel=pygame.Surface((width,height),pygame.SRCALPHA);
             if not self.ui_atlas.draw_panel(panel, pygame.Rect(0,0,width,height), border=6):
@@ -1820,7 +1862,7 @@ class Renderer:
 
         # Panel inferior: arma y munición a la izquierda; habilidades a la derecha.
         w = p.weapon
-        weapon_rect = pygame.Rect(10, VIEW_H - 74, 218, 64)
+        weapon_rect = pygame.Rect(22, VIEW_H - 74, 218, 64)
         panel(weapon_rect, fill=(15, 17, 25, 218), border=(64, 70, 86))
         hud_weapon = self._fit_image(self.weapon_scaled_images.get(getattr(w.d, "id", "")), 28)
         if hud_weapon is not None:
@@ -1828,7 +1870,11 @@ class Renderer:
             self.text(screen, w.d.name, (55, VIEW_H - 61), (240, 241, 246), self.small)
         else:
             self.text(screen, w.d.name, (21, VIEW_H - 61), (240, 241, 246), self.small)
-        if w.reloading:
+        is_melee = getattr(w.d, "class", "") == "melee"
+        if is_melee:
+            ammo_text = "USOS  %d/%d" % (w.ammo, w.d.magazine)
+            ammo_color = (255, 120, 120) if w.ammo <= 3 else (210, 218, 230)
+        elif w.reloading:
             ammo_text, ammo_color = "RECARGANDO", (240, 200, 90)
         else:
             ammo_text = "MUNICIÓN  %d/%d" % (w.ammo, w.d.magazine)
@@ -1841,8 +1887,8 @@ class Renderer:
 
         # Solo cuando el cargador está completamente vacío mostramos el icono de
         # recarga, pegado a la munición y dentro del mismo panel.
-        if not w.reloading and w.ammo <= 0:
-            reload_center = (124, VIEW_H - 31)
+        if not is_melee and not w.reloading and w.ammo <= 0:
+            reload_center = (136, VIEW_H - 31)
             if not self.ui_atlas.draw_icon(screen, reload_center, size=22, kind="refresh"):
                 pygame.draw.circle(screen, (240, 200, 90), reload_center, 9, 2)
                 self.text(screen, "R", reload_center, (240, 200, 90), self.small, center=True)
