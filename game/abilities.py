@@ -43,12 +43,14 @@ def use_ability(sim):
                 e.frozen = max(getattr(e, "frozen", 0.0), duration)
         sim.emit("ability_freeze", p.x, p.y)
     elif kind == "drone":
-        count = max(1, int(a.get("max_drones", 2)))
-        sim.drones = []
-        p.drones = sim.drones
-        for idx in range(count):
-            angle = (math.tau * idx / count) + sim.rng.random() * 0.45
+        max_drones = max(1, int(a.get("max_drones", 2)))
+        # Los drones sobreviven al cambio de sala. La habilidad solo repone
+        # unidades destruidas, sin borrar las que siguen activas.
+        missing = max(0, max_drones - len(sim.drones))
+        for idx in range(missing):
+            angle = (math.tau * (len(sim.drones) + idx) / max_drones) + sim.rng.random() * 0.45
             sim.spawn_drone(angle)
+        p.drones = sim.drones
         sim.emit("ability_drone", p.x, p.y, len(p.drones))
     else:
         return False
