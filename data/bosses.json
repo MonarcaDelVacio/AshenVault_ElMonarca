@@ -41,7 +41,7 @@
         "max_summons": 6
       },
       {
-        "cooldown": 1.0,
+        "cooldown": 1,
         "speed": 82,
         "pellets": 7,
         "fan_angle": 100,
@@ -89,7 +89,7 @@
     "summon_count": 2,
     "max_summons": 6,
     "sprite_set": "gargola",
-    "sprite_scale": 5.0,
+    "sprite_scale": 5,
     "visual_has_weapon": true,
     "boss_uses_supplied_model": true,
     "ranged_melee_profile": true,
@@ -187,7 +187,7 @@
     "summon_count": 2,
     "max_summons": 6,
     "sprite_set": "monodehielo",
-    "sprite_scale": 5.0,
+    "sprite_scale": 5,
     "visual_has_weapon": true,
     "boss_uses_supplied_model": true,
     "ranged_melee_profile": true,
@@ -282,10 +282,6 @@
     ],
     "summon_count": 2,
     "max_summons": 6,
-    "sprite_set": "ogro",
-    "sprite_scale": 5.0,
-    "visual_has_weapon": true,
-    "boss_uses_supplied_model": true,
     "ranged_melee_profile": true,
     "ranged_melee_threshold": 155
   },
@@ -431,7 +427,7 @@
         "max_summons": 6
       },
       {
-        "cooldown": 1.0,
+        "cooldown": 1,
         "speed": 68,
         "pellets": 9,
         "fan_angle": 130,
@@ -482,7 +478,7 @@
     "max_summons": 6,
     "stomp_interval": 4.8,
     "sprite_set": "minotaurogigante",
-    "sprite_scale": 5.0,
+    "sprite_scale": 5,
     "visual_has_weapon": true,
     "boss_uses_supplied_model": true,
     "ranged_melee_profile": true,
@@ -499,7 +495,7 @@
     "attack_range": 1100,
     "windup": 0.55,
     "recover": 0.2,
-    "cooldown": 1.0,
+    "cooldown": 1,
     "damage": 5,
     "projectile_speed": 290,
     "projectile_radius": 7,
@@ -513,7 +509,7 @@
     ],
     "phases": [
       {
-        "cooldown": 1.0,
+        "cooldown": 1,
         "speed": 78,
         "pellets": 8,
         "fan_angle": 100,
@@ -581,7 +577,7 @@
     "summon_count": 2,
     "max_summons": 6,
     "sprite_set": "nomuerto2",
-    "sprite_scale": 5.0,
+    "sprite_scale": 5,
     "visual_has_weapon": true,
     "boss_uses_supplied_model": true,
     "ranged_melee_profile": true,
