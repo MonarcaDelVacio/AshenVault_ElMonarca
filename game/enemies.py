@@ -216,8 +216,7 @@ class Enemy:
 
     def _defensive_reaction(self, sim, dt):
         threats=[]
-        for pr in sim.pool.items:
-            if not pr.active or pr.team != 0: continue
+        for pr in getattr(sim,"_active_player_projectiles",()):
             vx,vy=pr.vx,pr.vy; speed2=vx*vx+vy*vy
             if speed2<=1: continue
             t=((self.x-pr.x)*vx+(self.y-pr.y)*vy)/speed2
