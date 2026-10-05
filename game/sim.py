@@ -902,17 +902,6 @@ class Sim:
                     if prop["hp"]<=0: self._break_prop(prop,d.color)
         if hit: self.emit("melee_hit",p.x,p.y,hit)
 
-    def _update_drones(self,dt):
-        p=self.player
-        if not getattr(p,"drones",0) or p.ability_shot_timer>0: return
-        targets=[e for e in self.enemies if e.alive]
-        if not targets: return
-        target=min(targets,key=lambda e: math.hypot(e.x-p.x,e.y-p.y))
-        ang=math.atan2(target.y-p.y,target.x-p.x)
-        for i in range(p.drones):
-            self.spawn_projectile(0,p.x+math.cos(ang)*18,p.y+math.sin(ang)*18,ang,360,4*p.damage_mult,3,1.2,(100,220,255),"energy",0,0,False)
-        p.ability_shot_timer=0.7
-
     def _update_projectiles(self,dt):
         arena,p=self.arena,self.player
         for pr in self.pool.items:
@@ -1220,3 +1209,4 @@ class Sim:
             else:
                 kept.append(pickup)
         self.pickups=kept
+
