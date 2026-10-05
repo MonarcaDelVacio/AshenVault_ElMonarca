@@ -8,6 +8,7 @@ DEFAULT = {
     "unlocked_characters": ["soldier","medic","vanguard","pyromancer","striker","engineer"],
     "unlocked_weapons": ["plasma_pistol"],
     "meta_currency": 0,
+    "weapon_scores": {},
     "upgrades": {"vitality":0,"shield":0,"damage":0,"speed":0,"energy":0,"shield_regen":0},
     "character_progress": {
         "soldier":{"level":1,"xp":0,"upgrades":{}}, "medic":{"level":1,"xp":0,"upgrades":{}},
@@ -85,8 +86,9 @@ def _merge(base,over):
     return out
 
 def xp_to_next(level):
+    """Curva de XP deliberadamente creciente: cada nivel exige bastante más trabajo."""
     level=max(1,int(level))
-    return 80 + (level-1)*35 + int((level-1)**1.25*10)
+    return 120 + int((level-1)*55 + (level-1)**1.55*18)
 
 class SaveData:
     def __init__(self,path=None):
@@ -125,12 +127,29 @@ class SaveData:
         if kind not in tree:return 999999
         level=int(self.data["character_progress"].setdefault(cid,{"level":1,"xp":0,"upgrades":{}}).setdefault("upgrades",{}).get(kind,0))
         return tree[kind]["base_cost"]*(level+1)
+
+    def character_upgrade_requirement(self,cid,kind):
+        tree=CHARACTER_UPGRADES.get(cid,{})
+        if kind not in tree:return 999
+        current=int(self.data["character_progress"].setdefault(cid,{"level":1,"xp":0,"upgrades":{}}).setdefault("upgrades",{}).get(kind,0))
+        return 1 if current <= 0 else 1 + current * 2
+
+    def can_buy_character_upgrade(self,cid,kind):
+        tree=CHARACTER_UPGRADES.get(cid,{})
+        if kind not in tree:return False
+        prog=self.data["character_progress"].setdefault(cid,{"level":1,"xp":0,"upgrades":{}})
+        up=prog.setdefault("upgrades",{}); level=int(up.get(kind,0)); spec=tree[kind]
+        required=self.character_upgrade_requirement(cid,kind)
+        return level < spec["max"] and int(prog.get("level",1)) >= required and self.data["meta_currency"] >= self.character_upgrade_cost(cid,kind)
+
     def buy_character_upgrade(self,cid,kind):
         tree=CHARACTER_UPGRADES.get(cid,{})
         if kind not in tree:return False
         prog=self.data["character_progress"].setdefault(cid,{"level":1,"xp":0,"upgrades":{}})
         up=prog.setdefault("upgrades",{}); level=int(up.get(kind,0)); spec=tree[kind]
         if level>=spec["max"]:return False
+        required=self.character_upgrade_requirement(cid,kind)
+        if int(prog.get("level",1)) < required:return False
         cost=self.character_upgrade_cost(cid,kind)
         if self.data["meta_currency"]<cost:return False
         self.data["meta_currency"]-=cost; up[kind]=level+1; self.save(); return True
@@ -150,6 +169,9 @@ class SaveData:
         reward=stats["waves"]*2+stats["kills"]//5+(25 if victory else 0)
         self.data["meta_currency"]+=reward; s["meta_earned"]+=reward
         xp=int(stats.get("xp", stats["kills"]*3 + stats.get("rooms",1)*6 + stats.get("bosses_defeated",0)*40 + stats.get("coins",0)))
+        for wid in stats.get("weapon_usage", {}):
+            self.data.setdefault("weapon_scores", {}).setdefault(wid, 0)
+            self.data["weapon_scores"][wid] += 1
         levels=0
         if char_id: levels=self.add_character_xp(char_id,xp)
         self.last_run_xp=xp; self.last_levels_gained=levels
