@@ -649,7 +649,9 @@ class Renderer:
             image = pygame.image.load(str(path)).convert_alpha()
             mask = pygame.mask.from_surface(image, threshold=8)
             components = mask.connected_components(minimum=max(1, int(minimum)))
-            # pygame.mask.Mask expone get_bounding_rects(), no get_bounding_rect().\n            # Los componentes devueltos por connected_components() son máscaras.\n            rects = []\n            for component in components:\n                rects.extend(component.get_bounding_rects())
+            # connected_components() devuelve máscaras; Mask no tiene get_bounding_rect().\n            # get_bounding_rects() devuelve los Rect de cada componente opaco.\n            rects = []
+            for component in components:
+                rects.extend(component.get_bounding_rects())
             rects = [r for r in rects if r.width >= 2 and r.height >= 2]
             if not rects:
                 return []
