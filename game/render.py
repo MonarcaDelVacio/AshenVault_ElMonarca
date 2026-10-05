@@ -2390,14 +2390,15 @@ class Renderer:
         coin_text = self.small.render(str(int(p.coins)), True, (255, 225, 135))
         # El fotograma animado puede cambiar de ancho entre imágenes. Reservamos
         # siempre una caja fija para la moneda para que el contador no "salte".
-        icon_box = pygame.Rect(coin_panel.x + 18, coin_panel.y + 12, 20, 20)
+        icon_box = pygame.Rect(coin_panel.centerx - 30, coin_panel.y + 12, 20, 20)
         if coin_frame:
             screen.blit(coin_frame, coin_frame.get_rect(center=icon_box.center))
         else:
             pygame.draw.circle(screen, (238, 190, 55), icon_box.center, 5)
             pygame.draw.circle(screen, (255, 232, 120), icon_box.center, 5, 1)
-        # El número queda fijo respecto al panel y centrado verticalmente con la moneda.
-        text_rect = coin_text.get_rect(midleft=(icon_box.right + 5, coin_panel.centery))
+        # El número queda fijo respecto al panel: no depende del ancho de cada
+        # fotograma animado y permanece centrado con el icono de la moneda.
+        text_rect = coin_text.get_rect(center=(coin_panel.centerx + 20, coin_panel.centery))
         screen.blit(coin_text, text_rect)
 
         if getattr(sim, "statue_buffs", None):
