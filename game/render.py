@@ -1257,9 +1257,9 @@ class Renderer:
             elif getattr(p,"energy_flash",0.0)>0:
                 flash_kind=(255,225,55); flash_alpha=int(175*min(1.0,p.energy_flash/.26))
             if flash_kind:
-                # BLEND_RGBA_ADD sobre una superficie completa puede levantar el
-                # alpha de píxeles transparentes. La máscara de alpha garantiza que
-                # el parpadeo quede estrictamente dentro del contorno del PNG.
+                # Nunca modificar el sprite cacheado: hacerlo dejaba el tinte rojo,
+                # verde o amarillo grabado para los frames siguientes.
+                sprite=sprite.copy()
                 mask=pygame.mask.from_surface(sprite,threshold=8)
                 clipped=mask.to_surface(setcolor=(*flash_kind,flash_alpha),unsetcolor=(0,0,0,0))
                 sprite.blit(clipped,(0,0))
@@ -2037,6 +2037,15 @@ class Renderer:
                 pulse = 0.5 + 0.5 * math.sin(t * 8.0)
                 ice.set_alpha(int(120 + 25 * pulse))
                 screen.blit(ice, ice.get_rect(center=(int(ex + ox), int(ey + oy))))
+
+        # Aturdimiento de Rook: no usa el overlay de hielo de congelación.
+        # El signo de exclamación queda sobre la cabeza mientras dura el stun.
+        for e in sim.enemies:
+            if not getattr(e, "alive", False) or getattr(e, "stunned", 0.0) <= 0:
+                continue
+            sx, sy = int(e.x + ox), int(e.y + oy - max(22, e.radius * 2.0))
+            if not self.ui_atlas.draw_icon(screen, (sx, sy), size=22, kind="exclamation"):
+                self.text(screen, "!", (sx, sy), (255, 225, 95), self.menu_font, center=True)
 
         for q in fx.particles:
             a = q[4] / q[5]
