@@ -679,7 +679,7 @@ class Sim:
             if getattr(e,"is_boss",False) or getattr(e,"is_miniboss",False): self.stats["bosses_defeated"]+=1
             death_set = getattr(e.d, "sprite_set", None)
             death_size = max(48.0, float(getattr(e, "radius", 12)) * float(getattr(e.d, "sprite_scale", 2.5)) * 1.1)
-            self.emit("enemy_die",e.x,e.y,e.d.color,death_set,death_size,getattr(e,"facing",0.0))
+            self.emit("enemy_die",e.x,e.y,e.d.color,death_set,death_size,getattr(e,"facing",0.0),getattr(e.d,"variant_id",None))
             # Los esbirros invocados sólo presionan al jugador: no dan monedas ni loot.
             # Los jefes siempre recompensan; los enemigos normales tienen una probabilidad
             # de botín que crece con su valor de monedas/dificultad, pero nunca es segura.
