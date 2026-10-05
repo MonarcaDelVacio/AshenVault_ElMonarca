@@ -973,7 +973,7 @@ class App:
         kills=int(self.sim.stats.get("kills",0)) if self.sim else 0
         if self.score_phase=="kills":
             if kills <= 0:
-                self.score_phase="hold"; self.score_timer=0.0
+                self.score_phase="hold"; self.score_timer=0.0; self._begin_fade(0.18)
             else:
                 self.score_kills_display=min(kills, self.score_kills_display + max(1, int(kills*dt*2.4)))
                 if self.score_kills_display>=kills:
@@ -981,15 +981,15 @@ class App:
         elif self.score_phase=="hold":
             self.score_timer+=dt
             if self.score_timer>=2.2:
-                self.score_phase="fade"; self.score_timer=0.0
+                self.score_phase="fade"; self.score_timer=0.0; self._begin_fade(0.18)
         elif self.score_phase=="fade":
             self.score_timer+=dt
             if self.score_timer>=0.7:
-                self.score_phase="xp"; self.score_timer=0.0; self.score_xp_display=0.0
+                self.score_phase="xp"; self.score_timer=0.0; self.score_xp_display=0.0; self._begin_fade(0.18)
         elif self.score_phase=="xp":
             self.score_xp_display=min(float(self.score_xp_total), self.score_xp_display + max(1.0, self.score_xp_total*dt/3.2))
             if self.score_xp_display>=self.score_xp_total:
-                self.score_xp_display=float(self.score_xp_total); self.score_phase="done"; self.score_continue_ready=True
+                self.score_xp_display=float(self.score_xp_total); self.score_phase="done"; self.score_continue_ready=True; self._begin_fade(0.18)
         elif self.score_phase=="done":
             self.score_continue_ready=True
 
