@@ -28,7 +28,7 @@ class Sim:
         self.props=[]; self.hazards=[]; self.wave_attacks=[]; self.lasers=[]; self.drones=[]; self.allies=[]
         self.decoration_collider_provider=None
         self.time=0.; self.wave=0; self.wave_delay=0.5; self.over=False; self.victory=False; self.portal=False; self.portal_position=(self.arena.width/2,self.arena.height/2)
-        self.stats={"kills":0,"shots":0,"damage_taken":0,"waves":0,"coins":0,"rooms":1,"items":0,"purchases":0,"abilities":0,"bosses_defeated":0,"xp":0}
+        self.stats={"kills":0,"shots":0,"damage_taken":0,"waves":0,"coins":0,"rooms":1,"items":0,"purchases":0,"abilities":0,"bosses_defeated":0,"xp":0,"weapon_usage":{}}
         self._flow_tile=self.arena.tile_of(self.player.x,self.player.y); self._flow_refresh=0.; self.flow=self.arena.flow_field(*self._flow_tile)
         self.shop_offers=[]; self.revealed_secrets=set()
         self.statue_menu=None
