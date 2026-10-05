@@ -781,7 +781,10 @@
     "min_wave": 4,
     "weight": 2,
     "melee_explosion": true,
-    "melee_explosion_radius": 68
+    "melee_explosion_radius": 68,
+    "sprite_set": "ogro",
+    "sprite_scale": 4.8,
+    "boss_uses_supplied_model": true
   },
   "giant_minotaur": {
     "name": "Minotauro Gigante",
