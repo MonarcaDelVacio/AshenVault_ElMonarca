@@ -31,6 +31,7 @@ class Sim:
         self.stats={"kills":0,"shots":0,"damage_taken":0,"waves":0,"coins":0,"rooms":1,"items":0,"purchases":0,"abilities":0,"bosses_defeated":0,"xp":0,"weapon_usage":{}}
         self._flow_tile=self.arena.tile_of(self.player.x,self.player.y); self._flow_refresh=0.; self.flow=self.arena.flow_field(*self._flow_tile)
         self.shop_offers=[]; self.revealed_secrets=set()
+        self.merchant_variant_by_room={}
         self.statue_menu=None
         self.statue_buffs=[]
         self.statue_used=set()
@@ -591,6 +592,9 @@ class Sim:
             self.chest=None
             if not room.special_resolved and not initial: self._resolve_special_room(room)
         if room.room_type == "shop":
+            room_key = tuple(getattr(room, "id", getattr(self.arena, "room_id", (0, 0))))
+            if room_key not in self.merchant_variant_by_room:
+                self.merchant_variant_by_room[room_key] = self.rng.randrange(3)
             self._setup_shop()
         else:
             # Las ofertas pertenecen exclusivamente a la tienda actual.
