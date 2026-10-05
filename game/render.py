@@ -2160,47 +2160,43 @@ class Renderer:
         for index, icon in enumerate(active_statuses[:5]):
             self.ui_atlas.draw_icon(screen, (25, 12 + index * 24), size=21, kind=icon)
 
-        # Panel superior derecho: nombre de la dungeon + monedas.
-        # Usa el mismo atlas visual del HUD y el spritesheet de monedas animadas,
-        # evitando el texto plano que había antes.
+        # Panel superior derecho: nombre real de la dungeon + monedas.
+        # Usa recursos PNG del juego: marco/iconos del atlas y el
+        # spritesheet animado de monedas.
         dungeon_name = str(getattr(getattr(sim, "dungeon", None), "name", "Dungeon"))
-        coin_panel = pygame.Rect(VIEW_W - 274, 8, 262, 62)
-        if not self.ui_atlas.draw_panel(screen, coin_panel, border=8):
-            layer = pygame.Surface(coin_panel.size, pygame.SRCALPHA)
+        hud_panel = pygame.Rect(VIEW_W - 304, 8, 292, 64)
+        if not self.ui_atlas.draw_panel(screen, hud_panel, border=8):
+            layer = pygame.Surface(hud_panel.size, pygame.SRCALPHA)
             pygame.draw.rect(layer, (10, 14, 24, 232), layer.get_rect(), border_radius=8)
             pygame.draw.rect(layer, (91, 111, 136, 225), layer.get_rect(), 1, border_radius=8)
-            screen.blit(layer, coin_panel.topleft)
+            screen.blit(layer, hud_panel.topleft)
 
-        # Icono de mazmorra y nombre.
-        dungeon_icon_pos = (coin_panel.x + 20, coin_panel.y + 20)
+        # Dungeon: icono PNG + nombre de la dungeon actual.
+        dungeon_icon_pos = (hud_panel.x + 22, hud_panel.y + 20)
         if not self.ui_atlas.draw_icon(screen, dungeon_icon_pos, size=25, kind="pin"):
             pygame.draw.circle(screen, (105, 230, 218), dungeon_icon_pos, 8, 2)
-        dungeon_font = self.small
-        max_name_width = 150
-        dungeon_text = dungeon_name.upper()
-        dungeon_img = dungeon_font.render(dungeon_text, True, (226, 233, 241))
+        dungeon_img = self.small.render(dungeon_name.upper(), True, (226, 233, 241))
+        max_name_width = 174
         if dungeon_img.get_width() > max_name_width:
-            dungeon_img = pygame.transform.smoothscale(
-                dungeon_img, (max_name_width, dungeon_img.get_height())
-            )
-        screen.blit(dungeon_img, dungeon_img.get_rect(midleft=(coin_panel.x + 36, coin_panel.y + 20)))
+            dungeon_img = pygame.transform.smoothscale(dungeon_img, (max_name_width, dungeon_img.get_height()))
+        screen.blit(dungeon_img, dungeon_img.get_rect(midleft=(hud_panel.x + 39, hud_panel.y + 20)))
 
-        # Moneda animada pequeña junto al contador.
+        # Monedas: spritesheet pequeno y animado + contador.
         coin_frames = self.coin_frames
-        coin_center = (coin_panel.right - 65, coin_panel.y + 20)
+        coin_center = (hud_panel.right - 62, hud_panel.y + 20)
         if coin_frames:
             coin_frame = coin_frames[int(t * 8.0) % len(coin_frames)]
             screen.blit(coin_frame, coin_frame.get_rect(center=coin_center))
         else:
             pygame.draw.circle(screen, (238, 190, 55), coin_center, 8)
             pygame.draw.circle(screen, (255, 232, 120), coin_center, 8, 1)
-        self.text(screen, str(int(p.coins)), (coin_panel.right - 20, coin_panel.y + 20),
+        self.text(screen, str(int(p.coins)), (hud_panel.right - 17, hud_panel.y + 20),
                   (255, 225, 135), self.font, right=True)
 
         if getattr(sim, "statue_buffs", None):
             buff_labels={"defense":"DEF","melee":"MEL","ranged":"DIST","ability":"HAB","critical":"CRIT"}
             labels="  ".join(buff_labels.get(b.get("kind"),"BUFF") for b in sim.statue_buffs)
-            self.text(screen, "ESTATUAS  " + labels, (coin_panel.right, coin_panel.bottom + 7), (125, 225, 205), self.small, right=True)
+            self.text(screen, "ESTATUAS  " + labels, (hud_panel.right, hud_panel.bottom + 7), (125, 225, 205), self.small, right=True)
         self.draw_minimap(screen, sim, large=False)
 
         # Barra de jefe: centrada y reducida para no invadir los indicadores laterales.
