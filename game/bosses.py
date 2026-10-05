@@ -20,6 +20,7 @@ class Boss(Enemy):
         self.shield_timer = 0.0
         self.stomp_timer = 2.5
         self.special_counter = 0
+        self.laser_timer = 4.0
         self._phase_base = {
             k: getattr(bdef, k) for k in (
                 "cooldown", "speed", "pellets", "fan_angle",
@@ -149,6 +150,24 @@ class Boss(Enemy):
 
     def update(self, sim, dt):
         self.shield_timer=max(0.0,self.shield_timer-dt)
+        self.laser_timer=max(0.0,self.laser_timer-dt)
+        # Todos los jefes pueden canalizar el mismo rayo base; el color, daño y
+        # grosor escalan con su propio modelo y fase. No reemplaza su patrón normal.
+        if self.laser_timer <= 0 and self.spawn_delay <= 0 and self.state not in ("windup","recover") and self.difficulty_scale >= 1:
+            if self.boss_style == "tank" and self.phase == 1:
+                self.laser_timer = 6.5
+            else:
+                self.laser_timer = max(4.2, float(getattr(self.d,"laser_interval",5.8)) - self.phase*0.35)
+            sim.start_enemy_laser(
+                self, self.facing,
+                duration=1.8 + 0.25*self.phase,
+                color=tuple(getattr(self.d,"laser_color",getattr(self.d,"color",(255,100,100)))),
+                damage=float(getattr(self.d,"laser_damage",10.0)) + 2.5*self.phase,
+                width=1.5 + 0.5*self.phase,
+                max_width=8.0 + 2.5*self.phase,
+                range_=float(getattr(self.d,"laser_range",820.0)),
+                explosion_radius=20.0 + 4.0*self.phase,
+            )
         if self.boss_style == "mage":
             if self.shield_timer <= 0:
                 self.shield_active = True
