@@ -194,7 +194,7 @@ class Audio:
         """Aplica la musica correspondiente al estado visual del juego."""
         if state == "play":
             self.play_music(music_context(sim))
-        elif state in {"menu", "pause", "settings", "hub", "char_select", "dead", "victory"}:
+        elif state in {"menu", "pause", "map", "settings", "hub", "char_select", "dead", "victory"}:
             self.play_music("menu")
         else:
             self.stop_music()
