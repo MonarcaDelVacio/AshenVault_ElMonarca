@@ -416,6 +416,8 @@ class Renderer:
         # from transparent gaps, so sheets may contain different frame sizes and
         # even multiple rows (the assets do not need to be normalized manually).
         self.enemy_sprites = {}
+        self.enemy_variant_sprites = {}
+        self.enemy_variant_tints = {}
         self.enemy_projectile_frames = {}
         enemy_dir = self.asset_root / "enemies"
         enemy_specs = {
@@ -522,6 +524,23 @@ class Renderer:
             return frames or [image]
         except (pygame.error, OSError, ValueError):
             return []
+
+    def _variant_enemy_anims(self, key, variant_id, hue_shift, saturation, lightness):
+        if not variant_id:
+            return self.enemy_sprites.get(key, {})
+        cache_key=(key, variant_id)
+        cached=self.enemy_variant_sprites.get(cache_key)
+        if cached is not None:
+            return cached
+        source=self.enemy_sprites.get(key, {})
+        transformed={}
+        for anim, frames in source.items():
+            transformed[anim]=[
+                pygame.transform.hsl(frame, hue_shift, saturation, lightness)
+                for frame in frames
+            ]
+        self.enemy_variant_sprites[cache_key]=transformed
+        return transformed
 
     def _draw_enemy_sprite(self, screen, e, x, y, light_level, t):
         key=getattr(e.d,"sprite_set",None)
