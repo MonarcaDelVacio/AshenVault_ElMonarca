@@ -1851,7 +1851,7 @@ class Renderer:
         for laser in getattr(sim, "lasers", []):
             owner=laser.get("owner"); angle=float(laser.get("angle",0.0))
             if owner is None: continue
-            length,point,_=sim._laser_hit_target(laser,0.0)
+            length=float(laser.get("_render_length",laser.get("travel",laser.get("range",760.0))))
             sx,sy=owner.x+ox,owner.y+oy
             ex,ey=owner.x+math.cos(angle)*length+ox,owner.y+math.sin(angle)*length+oy
             width=max(1,int(laser.get("width",2.0)))
