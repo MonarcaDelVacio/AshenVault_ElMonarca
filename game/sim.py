@@ -64,7 +64,7 @@ class Sim:
         drone={"x":self.player.x+math.cos(angle)*34.0,"y":self.player.y+math.sin(angle)*34.0,
                "angle":float(angle),"orbit":float(angle),"hp":float(a.get("drone_hp",18)),
                "max_hp":float(a.get("drone_hp",18)),"shot_cd":1.0,"burst_left":0,
-               "burst_cd":0.0,"phase":self.rng.random()*math.tau,"radius":10.0}
+               "burst_cd":0.0,"phase":self.rng.random()*math.tau,"radius":10.0,"flash":0.0}
         self.drones.append(drone)
         self.player.drones=self.drones
         return drone
@@ -81,7 +81,13 @@ class Sim:
             nearest_enemy=min((e for e in self.enemies if e.alive and e.spawn_delay<=0.2),
                                key=lambda e:math.hypot(e.x-d["x"],e.y-d["y"]),default=None)
             target_x,target_y=p.x,p.y
-            if nearest_enemy is not None and math.hypot(nearest_enemy.x-p.x,nearest_enemy.y-p.y)<420:
+            electric_hazards=[h for h in self.hazards if h.get("dtype")=="electric" and h.get("life",0)>0 and math.hypot(h["x"]-d["x"],h["y"]-d["y"])<115]
+            if electric_hazards:
+                h=min(electric_hazards,key=lambda q:math.hypot(q["x"]-d["x"],q["y"]-d["y"]))
+                hd=math.hypot(d["x"]-h["x"],d["y"]-h["y"]) or 1
+                target_x=d["x"]+(d["x"]-h["x"])/hd*180
+                target_y=d["y"]+(d["y"]-h["y"])/hd*180
+            elif nearest_enemy is not None and math.hypot(nearest_enemy.x-p.x,nearest_enemy.y-p.y)<420:
                 ex,ey=nearest_enemy.x-d["x"],nearest_enemy.y-d["y"]
                 edist=math.hypot(ex,ey) or 1
                 if edist<180:
@@ -99,6 +105,7 @@ class Sim:
                 d["x"] += dx/dist*step
                 d["y"] += dy/dist*step
             d["phase"] += dt*3.5
+            d["flash"]=max(0.0,float(d.get("flash",0.0))-dt)
             d["shot_cd"]=max(0.0,d["shot_cd"]-dt)
             d["burst_cd"]=max(0.0,d["burst_cd"]-dt)
             target=min((e for e in self.enemies if e.alive and e.spawn_delay<=0.2),
@@ -126,6 +133,7 @@ class Sim:
             return False
         damage=min(float(amount),max(1.0,drone["max_hp"]*0.42))
         drone["hp"]-=damage
+        drone["flash"]=0.25
         self.emit("drone_hit",drone["x"],drone["y"],damage)
         if drone["hp"]<=0:
             self.drones.remove(drone)
@@ -1300,6 +1308,10 @@ class Sim:
                 for e in self.enemies:
                     if e.alive and math.hypot(e.x-h["x"],e.y-h["y"])<=h["radius"]:
                         e.hurt(h["damage"],math.atan2(e.y-h["y"],e.x-h["x"]))
+                if h["dtype"]=="electric":
+                    for drone in list(self.drones):
+                        if math.hypot(drone["x"]-h["x"],drone["y"]-h["y"])<=h["radius"]:
+                            self.damage_drone(drone,h["damage"],h["x"],h["y"])
         self.hazards=[h for h in self.hazards if h["life"]>0]
         for wave in self.wave_attacks:
             wave["life"]-=dt
