@@ -544,8 +544,6 @@ class App:
             return
         if self.state == CHAR_SELECT:
             if k in (pygame.K_ESCAPE,): self.go(HUB if self.back_state==HUB else MENU); return
-            if k in (pygame.K_LEFT, pygame.K_a) and self.char_sel % 3 == 0: self.go(HUB if self.back_state==HUB else MENU); return
-            if k in (pygame.K_RIGHT, pygame.K_d) and self.char_sel % 3 == 2: self.go(HUB); return
             if k in (pygame.K_UP, pygame.K_w): self.char_sel=(self.char_sel-1)%len(self.char_ids); return
             if k in (pygame.K_DOWN, pygame.K_s): self.char_sel=(self.char_sel+1)%len(self.char_ids); return
             if k in (pygame.K_RETURN, pygame.K_SPACE): self.char_id=self.char_ids[self.char_sel]; self.confirm_character_selection(); return
