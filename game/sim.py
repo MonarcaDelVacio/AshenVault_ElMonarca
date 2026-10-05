@@ -35,9 +35,25 @@ class Sim:
         self.statue_buffs=[]
         self.statue_used=set()
         self._enter_room(self.room,initial=True)
+    def _obstacle_clear_to(self, x0, y0, x1, y1, radius=0.0):
+        """Checks walls, props and physical decorations along a segment."""
+        if not self.arena.line_of_sight(x0, y0, x1, y1):
+            return False
+        steps=max(1,int(math.hypot(x1-x0,y1-y0)//7))
+        for i in range(1,steps+1):
+            t=i/steps; x=x0+(x1-x0)*t; y=y0+(y1-y0)*t
+            if self._decoration_collision(x,y,radius):
+                return False
+            for prop in self.props:
+                if prop.get("broken"): continue
+                rr=float(prop.get("radius",0))+radius
+                if rr>0 and math.hypot(x-prop["x"],y-prop["y"])<=rr:
+                    return False
+        return True
+
     def _wave_clear_to(self, x0, y0, x1, y1):
         """LOS para ondas: paredes del mapa y props sólidos bloquean la propagación."""
-        if not self.arena.line_of_sight(x0,y0,x1,y1):
+        if not self._obstacle_clear_to(x0,y0,x1,y1):
             return False
         steps=max(1,int(math.hypot(x1-x0,y1-y0)//8))
         for i in range(1,steps+1):
@@ -1191,7 +1207,7 @@ class Sim:
         for e in self.enemies:e.update(self,dt)
         self._update_lasers(dt)
         self._update_drones(dt)
-        self._update_projectiles(dt); self._update_pickups(dt); self._update_hazards(dt)
+        self._update_projectiles(dt); self._update_pickups(dt); self._update_hazards(dt); self._update_dot_effects(dt)
         dead=[e for e in self.enemies if not e.alive]
         for e in dead:
             self.stats["kills"]+=1; self.stats["xp"] += 3 + (20 if getattr(e,"is_boss",False) else 8 if getattr(e,"is_miniboss",False) else 0);
@@ -1240,6 +1256,34 @@ class Sim:
         else:
             self.emit("projectile_block", enemy.x, enemy.y, (120, 190, 255))
         return True
+
+    def _apply_dot(self,target,kind,duration=4.0,base_damage=1.0):
+        if kind not in ("fire","poison"): return
+        state=getattr(target,"dot_effects",None)
+        if state is None:
+            state={}; target.dot_effects=state
+        old=state.get(kind,{})
+        state[kind]={"time":max(float(duration),float(old.get("time",0.0))),
+                     "tick":min(float(old.get("tick",0.0)),0.25),
+                     "damage":max(float(old.get("damage",0.0)),max(0.5,float(base_damage)*0.22))}
+        if hasattr(target,"set_status"):
+            target.set_status({"fire":"burn","poison":"poison"}[kind],duration)
+
+    def _update_dot_effects(self,dt):
+        for target in [self.player]+[e for e in self.enemies if e.alive]:
+            effects=getattr(target,"dot_effects",{})
+            for kind,effect in list(effects.items()):
+                effect["time"]-=dt; effect["tick"]-=dt
+                if effect["tick"]<=0 and effect["time"]>0:
+                    effect["tick"]=0.65
+                    damage=max(0.5,float(effect.get("damage",0.5)))
+                    if target is self.player:
+                        if self.player.take_damage(damage,None):
+                            self.on_player_hit(self.player.x,self.player.y,damage)
+                    else:
+                        target.hurt(damage,0.0)
+                        self.emit("enemy_status_tick",target.x,target.y,kind,damage)
+                if effect["time"]<=0: effects.pop(kind,None)
 
     @staticmethod
     def _freeze_duration(power):
@@ -1306,7 +1350,7 @@ class Sim:
                     if status_type == "ice" and self.rng.random() < status_chance:
                         self._apply_freeze(e, damage)
                     elif status_type in ("fire","poison","electric") and self.rng.random() < status_chance:
-                        self.emit("enemy_status",e.x,e.y,status_type,2.4)
+                        self._apply_dot(e,status_type,4.0,damage)
                     hit += 1
                     self.emit("enemy_hit",e.x,e.y,d.color,damage,False)
         for prop in self.props:
@@ -1438,28 +1482,27 @@ class Sim:
                             pr.active=False
                         break
     def _explode_projectile(self, pr):
-        """Detona un proyectil explosivo y aplica daño en un radio corto (aprox. 3x3 casillas)."""
-        radius = max(TILE, getattr(pr, "explosion_radius", 0) or TILE * 1.5)
+        """Applies explosive damage throughout the configured radius, blocked by obstacles."""
+        radius=max(TILE,getattr(pr,"explosion_radius",0) or TILE*1.5)
         for prop in self.props:
-            if not prop.get("broken") and math.hypot(prop["x"]-pr.x,prop["y"]-pr.y)<=radius+prop.get("radius",24): self._break_prop(prop,pr.color)
-        if pr.team == 1 and math.hypot(self.player.x-pr.x,self.player.y-pr.y) <= radius+self.player.radius:
-            if self.player.take_damage(pr.damage, math.atan2(self.player.y-pr.y,self.player.x-pr.x)):
-                self.on_player_hit(pr.x,pr.y,pr.damage)
-                if pr.dtype == "ice":
-                    self._apply_freeze(self.player, pr.damage)
+            if not prop.get("broken") and math.hypot(prop["x"]-pr.x,prop["y"]-pr.y)<=radius+prop.get("radius",24):
+                self._break_prop(prop,pr.color)
+        if pr.team==1 and math.hypot(self.player.x-pr.x,self.player.y-pr.y)<=radius+self.player.radius:
+            if self._obstacle_clear_to(pr.x,pr.y,self.player.x,self.player.y,self.player.radius):
+                if self.player.take_damage(pr.damage,math.atan2(self.player.y-pr.y,self.player.x-pr.x)):
+                    self.on_player_hit(pr.x,pr.y,pr.damage)
         for enemy in self.enemies:
-            if not enemy.alive or enemy.spawn_delay > .3:
-                continue
-            if math.hypot(enemy.x - pr.x, enemy.y - pr.y) <= radius + enemy.radius:
-                from_explosion = math.atan2(pr.y - enemy.y, pr.x - enemy.x)
-                if self._damage_shield(enemy, pr.damage, from_explosion, "projectile"):
-                    continue
-                enemy.hurt(pr.damage, math.atan2(enemy.y - pr.y, enemy.x - pr.x))
-                if pr.team == 0 and pr.status_chance > 0.0 and self.rng.random() < pr.status_chance and pr.dtype == "ice":
-                    self._apply_freeze(enemy, pr.damage)
-                self.emit("enemy_hit", enemy.x, enemy.y, pr.color, pr.damage, pr.crit)
-        self.emit("explosion", pr.x, pr.y, radius, pr.color)
-        pr.active = False
+            if not enemy.alive or enemy.spawn_delay>.3: continue
+            if math.hypot(enemy.x-pr.x,enemy.y-pr.y)<=radius+enemy.radius and self._obstacle_clear_to(pr.x,pr.y,enemy.x,enemy.y,enemy.radius):
+                from_explosion=math.atan2(pr.y-enemy.y,pr.x-enemy.x)
+                if self._damage_shield(enemy,pr.damage,from_explosion,"projectile"): continue
+                enemy.hurt(pr.damage,math.atan2(enemy.y-pr.y,enemy.x-pr.x))
+                if pr.team==0 and pr.status_chance>0 and self.rng.random()<pr.status_chance:
+                    if pr.dtype=="ice": self._apply_freeze(enemy,pr.damage)
+                    elif pr.dtype in ("fire","poison"): self._apply_dot(enemy,pr.dtype,4.0,pr.damage)
+                self.emit("enemy_hit",enemy.x,enemy.y,pr.color,pr.damage,pr.crit)
+        self.emit("explosion",pr.x,pr.y,radius,pr.color)
+        pr.active=False
 
     def _hit_enemies(self,pr):
         for e in self.enemies:
@@ -1480,7 +1523,7 @@ class Sim:
                     if pr.dtype == "ice":
                         self._apply_freeze(e, pr.damage)
                     elif pr.dtype in ("fire","poison","electric"):
-                        self.emit("enemy_status",e.x,e.y,pr.dtype,2.4)
+                        self._apply_dot(e,pr.dtype,4.0,pr.damage)
                 self.emit("enemy_hit",pr.x,pr.y,pr.color,pr.damage,pr.crit);pr.hit_ids.add(e.id)
                 if pr.stick_on_hit:
                     pr.stuck = True; pr.stuck_timer = 3.0; pr.stuck_angle = math.atan2(pr.vy, pr.vx)
