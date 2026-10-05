@@ -648,6 +648,18 @@ class Sim:
                         qx,qy=self._safe_drop_position(self.chest.x+ox,self.chest.y+oy,14.0)
                         if math.hypot(qx-self.player.x,qy-self.player.y) >= TILE*1.35:
                             self.chest.x,self.chest.y=qx,qy; break
+        if self.room.room_type=="boss":
+            usable=any((getattr(w.d,"class","")=="melee" and getattr(w,"durability",0)>0) or
+                       (getattr(w.d,"class","")!="melee" and (getattr(w,"ammo",0)>0 or getattr(w,"reserve_magazines",0)>0))
+                       for w in self.player.inventory)
+            if not usable:
+                choices=list(self.data.weapons)
+                if choices:
+                    wid=self.rng.choice(choices)
+                    wx,wy=self._safe_drop_position(self.player.x+54,self.player.y,10.0)
+                    it=type("WeaponEmergencyPickup",(),{"id":wid,"name":self.data.weapons[wid].name,"kind":"weapon","weapon_id":wid,"x":wx,"y":wy})()
+                    self.items.append(it); self.stats["items"]+=1
+                    self.emit("weapon_emergency",wx,wy,wid)
         if self.room.room_type=="boss" and self.room.arena.biome=="final":
             # El portal y el cofre final comparten la sala, pero nunca el mismo punto.
             cx,cy=self.arena.width/2,self.arena.height/2
