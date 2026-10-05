@@ -40,7 +40,8 @@ class Boss(Enemy):
             radius = 72.0 + 12.0 * self.phase
             damage = float(self.d.damage) * (1.0 + 0.12 * (self.phase - 1))
             sim.wave_attacks.append({"x": self.x, "y": self.y, "radius": 18.0, "speed": 250.0 + 35.0 * self.phase,
-                                     "life": 1.15, "damage": damage, "color": tuple(self.d.color), "hit": False})
+                                     "life": 1.15, "damage": damage, "color": tuple(self.d.color),
+                                     "max_radius": radius, "team": 1, "hit": False, "hit_ids": set()})
             sim.emit("boss_stomp", self.x, self.y)
             sim.emit("boss_shockwave", self.x, self.y, radius, damage)
             return
