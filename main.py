@@ -364,9 +364,12 @@ class App:
                     self.hub_dropdown_open=False
                 return
             cid=self.char_id; tree=CHARACTER_UPGRADES.get(cid,{})
-            for n,kind in enumerate(tree):
-                col,row=n%2,n//2
-                rect=pygame.Rect(70+col*420,118+row*145,390,125)
+            upgrade_items=list(tree.items()); count=len(upgrade_items); cols=3 if count>4 else 2
+            gap_x=14; gap_y=10; area_x,area_y,area_w,area_h=28,112,VIEW_W-56,300
+            card_w=(area_w-gap_x*(cols-1))//cols; rows=max(1,(count+cols-1)//cols); card_h=min(125,(area_h-gap_y*(rows-1))//rows)
+            for n,(kind,up) in enumerate(upgrade_items):
+                col,row=n%cols,n//cols
+                rect=pygame.Rect(area_x+col*(card_w+gap_x),area_y+row*(card_h+gap_y),card_w,card_h)
                 if rect.collidepoint(pos):
                     self.hub_sel=n+2
                     if click: self.activate_hub("UPGRADE:"+kind)
@@ -564,8 +567,7 @@ class App:
                 self.inp.switch_weapon_pressed = True
             elif k in (pygame.K_1, pygame.K_2, pygame.K_3) and self.sim:
                 slot = k - pygame.K_1
-                if slot < len(self.sim.player.inventory):
-                    self.sim.player.weapon = self.sim.player.inventory[slot]
+                self.sim.select_weapon_slot(slot)
             elif k == self.key("ability"):
                 self.inp.ability_pressed = True
             return
@@ -881,16 +883,22 @@ class App:
         c=self.data.characters[cid]; prog=s["character_progress"].get(cid,{"level":1,"xp":0,"upgrades":{}}); level=prog.get("level",1); xp=prog.get("xp",0); needed=xp_to_next(level)
         self.r.text(self.screen,"MEJORAS · %s" % c.name.split(",")[0].upper(),(VIEW_W//2,42),(240,195,105),self.r.menu_title,True)
         self.r.text(self.screen,"NIVEL %d    XP %d / %d    FRAGMENTOS %d" % (level,xp,needed,s["meta_currency"]),(VIEW_W//2,78),(112,231,219),self.r.menu_font,True)
-        for n,(kind,up) in enumerate(tree.items()):
-            col,row=n%2,n//2; x,y,w,h=70+col*420,118+row*145,390,125; selected=self.hub_sel==n+2
+        upgrade_items=list(tree.items())
+        count=len(upgrade_items); cols=3 if count>4 else 2
+        gap_x=14; gap_y=10; area_x,area_y,area_w,area_h=28,112,VIEW_W-56,300
+        card_w=(area_w-gap_x*(cols-1))//cols; rows=max(1,(count+cols-1)//cols)
+        card_h=min(125,(area_h-gap_y*(rows-1))//rows)
+        for n,(kind,up) in enumerate(upgrade_items):
+            col,row=n%cols,n//cols; x=area_x+col*(card_w+gap_x); y=area_y+row*(card_h+gap_y); w,h=card_w,card_h
+            selected=self.hub_sel==n+2
             card=pygame.Rect(x,y,w,h); pygame.draw.rect(self.screen,(10,13,23,235),card,border_radius=8); pygame.draw.rect(self.screen,(74,226,220) if selected else (75,91,113),card,2 if selected else 1,border_radius=8)
-            self.r.text(self.screen,up["name"].upper(),(x+w//2,y+24),(105,232,222) if selected else (214,223,235),self.r.menu_font,True)
-            self.r.text(self.screen,up["description"],(x+w//2,y+52),(183,198,213),self.r.menu_small,True)
-            lvl=int(prog.get("upgrades",{}).get(kind,0)); self.r.text(self.screen,"NIVEL %d / %d"%(lvl,up["max"]),(x+w//2,y+76),(232,222,190),self.r.menu_small,True)
+            self.r.text(self.screen,up["name"].upper(),(x+w//2,y+20),(105,232,222) if selected else (214,223,235),self.r.menu_font if h>=112 else self.r.menu_small,True)
+            self.r.text(self.screen,up["description"],(x+w//2,y+45),(183,198,213),self.r.menu_small,True)
+            lvl=int(prog.get("upgrades",{}).get(kind,0)); self.r.text(self.screen,"NIVEL %d / %d"%(lvl,up["max"]),(x+w//2,y+h-37),(232,222,190),self.r.menu_small,True)
             if lvl>=up["max"]: price="MAXIMO"; color=(124,231,173)
             else:
                 cost=self.save.character_upgrade_cost(cid,kind); price="MEJORAR · %d FRAGMENTOS"%cost; color=(255,219,133) if s["meta_currency"]>=cost else (161,167,181)
-            self.r.text(self.screen,price,(x+w//2,y+103),color,self.r.menu_small,True)
+            self.r.text(self.screen,price,(x+w//2,y+h-15),color,self.r.menu_small,True)
         for n,item in enumerate(("Personajes","Volver al menu")):
             self.draw_option_card((250+n*240,438,220,44),item,self.hub_sel==HUB_ITEMS.index(item))
         self.r.text(self.screen,"Las mejoras son exclusivas de %s y afectan sus partidas."%c.name.split(",")[0],(VIEW_W//2,518),(150,165,180),self.r.menu_small,True)
@@ -1098,8 +1106,8 @@ class App:
             pygame.draw.rect(scr, (12, 16, 25), checkbox, border_radius=3)
             pygame.draw.rect(scr, (80, 223, 215) if self.settings_sel == 12 else (116, 132, 151), checkbox, 1, border_radius=3)
             if fullscreen:
-                pygame.draw.line(scr, (105, 235, 180), (143, 330), (148, 334), 2)
-                pygame.draw.line(scr, (105, 235, 180), (148, 334), (155, 325), 2)
+                pygame.draw.line(scr, (105, 235, 180), (142, 353), (147, 358), 2)
+                pygame.draw.line(scr, (105, 235, 180), (147, 358), (155, 347), 2)
             self.r.text(scr, "PANTALLA COMPLETA", (259, 354), (225, 232, 240), self.r.menu_small, True)
 
             reset_rect = pygame.Rect(126, 383, 266, 32)
