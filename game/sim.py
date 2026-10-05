@@ -1758,6 +1758,7 @@ class Sim:
         self.hazards=[h for h in self.hazards if h["life"]>0]
         for wave in self.wave_attacks:
             wave["life"]-=dt
+            wave["_los_cache"]={}
             wave["radius"]+=wave["speed"]*dt
             if wave.get("max_radius") is not None and wave["radius"]>=wave["max_radius"]:
                 wave["radius"]=wave["max_radius"]; wave["life"]=min(wave["life"],0.12)
@@ -1768,13 +1769,23 @@ class Sim:
                     if abs(dist-wave["radius"])<max(12.0,e.radius+5):
                         # La onda solo puede afectar lo que sea visible desde su
                         # origen. Un muro/obstáculo corta ese sector de la onda.
-                        if not self._wave_clear_to(wave["x"],wave["y"],e.x,e.y):
+                        tile=self.arena.tile_of(e.x,e.y)
+                        key=(int(tile[0]),int(tile[1]))
+                        clear=wave["_los_cache"].get(key)
+                        if clear is None:
+                            clear=self._wave_clear_to(wave["x"],wave["y"],e.x,e.y)
+                            wave["_los_cache"][key]=clear
+                        if not clear:
                             continue
                         if wave.get("effect")=="freeze":
                             self._apply_freeze(e,wave.get("freeze_duration",2.5))
                         else:
                             e.hurt(wave["damage"],math.atan2(e.y-wave["y"],e.x-wave["x"]))
-                            if wave.get("stun",0)>0: e.frozen=max(getattr(e,"frozen",0),wave["stun"])
+                            if wave.get("stun",0)>0:
+                                e.frozen=max(getattr(e,"frozen",0),wave["stun"])
+                                if wave.get("confusion",False):
+                                    e.confused=max(getattr(e,"confused",0.0),wave["stun"])
+                                    self.emit("enemy_confused",e.x,e.y,wave["stun"])
                         wave["hit_ids"].add(e.id)
                         self.emit("enemy_hit",e.x,e.y,wave.get("color",(220,150,80)),wave.get("damage",0),False)
             else:
