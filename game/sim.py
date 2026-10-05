@@ -25,7 +25,7 @@ class Sim:
         self.player=Player(c,data.weapons[c.start_weapon],self.arena.player_spawn,self.meta_upgrades,character_progress)
         self.player.inventory=[self.player.weapon]; self.player.items=[]; self.player.bonus_pierce=0; self.player.bonus_projectiles=0; self.player.attack_speed_mult=1.0; self.player.coin_radius=0
         self.pool=ProjectilePool(); self.enemies=[]; self.enemy_pool=[]; self.items=[]; self.pickups=[]; self.keys=0; self.events=[]; self.chest=None
-        self.props=[]; self.hazards=[]; self.wave_attacks=[]; self.lasers=[]; self.drones=[]
+        self.props=[]; self.hazards=[]; self.wave_attacks=[]; self.lasers=[]; self.drones=[]; self.allies=[]
         self.decoration_collider_provider=None
         self.time=0.; self.wave=0; self.wave_delay=0.5; self.over=False; self.victory=False; self.portal=False; self.portal_position=(self.arena.width/2,self.arena.height/2)
         self.stats={"kills":0,"shots":0,"damage_taken":0,"waves":0,"coins":0,"rooms":1,"items":0,"purchases":0,"abilities":0,"bosses_defeated":0,"xp":0}
@@ -1072,6 +1072,14 @@ class Sim:
                     self.emit("decoration_hit",pr.x,pr.y,pr.color)
                     break
                 if pr.team==0:
+                    if pr.ally_heal > 0 and self.allies:
+                        healed=False
+                        for ally in self.allies:
+                            if getattr(ally,"alive",True) and math.hypot(pr.x-ally.x,pr.y-ally.y)<pr.radius+getattr(ally,"radius",10):
+                                ally.hp=min(ally.max_hp,ally.hp+pr.ally_heal)
+                                self.emit("ally_heal",ally.x,ally.y,pr.ally_heal)
+                                pr.active=False; healed=True; break
+                        if healed: break
                     if self._hit_enemies(pr):break
                 else:
                     w=p.weapon.d
