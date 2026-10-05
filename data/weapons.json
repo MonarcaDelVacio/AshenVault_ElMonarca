@@ -24,7 +24,9 @@
       255
     ],
     "weapon_sprite": "assets/weapons/pistols/pistol2.png",
-    "projectile_sprite": "assets/projectiles/projectile_02.png"
+    "projectile_sprite": "assets/projectiles/projectile_02.png",
+    "weapon_sprite_sheet": "ranged",
+    "weapon_sprite_index": 0
   },
   "ember_sidearm": {
     "name": "Brasa-9",
@@ -46,7 +48,9 @@
       60
     ],
     "weapon_sprite": "assets/weapons/pistols/pistol3.png",
-    "projectile_sprite": "assets/projectiles/projectile_09.png"
+    "projectile_sprite": "assets/projectiles/projectile_09.png",
+    "weapon_sprite_sheet": "ranged",
+    "weapon_sprite_index": 1
   },
   "volt_smg": {
     "name": "Volt SMG",
@@ -68,7 +72,9 @@
       255
     ],
     "weapon_sprite": "assets/weapons/smgs/smg2.png",
-    "projectile_sprite": "assets/projectiles/projectile_06.png"
+    "projectile_sprite": "assets/projectiles/projectile_06.png",
+    "weapon_sprite_sheet": "ranged",
+    "weapon_sprite_index": 2
   },
   "thorn_shotgun": {
     "name": "Escopeta Zarza",
@@ -91,7 +97,9 @@
     ],
     "weapon_sprite": "assets/weapons/rifles/rifle1.png",
     "projectile_sprite": "assets/projectiles/projectile_07.png",
-    "energy_cost": 0
+    "energy_cost": 0,
+    "weapon_sprite_sheet": "ranged",
+    "weapon_sprite_index": 3
   },
   "cinder_rifle": {
     "name": "Rifle Cinéreo",
@@ -113,7 +121,9 @@
     ],
     "weapon_sprite": "assets/weapons/rifles/rifle3.png",
     "projectile_sprite": "assets/projectiles/projectile_09.png",
-    "energy_cost": 0
+    "energy_cost": 0,
+    "weapon_sprite_sheet": "ranged",
+    "weapon_sprite_index": 4
   },
   "needle_rifle": {
     "name": "Aguja Larga",
@@ -135,7 +145,9 @@
       255
     ],
     "weapon_sprite": "assets/weapons/snipers/sniper3.png",
-    "projectile_sprite": "assets/projectiles/projectile_05.png"
+    "projectile_sprite": "assets/projectiles/projectile_05.png",
+    "weapon_sprite_sheet": "ranged",
+    "weapon_sprite_index": 5
   },
   "iron_barrage": {
     "name": "Batería de Hierro",
@@ -156,7 +168,9 @@
       130
     ],
     "weapon_sprite": "assets/weapons/heavy/heavy1.png",
-    "projectile_sprite": "assets/projectiles/projectile_08.png"
+    "projectile_sprite": "assets/projectiles/projectile_08.png",
+    "weapon_sprite_sheet": "ranged",
+    "weapon_sprite_index": 6
   },
   "nova_launcher": {
     "name": "Lanzador Nova",
@@ -183,7 +197,9 @@
     "explosive": true,
     "explosion_tiles": 3,
     "pellets": 1,
-    "bounces": 0
+    "bounces": 0,
+    "weapon_sprite_sheet": "ranged",
+    "weapon_sprite_index": 7
   },
   "frost_orb": {
     "name": "Orbe de Escarcha",
@@ -206,7 +222,9 @@
       255
     ],
     "weapon_sprite": "assets/weapons/magic/magicice2.png",
-    "projectile_sprite": "assets/projectiles/projectile_02.png"
+    "projectile_sprite": "assets/projectiles/projectile_02.png",
+    "weapon_sprite_sheet": "ranged",
+    "weapon_sprite_index": 8
   },
   "arc_blade": {
     "name": "Hoja de Arco",
@@ -232,7 +250,9 @@
     "weapon_sprite": "assets/weapons/melee/espada3.png",
     "pellets": 1,
     "bounces": 0,
-    "melee_level": 4
+    "melee_level": 4,
+    "weapon_sprite_sheet": "melee",
+    "weapon_sprite_index": 0
   },
   "sun_lance": {
     "name": "Lanza Solar",
@@ -265,7 +285,9 @@
     "pellets": 1,
     "bounces": 0,
     "projectile_rotation_offset": 62,
-    "projectile_visual_scale": 1.65
+    "projectile_visual_scale": 1.65,
+    "weapon_sprite_sheet": "ranged",
+    "weapon_sprite_index": 9
   },
   "ricochet_disc": {
     "name": "Disco Rebote",
@@ -287,7 +309,9 @@
       220
     ],
     "weapon_sprite": "assets/weapons/experimental/lanzadiscos1.png",
-    "projectile_sprite": "assets/projectiles/projectile_12.png"
+    "projectile_sprite": "assets/projectiles/projectile_12.png",
+    "weapon_sprite_sheet": "ranged",
+    "weapon_sprite_index": 10
   },
   "iron_sabre": {
     "name": "Sable de Hierro",
@@ -311,7 +335,9 @@
       220
     ],
     "weapon_sprite": "assets/weapons/melee/espada1.png",
-    "melee_level": 1
+    "melee_level": 1,
+    "weapon_sprite_sheet": "melee",
+    "weapon_sprite_index": 1
   },
   "warden_spear": {
     "name": "Lanza del Vigia",
@@ -345,7 +371,9 @@
     "pellets": 1,
     "bounces": 0,
     "projectile_rotation_offset": 45,
-    "projectile_visual_scale": 1.65
+    "projectile_visual_scale": 1.65,
+    "weapon_sprite_sheet": "ranged",
+    "weapon_sprite_index": 11
   },
   "ember_greatsword": {
     "name": "Mandoble Incandescente",
@@ -369,7 +397,9 @@
       55
     ],
     "weapon_sprite": "assets/weapons/melee/espada2.png",
-    "melee_level": 3
+    "melee_level": 3,
+    "weapon_sprite_sheet": "melee",
+    "weapon_sprite_index": 2
   },
   "frost_scythe": {
     "name": "Guadana de Escarcha",
@@ -393,7 +423,9 @@
       255
     ],
     "weapon_sprite": "assets/weapons/melee/guadana_escarcha.png",
-    "melee_level": 4
+    "melee_level": 4,
+    "weapon_sprite_sheet": "melee",
+    "weapon_sprite_index": 3
   },
   "ember_revolver": {
     "name": "Revólver Brasa",
@@ -420,7 +452,9 @@
       255
     ],
     "weapon_sprite": "assets/weapons/pistols/pistol5.png",
-    "projectile_sprite": "assets/projectiles/projectile_09.png"
+    "projectile_sprite": "assets/projectiles/projectile_09.png",
+    "weapon_sprite_sheet": "ranged",
+    "weapon_sprite_index": 12
   },
   "void_pistol": {
     "name": "Pistola del Vacío",
@@ -447,7 +481,9 @@
       255
     ],
     "weapon_sprite": "assets/weapons/pistols/pistol4.png",
-    "projectile_sprite": "assets/projectiles/projectile_11.png"
+    "projectile_sprite": "assets/projectiles/projectile_11.png",
+    "weapon_sprite_sheet": "ranged",
+    "weapon_sprite_index": 13
   },
   "frost_sidearm": {
     "name": "Pistola Escarcha",
@@ -474,7 +510,9 @@
       255
     ],
     "weapon_sprite": "assets/weapons/pistols/pistol9.png",
-    "projectile_sprite": "assets/projectiles/projectile_02.png"
+    "projectile_sprite": "assets/projectiles/projectile_02.png",
+    "weapon_sprite_sheet": "ranged",
+    "weapon_sprite_index": 14
   },
   "sun_pistol": {
     "name": "Pistola Solar",
@@ -501,7 +539,9 @@
       255
     ],
     "weapon_sprite": "assets/weapons/pistols/pistol5.png",
-    "projectile_sprite": "assets/projectiles/projectile_03.png"
+    "projectile_sprite": "assets/projectiles/projectile_03.png",
+    "weapon_sprite_sheet": "ranged",
+    "weapon_sprite_index": 15
   },
   "iron_burst": {
     "name": "Pistola Ráfaga",
@@ -528,7 +568,9 @@
       255
     ],
     "weapon_sprite": "assets/weapons/pistols/pistol6.png",
-    "projectile_sprite": "assets/projectiles/projectile_06.png"
+    "projectile_sprite": "assets/projectiles/projectile_06.png",
+    "weapon_sprite_sheet": "ranged",
+    "weapon_sprite_index": 16
   },
   "thorn_smg": {
     "name": "SMG de Espinas",
@@ -555,7 +597,9 @@
       255
     ],
     "weapon_sprite": "assets/weapons/smgs/smg3.png",
-    "projectile_sprite": "assets/projectiles/projectile_07.png"
+    "projectile_sprite": "assets/projectiles/projectile_07.png",
+    "weapon_sprite_sheet": "ranged",
+    "weapon_sprite_index": 17
   },
   "frost_smg": {
     "name": "SMG Boreal",
@@ -582,7 +626,9 @@
       255
     ],
     "weapon_sprite": "assets/weapons/smgs/smg5.png",
-    "projectile_sprite": "assets/projectiles/projectile_10.png"
+    "projectile_sprite": "assets/projectiles/projectile_10.png",
+    "weapon_sprite_sheet": "ranged",
+    "weapon_sprite_index": 18
   },
   "ember_smg": {
     "name": "SMG Incandescente",
@@ -609,7 +655,9 @@
       255
     ],
     "weapon_sprite": "assets/weapons/smgs/smg4.png",
-    "projectile_sprite": "assets/projectiles/projectile_09.png"
+    "projectile_sprite": "assets/projectiles/projectile_09.png",
+    "weapon_sprite_sheet": "ranged",
+    "weapon_sprite_index": 19
   },
   "void_smg": {
     "name": "SMG Umbral",
@@ -636,7 +684,9 @@
       255
     ],
     "weapon_sprite": "assets/weapons/smgs/smg1.png",
-    "projectile_sprite": "assets/projectiles/projectile_11.png"
+    "projectile_sprite": "assets/projectiles/projectile_11.png",
+    "weapon_sprite_sheet": "ranged",
+    "weapon_sprite_index": 20
   },
   "hunter_rifle": {
     "name": "Rifle Rastreador",
@@ -663,7 +713,9 @@
       255
     ],
     "weapon_sprite": "assets/weapons/rifles/rifle2.png",
-    "projectile_sprite": "assets/projectiles/projectile_06.png"
+    "projectile_sprite": "assets/projectiles/projectile_06.png",
+    "weapon_sprite_sheet": "ranged",
+    "weapon_sprite_index": 21
   },
   "thorn_rifle": {
     "name": "Rifle de Espinas",
@@ -690,7 +742,9 @@
       255
     ],
     "weapon_sprite": "assets/weapons/rifles/rifle6.png",
-    "projectile_sprite": "assets/projectiles/projectile_07.png"
+    "projectile_sprite": "assets/projectiles/projectile_07.png",
+    "weapon_sprite_sheet": "ranged",
+    "weapon_sprite_index": 22
   },
   "frost_rifle": {
     "name": "Rifle Boreal",
@@ -717,7 +771,9 @@
       255
     ],
     "weapon_sprite": "assets/weapons/rifles/rifle4.png",
-    "projectile_sprite": "assets/projectiles/projectile_10.png"
+    "projectile_sprite": "assets/projectiles/projectile_10.png",
+    "weapon_sprite_sheet": "ranged",
+    "weapon_sprite_index": 23
   },
   "helix_rifle": {
     "name": "Rifle Helix",
@@ -744,7 +800,9 @@
       255
     ],
     "weapon_sprite": "assets/weapons/rifles/rifle5.png",
-    "projectile_sprite": "assets/projectiles/projectile_02.png"
+    "projectile_sprite": "assets/projectiles/projectile_02.png",
+    "weapon_sprite_sheet": "ranged",
+    "weapon_sprite_index": 24
   },
   "void_marksman": {
     "name": "Fusil Umbral",
@@ -771,7 +829,9 @@
       255
     ],
     "weapon_sprite": "assets/weapons/snipers/sniper2.png",
-    "projectile_sprite": "assets/projectiles/projectile_11.png"
+    "projectile_sprite": "assets/projectiles/projectile_11.png",
+    "weapon_sprite_sheet": "ranged",
+    "weapon_sprite_index": 25
   },
   "glass_needle": {
     "name": "Aguja de Cristal",
@@ -798,7 +858,9 @@
       255
     ],
     "weapon_sprite": "assets/weapons/snipers/sniper4.png",
-    "projectile_sprite": "assets/projectiles/projectile_05.png"
+    "projectile_sprite": "assets/projectiles/projectile_05.png",
+    "weapon_sprite_sheet": "ranged",
+    "weapon_sprite_index": 26
   },
   "longbow_lumen": {
     "name": "Arco Lumen",
@@ -831,7 +893,9 @@
     "charge_speed_mult": 1.8,
     "charge_range_mult": 2,
     "charge_damage_mult": 2.2,
-    "stick_on_hit": true
+    "stick_on_hit": true,
+    "weapon_sprite_sheet": "ranged",
+    "weapon_sprite_index": 27
   },
   "coil_carbine": {
     "name": "Carabina de Bobina",
@@ -858,7 +922,9 @@
       255
     ],
     "weapon_sprite": "assets/weapons/rifles/rifle7.png",
-    "projectile_sprite": "assets/projectiles/projectile_15.png"
+    "projectile_sprite": "assets/projectiles/projectile_15.png",
+    "weapon_sprite_sheet": "ranged",
+    "weapon_sprite_index": 28
   },
   "heavy_barrage": {
     "name": "Ametralladora Pesada",
@@ -885,7 +951,9 @@
       255
     ],
     "weapon_sprite": "assets/weapons/heavy/heavy4.png",
-    "projectile_sprite": "assets/projectiles/projectile_08.png"
+    "projectile_sprite": "assets/projectiles/projectile_08.png",
+    "weapon_sprite_sheet": "ranged",
+    "weapon_sprite_index": 29
   },
   "vulcan_core": {
     "name": "Núcleo Vulcano",
@@ -912,7 +980,9 @@
       255
     ],
     "weapon_sprite": "assets/weapons/heavy/heavy3.png",
-    "projectile_sprite": "assets/projectiles/projectile_09.png"
+    "projectile_sprite": "assets/projectiles/projectile_09.png",
+    "weapon_sprite_sheet": "ranged",
+    "weapon_sprite_index": 30
   },
   "frost_minigun": {
     "name": "Minigun Boreal",
@@ -939,7 +1009,9 @@
       255
     ],
     "weapon_sprite": "assets/weapons/heavy/heavy4.png",
-    "projectile_sprite": "assets/projectiles/projectile_10.png"
+    "projectile_sprite": "assets/projectiles/projectile_10.png",
+    "weapon_sprite_sheet": "ranged",
+    "weapon_sprite_index": 31
   },
   "arc_minigun": {
     "name": "Minigun de Arco",
@@ -966,7 +1038,9 @@
       255
     ],
     "weapon_sprite": "assets/weapons/heavy/heavy2.png",
-    "projectile_sprite": "assets/projectiles/projectile_05.png"
+    "projectile_sprite": "assets/projectiles/projectile_05.png",
+    "weapon_sprite_sheet": "ranged",
+    "weapon_sprite_index": 32
   },
   "ember_mortar": {
     "name": "Mortero de Brasa",
@@ -995,7 +1069,9 @@
     "weapon_sprite": "assets/weapons/launchers/launcher1.png",
     "projectile_sprite": "assets/projectiles/projectile_17.png",
     "explosive": true,
-    "explosion_tiles": 3
+    "explosion_tiles": 3,
+    "weapon_sprite_sheet": "ranged",
+    "weapon_sprite_index": 33
   },
   "frost_mortar": {
     "name": "Mortero Glacial",
@@ -1024,7 +1100,9 @@
     "weapon_sprite": "assets/weapons/launchers/launcher3.png",
     "projectile_sprite": "assets/projectiles/projectile_04.png",
     "explosive": true,
-    "explosion_tiles": 3
+    "explosion_tiles": 3,
+    "weapon_sprite_sheet": "ranged",
+    "weapon_sprite_index": 34
   },
   "void_rocket": {
     "name": "Cohete del Vacío",
@@ -1053,7 +1131,9 @@
     "weapon_sprite": "assets/weapons/launchers/launcher4.png",
     "projectile_sprite": "assets/projectiles/projectile_11.png",
     "explosive": true,
-    "explosion_tiles": 3
+    "explosion_tiles": 3,
+    "weapon_sprite_sheet": "ranged",
+    "weapon_sprite_index": 35
   },
   "star_rocket": {
     "name": "Cohete Estelar",
@@ -1082,7 +1162,9 @@
     "weapon_sprite": "assets/weapons/launchers/launcher6.png",
     "projectile_sprite": "assets/projectiles/projectile_04.png",
     "explosive": true,
-    "explosion_tiles": 3
+    "explosion_tiles": 3,
+    "weapon_sprite_sheet": "ranged",
+    "weapon_sprite_index": 36
   },
   "ember_wand": {
     "name": "Varita de Brasa",
@@ -1109,7 +1191,9 @@
       255
     ],
     "weapon_sprite": "assets/weapons/magic/magicignite2.png",
-    "projectile_sprite": "assets/projectiles/projectile_03.png"
+    "projectile_sprite": "assets/projectiles/projectile_03.png",
+    "weapon_sprite_sheet": "ranged",
+    "weapon_sprite_index": 37
   },
   "storm_wand": {
     "name": "Varita de Tormenta",
@@ -1136,7 +1220,9 @@
       255
     ],
     "weapon_sprite": "assets/weapons/magic/magicice1.png",
-    "projectile_sprite": "assets/projectiles/projectile_02.png"
+    "projectile_sprite": "assets/projectiles/projectile_02.png",
+    "weapon_sprite_sheet": "ranged",
+    "weapon_sprite_index": 38
   },
   "void_orb": {
     "name": "Orbe del Vacío",
@@ -1163,7 +1249,9 @@
       255
     ],
     "weapon_sprite": "assets/weapons/magic/magicvoid2.png",
-    "projectile_sprite": "assets/projectiles/projectile_11.png"
+    "projectile_sprite": "assets/projectiles/projectile_11.png",
+    "weapon_sprite_sheet": "ranged",
+    "weapon_sprite_index": 39
   },
   "solar_orb": {
     "name": "Orbe Solar",
@@ -1190,7 +1278,9 @@
       255
     ],
     "weapon_sprite": "assets/weapons/magic/magiclight1.png",
-    "projectile_sprite": "assets/projectiles/projectile_03.png"
+    "projectile_sprite": "assets/projectiles/projectile_03.png",
+    "weapon_sprite_sheet": "ranged",
+    "weapon_sprite_index": 40
   },
   "chain_lightning": {
     "name": "Cadena Eléctrica",
@@ -1217,7 +1307,9 @@
       255
     ],
     "weapon_sprite": "assets/weapons/special/vara2.png",
-    "projectile_sprite": "assets/projectiles/projectile_02.png"
+    "projectile_sprite": "assets/projectiles/projectile_02.png",
+    "weapon_sprite_sheet": "ranged",
+    "weapon_sprite_index": 41
   },
   "gravity_lance": {
     "name": "Lanza Gravitatoria",
@@ -1252,7 +1344,9 @@
     "charge_damage_mult": 2.2,
     "stick_on_hit": true,
     "projectile_rotation_offset": 45,
-    "projectile_visual_scale": 1.65
+    "projectile_visual_scale": 1.65,
+    "weapon_sprite_sheet": "ranged",
+    "weapon_sprite_index": 42
   },
   "prism_beam": {
     "name": "Rayo Prisma",
@@ -1294,7 +1388,9 @@
       160,
       210,
       255
-    ]
+    ],
+    "weapon_sprite_sheet": "ranged",
+    "weapon_sprite_index": 43
   },
   "pulse_cannon": {
     "name": "Cañón de Pulso",
@@ -1321,7 +1417,9 @@
       255
     ],
     "weapon_sprite": "assets/weapons/experimental/energypistol2.png",
-    "projectile_sprite": "assets/projectiles/projectile_02.png"
+    "projectile_sprite": "assets/projectiles/projectile_02.png",
+    "weapon_sprite_sheet": "ranged",
+    "weapon_sprite_index": 44
   },
   "gravity_disc": {
     "name": "Disco Gravitatorio",
@@ -1348,7 +1446,9 @@
       255
     ],
     "weapon_sprite": "assets/weapons/experimental/lanzadiscos2.png",
-    "projectile_sprite": "assets/projectiles/projectile_13.png"
+    "projectile_sprite": "assets/projectiles/projectile_13.png",
+    "weapon_sprite_sheet": "ranged",
+    "weapon_sprite_index": 45
   },
   "shard_caster": {
     "name": "Lanzador de Esquirlas",
@@ -1375,7 +1475,9 @@
       255
     ],
     "weapon_sprite": "assets/weapons/experimental/energypistol3.png",
-    "projectile_sprite": "assets/weapons/experimental/energypistol3.png"
+    "projectile_sprite": "assets/weapons/experimental/energypistol3.png",
+    "weapon_sprite_sheet": "ranged",
+    "weapon_sprite_index": 46
   },
   "fury_blade": {
     "name": "Hoja de Furia",
@@ -1403,7 +1505,9 @@
     ],
     "melee_arc": 1.45,
     "weapon_sprite": "assets/weapons/melee/espada4.png",
-    "melee_level": 2
+    "melee_level": 2,
+    "weapon_sprite_sheet": "melee",
+    "weapon_sprite_index": 4
   },
   "war_axe": {
     "name": "Hacha de Guerra",
@@ -1431,7 +1535,9 @@
     ],
     "melee_arc": 1.1,
     "weapon_sprite": "assets/weapons/melee/hachapesada1.png",
-    "melee_level": 1
+    "melee_level": 1,
+    "weapon_sprite_sheet": "melee",
+    "weapon_sprite_index": 5
   },
   "moon_spear": {
     "name": "Lanza Lunar",
@@ -1467,7 +1573,9 @@
     "projectile_sprite": "assets/weapons/melee/lanza2.png",
     "stick_on_hit": true,
     "projectile_rotation_offset": 45,
-    "projectile_visual_scale": 1.65
+    "projectile_visual_scale": 1.65,
+    "weapon_sprite_sheet": "ranged",
+    "weapon_sprite_index": 47
   },
   "void_hammer": {
     "name": "Martillo del Vacío",
@@ -1495,7 +1603,9 @@
     ],
     "melee_arc": 1.3,
     "weapon_sprite": "assets/weapons/melee/martillopesado1.png",
-    "melee_level": 4
+    "melee_level": 4,
+    "weapon_sprite_sheet": "melee",
+    "weapon_sprite_index": 6
   },
   "solar_scythe": {
     "name": "Guadaña Solar",
@@ -1523,7 +1633,9 @@
     ],
     "melee_arc": 1.9,
     "weapon_sprite": "assets/weapons/melee/guadana_solar.png",
-    "melee_level": 5
+    "melee_level": 5,
+    "weapon_sprite_sheet": "melee",
+    "weapon_sprite_index": 7
   },
   "frost_dagger": {
     "name": "Daga Boreal",
@@ -1551,7 +1663,9 @@
     ],
     "melee_arc": 1.2,
     "weapon_sprite": "assets/weapons/melee/espada3.png",
-    "melee_level": 3
+    "melee_level": 3,
+    "weapon_sprite_sheet": "melee",
+    "weapon_sprite_index": 8
   },
   "chain_blade": {
     "name": "Cadena de Acero",
@@ -1579,7 +1693,9 @@
     ],
     "melee_arc": 1,
     "weapon_sprite": "assets/weapons/melee/espada1.png",
-    "melee_level": 4
+    "melee_level": 4,
+    "weapon_sprite_sheet": "melee",
+    "weapon_sprite_index": 9
   },
   "iria_dart_pistol": {
     "name": "Pistola de Dardos Médicos",
@@ -1607,7 +1723,9 @@
     ],
     "weapon_sprite": "assets/weapons/pistols/pistol2.png",
     "projectile_sprite": "assets/projectiles/projectile_02.png",
-    "ally_heal": 3
+    "ally_heal": 3,
+    "weapon_sprite_sheet": "ranged",
+    "weapon_sprite_index": 48
   },
   "ember_spear_new": {
     "name": "Lanza del Infierno",
@@ -1625,7 +1743,7 @@
     "energy_cost": 1,
     "range": 430,
     "weapon_sprite_sheet": "ranged",
-    "weapon_sprite_index": 0,
+    "weapon_sprite_index": 49,
     "projectile_sprite": "assets/projectiles/projectile_09.png"
   },
   "void_caster_new": {
@@ -1644,7 +1762,7 @@
     "energy_cost": 2,
     "range": 500,
     "weapon_sprite_sheet": "ranged",
-    "weapon_sprite_index": 1,
+    "weapon_sprite_index": 50,
     "projectile_sprite": "assets/projectiles/projectile_11.png"
   },
   "storm_carbine_new": {
@@ -1662,7 +1780,7 @@
     "damage_type": "energy",
     "energy_cost": 2,
     "weapon_sprite_sheet": "ranged",
-    "weapon_sprite_index": 2,
+    "weapon_sprite_index": 51,
     "projectile_sprite": "assets/projectiles/projectile_02.png"
   },
   "ashen_blade_new": {
@@ -1682,7 +1800,7 @@
     "range": 76,
     "melee_arc": 1.7,
     "weapon_sprite_sheet": "melee",
-    "weapon_sprite_index": 0,
+    "weapon_sprite_index": 10,
     "melee_level": 4
   },
   "void_cleaver_new": {
@@ -1702,7 +1820,7 @@
     "range": 78,
     "melee_arc": 1.55,
     "weapon_sprite_sheet": "melee",
-    "weapon_sprite_index": 1,
+    "weapon_sprite_index": 11,
     "melee_level": 3
   }
 }
