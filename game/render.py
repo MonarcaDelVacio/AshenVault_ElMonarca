@@ -1216,8 +1216,8 @@ class Renderer:
             return None
         bbox=image.get_bounding_rect(min_alpha=8)
         if not bbox.width or not bbox.height: return None
-        target=(TILE,TILE) if kind=="crate" else (48,48)
-        scale=min(target[0]/max(1,image.get_width()),target[1]/max(1,image.get_height()))
+        # Los props se dibujan a su tamaño real; el collider usa ese mismo alpha.
+        scale=1.0
         return (float(prop.get("x",0)),float(prop.get("y",0)),max(5.0,bbox.width*scale*0.42),max(5.0,min(bbox.height*scale*0.20,bbox.width*scale*0.30)))
 
     def _draw_world_prop(self, screen, prop, ox, oy):
