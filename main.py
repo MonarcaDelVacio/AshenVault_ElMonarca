@@ -504,6 +504,7 @@ class App:
     def new_run(self):
         self.sim = Sim(self.data, self.char_id, meta_upgrades=self.save.data.get("upgrades", {}), character_progress=self.save.data.get("character_progress", {}).get(self.char_id, {}))
         self.sim.decoration_collider_provider = self.r
+        self._last_room_key = tuple(getattr(self.sim.room, "id", ()))
         self.fx = Fx()
         self.inp = Input()
         self.state = PLAY
@@ -1391,6 +1392,22 @@ class App:
             overlay = self._intro_transition_surface.copy()
             overlay.set_alpha(alpha)
             scr.blit(overlay, (0, 0))
+
+        # Transición global: imagen anterior -> negro -> pantalla nueva.
+        if self._fade_surface is not None and self._fade_t > 0.0:
+            half=self._fade_half
+            if self._fade_t > half:
+                old_alpha=int(255*max(0.0,min(1.0,(self._fade_t-half)/half)))
+                overlay=self._fade_surface.copy()
+                overlay.set_alpha(old_alpha)
+                scr.blit(overlay,(0,0))
+                black_alpha=255-old_alpha
+            else:
+                black_alpha=int(255*max(0.0,min(1.0,self._fade_t/half)))
+            if black_alpha:
+                fade=pygame.Surface((VIEW_W,VIEW_H),pygame.SRCALPHA)
+                fade.fill((0,0,0,black_alpha))
+                scr.blit(fade,(0,0))
 
         self._present()
 
