@@ -1351,6 +1351,9 @@ class Renderer:
         arena=sim.arena
         if arena.room_type != "shop": return []
         room_key=tuple(getattr(arena,"room_id",()))
+        if room_key != self._merchant_intro_room:
+            self._merchant_intro_room = room_key
+            self._merchant_intro_start = t
         merchant_idle=self.npc_frames.get("merchant_idle",[])
         merchant_near=self.npc_frames.get("merchant_near",[])
         if not merchant_idle and not merchant_near: return []
@@ -1358,7 +1361,7 @@ class Renderer:
         if room_key not in self._merchant_room_seen:
             self._merchant_room_seen.add(room_key)
             intro=merchant_near or merchant_idle
-            idx=min(len(intro)-1,int(t*7.0)) if intro else 0
+            idx=min(len(intro)-1,int(max(0.0,t-self._merchant_intro_start)*7.0)) if intro else 0
             frame=intro[idx] if intro else None
         else:
             # Después de la entrada se usa únicamente el ciclo idle. Nunca vuelve
