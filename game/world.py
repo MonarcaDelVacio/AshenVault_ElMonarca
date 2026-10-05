@@ -282,13 +282,25 @@ class Room:
         self.arena=Arena(adata,self.id)
 
 class Dungeon:
-    def __init__(self,seed=None,biome="ruins",difficulty=1):
+    BIOME_ORDER=("ruins","forest","dungeon","laboratory","volcanic","final")
+    def __init__(self,seed=None,biome=None,difficulty=1):
         self.seed=seed if seed is not None else 0
         self.difficulty=max(1,int(difficulty))
+        # Una dungeon completa usa un único bioma. El seed elige la temática al
+        # comenzar la run; todas las salas, enemigos y decoraciones heredan esta
+        # elección hasta el jefe final.
+        if biome in self.BIOME_ORDER:
+            self.biome=biome
+        else:
+            self.biome=self.BIOME_ORDER[abs(int(self.seed)) % len(self.BIOME_ORDER)]
+        self.name={
+            "ruins":"Ruinas Antiguas","forest":"Bosque Umbrío","dungeon":"Mazmorra Profunda",
+            "laboratory":"Laboratorio Helix","volcanic":"Falla Ígnea","final":"Núcleo del Vacío"
+        }.get(self.biome,self.biome.title())
         self.layout=generate_layout(self.seed)
         self.rooms={}
         path_set={tuple(x) for x in self.layout["path"]}; rng=random.Random(self.seed+7919)
-        biome_order=["ruins","forest","dungeon","laboratory","volcanic","final"]
+        biome_order=[self.biome] * 6
         path_index={tuple(r):i for i,r in enumerate(self.layout["path"])}
         branch_types=["combat","combat","combat","elite","treasure","event","healing","challenge","secret","miniboss"]
         # Los jefes se espacian deliberadamente: nunca hay un jefe en la segunda sala
@@ -325,7 +337,7 @@ class Dungeon:
             else: typ=rng.choice(branch_types)
             idx=path_index.get(tr, min(path_index.get(n,0) for n in path_index if abs(n[0]-tr[0])+abs(n[1]-tr[1])<=2)) if path_index else 0
             zone=bisect_left(zone_end_indices, idx)
-            room_biome=biome_order[zone]
+            room_biome=self.biome
             sides=[]
             for side,nrid in {"N":(rid[0],rid[1]-1),"S":(rid[0],rid[1]+1),"W":(rid[0]-1,rid[1]),"E":(rid[0]+1,rid[1])}.items():
                 if nrid in self.rooms or nrid in [tuple(x) for x in self.layout["rooms"]]: sides.append(side)
