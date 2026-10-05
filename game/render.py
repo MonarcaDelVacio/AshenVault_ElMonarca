@@ -2084,14 +2084,16 @@ class Renderer:
         else:
             self.text(screen, w.d.name, (62, VIEW_H - 61), (240, 241, 246), self.small)
         is_melee = getattr(w.d, "class", "") == "melee"
-        if is_melee:
-            ammo_text = "USOS  %d/%d" % (w.ammo, w.d.magazine)
-            ammo_color = (255, 120, 120) if w.ammo <= 3 else (210, 218, 230)
+        if getattr(w.d, "id", "") == "fists":
+            ammo_text, ammo_color = "PUÑOS", (210, 218, 230)
+        elif is_melee:
+            ammo_text = "USOS  %d/%d" % (w.durability, w.max_durability)
+            ammo_color = (255, 120, 120) if w.durability <= 3 else (210, 218, 230)
         elif w.reloading:
             ammo_text, ammo_color = "RECARGANDO", (240, 200, 90)
         else:
-            ammo_text = "MUNICIÓN  %d/%d" % (w.ammo, w.d.magazine)
-            ammo_color = (255, 120, 120) if w.ammo <= 3 else (210, 218, 230)
+            ammo_text = "MUNICIÓN  %d/%d" % (w.ammo, w.reserve_magazines)
+            ammo_color = (255, 120, 120) if w.ammo <= 2 and w.reserve_magazines <= 0 else (210, 218, 230)
 
         # Munición y estado de recarga quedan en una sola línea limpia. La barra
         # de progreso fue eliminada para evitar ruido visual en el panel.
@@ -2100,7 +2102,7 @@ class Renderer:
 
         # Solo cuando el cargador está completamente vacío mostramos el icono de
         # recarga, pegado a la munición y dentro del mismo panel.
-        if not is_melee and not w.reloading and w.ammo <= 0:
+        if not is_melee and getattr(w.d, "id", "") != "fists" and not w.reloading and w.ammo <= 0 and w.reserve_magazines > 0:
             reload_center = (177, VIEW_H - 31)
             if not self.ui_atlas.draw_icon(screen, reload_center, size=22, kind="refresh"):
                 pygame.draw.circle(screen, (240, 200, 90), reload_center, 9, 2)
