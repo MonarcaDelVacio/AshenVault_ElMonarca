@@ -1594,17 +1594,26 @@ class Renderer:
         player_light = pygame.Surface((VIEW_W, VIEW_H))
         player_light.fill((0, 0, 0))
         def add_light(target, world_x, world_y, radius, color, strength=1.0):
+            radius=max(1,int(radius))
             lx, ly = int(world_x + ox), int(world_y + oy)
             if lx < -radius or ly < -radius or lx > VIEW_W + radius or ly > VIEW_H + radius:
                 return
-            # Gradiente radial con muchos anillos de baja intensidad y caída suave.
-            for i in range(24, 0, -1):
-                ring = i / 24.0
-                rr = max(1, int(radius * ring))
-                falloff = (1.0 - ring) ** 1.55
-                factor = (0.008 + falloff * 0.205) * strength
-                tint = tuple(min(255, int(channel * factor)) for channel in color)
-                pygame.draw.circle(target, tint, (lx, ly), rr)
+            bucket=max(1,min(12,int(round(strength*12))))
+            key=(radius,tuple(color),bucket)
+            surf=self._light_surface_cache.get(key)
+            if surf is None:
+                size=radius*2+2
+                surf=pygame.Surface((size,size))
+                surf.fill((0,0,0))
+                for i in range(12,0,-1):
+                    ring=i/12.0
+                    rr=max(1,int(radius*ring))
+                    falloff=(1.0-ring)**1.55
+                    factor=(0.008+falloff*0.205)*(bucket/12.0)
+                    tint=tuple(min(255,int(channel*factor)) for channel in color)
+                    pygame.draw.circle(surf,tint,(radius+1,radius+1),rr)
+                self._light_surface_cache[key]=surf
+            target.blit(surf,(lx-radius-1,ly-radius-1))
         for light in decor_lights:
             rate = 8.5 if light["kind"] == "bonfire" else 2.2 if light["kind"] == "fountain" else 3.0
             flicker = 0.91 + 0.09 * math.sin(t * rate + light["x"] * 0.1)
@@ -1764,39 +1773,14 @@ class Renderer:
             pygame.draw.circle(layer,(*h["color"],min(170,alpha+50)),(layer.get_width()//2,layer.get_height()//2),int(h["radius"]),3)
             screen.blit(layer,(int(h["x"]+ox-h["radius"]),int(h["y"]+oy-h["radius"])))
         for wave in getattr(sim,"wave_attacks",[]):
-            # Renderiza solo los sectores de la onda que siguen teniendo línea
-            # de propagación libre; los obstáculos cortan visualmente el anillo.
             color=wave.get("color",(255,120,50))
-            radius=float(wave["radius"])
-            max_radius=float(wave.get("max_radius",radius))
-            segments=[]; current=[]
-            samples=96
-            for n in range(samples+1):
-                ang=math.tau*n/samples
-                limit=radius
-                if hasattr(sim,"_wave_clear_to"):
-                    step=8.0
-                    d=step
-                    while d<radius:
-                        tx=wave["x"]+math.cos(ang)*d
-                        ty=wave["y"]+math.sin(ang)*d
-                        if not sim._wave_clear_to(wave["x"],wave["y"],tx,ty):
-                            limit=d-step
-                            break
-                        d+=step
-                blocked = limit < radius - 0.5
-                px=wave["x"]+math.cos(ang)*max(0.0,limit)+ox
-                py=wave["y"]+math.sin(ang)*max(0.0,limit)+oy
-                point=(int(px),int(py))
-                if blocked:
-                    current.append(point)
-                    if len(current)>1: segments.append(current)
-                    current=[]
-                else:
-                    current.append(point)
-            if len(current)>1: segments.append(current)
-            for segment in segments:
-                pygame.draw.lines(screen,color,False,segment,4)
+            radius=max(1,int(wave["radius"]))
+            center=(int(wave["x"]+ox),int(wave["y"]+oy))
+            # La simulación ya aplica LOS a los impactos. El render anterior
+            # repetía decenas de consultas de colisión por ángulo y por frame.
+            pygame.draw.circle(screen,color,center,radius,4)
+            if radius>18:
+                pygame.draw.circle(screen,tuple(min(255,int(c*0.55)) for c in color),center,radius-4,1)
 
         # Tienda: objetos físicos flotando, sin tarjetas/botones. Acercarse e
         # interactuar compra la oferta; precio y nombre quedan debajo del objeto.
