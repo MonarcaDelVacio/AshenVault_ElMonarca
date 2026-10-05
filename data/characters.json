@@ -44,7 +44,7 @@
     "damage_mult": 0.9,
     "crit_chance": 0.05,
     "radius": 10,
-    "start_weapon": "volt_smg",
+    "start_weapon": "iria_dart_pistol",
     "color": [
       90,
       220,
@@ -91,7 +91,9 @@
       "kind": "burst",
       "cooldown": 8,
       "radius": 125,
-      "damage": 24
+      "damage": 24,
+      "wave_speed": 520,
+      "stun": 0.45
     }
   },
   "pyromancer": {
