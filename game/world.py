@@ -74,6 +74,7 @@ class Arena:
             "chest_purple_closed":22.0, "chest_purple_open":22.0,
             "chest_red_closed":22.0, "chest_red_open":22.0,
         }
+        self._decoration_radii = decoration_radii
         for deco in self.decorations:
             kind=deco.get("kind")
             if kind in decoration_radii:
@@ -93,9 +94,92 @@ class Arena:
         for x,y in adata.get("doors",[]):
             side="N" if y==0 else "S" if y==self.rows-1 else "W" if x==0 else "E"
             self.doors[side]=Door(side,x,y)
+        self._ensure_door_access()
         self.secrets=[]
         for x,y in adata.get("secrets",[]):
             self.grid[y][x]=SECRET; self.secrets.append((x,y))
+    def _ensure_door_access(self):
+        """Garantiza al menos un camino físico hacia cada puerta abierta.
+        
+        Las paredes de la sala ya deben ser navegables por diseño. Si una decoración
+        indestructible tapa el único corredor, se elimina esa decoración del escenario
+        en lugar de dejar al jugador sin salida.
+        """
+        if not self.doors:
+            return
+
+        def deco_blocked_tiles(decorations):
+            blocked=set()
+            for deco in decorations:
+                kind=deco.get("kind")
+                radius=float(self._decoration_radii.get(kind,0))
+                if radius <= 0:
+                    continue
+                cx=float(deco.get("x",0))*TILE+TILE/2
+                cy=float(deco.get("y",0))*TILE+TILE/2
+                tx,ty=int(cx//TILE),int(cy//TILE)
+                reach=max(0,int(math.ceil((radius+14)/TILE)))
+                for yy in range(max(0,ty-reach),min(self.rows,ty+reach+1)):
+                    for xx in range(max(0,tx-reach),min(self.cols,tx+reach+1)):
+                        if math.hypot(xx*TILE+TILE/2-cx,yy*TILE+TILE/2-cy) <= radius+14:
+                            blocked.add((xx,yy))
+            return blocked
+
+        def path_exists(door, blocked):
+            start=(door.x,door.y)
+            if door.side=="N": start=(door.x,1)
+            elif door.side=="S": start=(door.x,self.rows-2)
+            elif door.side=="W": start=(1,door.y)
+            elif door.side=="E": start=(self.cols-2,door.y)
+            goal=(int(self.player_spawn[0]//TILE),int(self.player_spawn[1]//TILE))
+            q=deque([start]); seen={start}
+            while q:
+                x,y=q.popleft()
+                if (x,y)==goal:
+                    return True
+                for dx,dy in _NEIGH:
+                    nx,ny=x+dx,y+dy
+                    if not (0<=nx<self.cols and 0<=ny<self.rows):
+                        continue
+                    if (nx,ny) in seen or (nx,ny) in blocked:
+                        continue
+                    if (nx,ny)==(door.x,door.y):
+                        pass
+                    elif self.solid_tile(nx,ny):
+                        continue
+                    if dx and dy and (self.solid_tile(x+dx,y) or self.solid_tile(x,y+dy)):
+                        continue
+                    seen.add((nx,ny)); q.append((nx,ny))
+            return False
+
+        # If the room's walls themselves make the door unreachable, do not destroy
+        # scenery to hide a generation problem.
+        for door in self.doors.values():
+            if path_exists(door,set()):
+                blocked=deco_blocked_tiles(self.decorations)
+                if not path_exists(door,blocked):
+                    candidates=[d for d in self.decorations if d.get("kind") in self._decoration_radii]
+                    candidates.sort(key=lambda d: math.hypot(
+                        float(d.get("x",0))*TILE+TILE/2-(door.x*TILE+TILE/2),
+                        float(d.get("y",0))*TILE+TILE/2-(door.y*TILE+TILE/2)))
+                    while candidates and not path_exists(door,blocked):
+                        doomed=candidates.pop(0)
+                        self.decorations.remove(doomed)
+                        blocked=deco_blocked_tiles(self.decorations)
+
+        # Rebuild physical decoration colliders after any safety removal.
+        self.decoration_colliders=[]
+        for deco in self.decorations:
+            kind=deco.get("kind")
+            if kind in self._decoration_radii:
+                self.decoration_colliders.append((
+                    float(deco.get("x",0))*TILE+TILE/2,
+                    float(deco.get("y",0))*TILE+TILE/2,
+                    self._decoration_radii[kind], kind,
+                ))
+        for bx,by in bonfire_positions(self):
+            self.decoration_colliders.append((bx,by,16.0,"bonfire"))
+
     def solid_tile(self,tx,ty):
         if tx<0 or ty<0 or tx>=self.cols or ty>=self.rows:return True
         v=self.grid[ty][tx]
