@@ -49,6 +49,8 @@ class Renderer:
         self._ambient_surface = pygame.Surface((VIEW_W, VIEW_H), pygame.SRCALPHA)
         self._ambient_surface.fill((6, 9, 20, 66))
         self._shadow_layer = pygame.Surface((VIEW_W, VIEW_H), pygame.SRCALPHA)
+        self._lights_surface = pygame.Surface((VIEW_W, VIEW_H))
+        self._player_light_surface = pygame.Surface((VIEW_W, VIEW_H))
         self._pillar_positions_cache = {}
         self.chest_images = {}
         self.chest_type_images = {}
@@ -1604,10 +1606,10 @@ class Renderer:
         # Iluminación dinámica 2D económica: luces radiales aditivas se calculan en
         # coordenadas de pantalla y se dibujan detrás de los actores y objetos.
         decor_lights = self._room_decor_lights(arena)
-        lights = pygame.Surface((VIEW_W, VIEW_H))
-        lights.fill((0, 0, 0))
-        player_light = pygame.Surface((VIEW_W, VIEW_H))
-        player_light.fill((0, 0, 0))
+        lights = self._lights_surface
+        player_light = self._player_light_surface
+        lights.fill((0,0,0))
+        player_light.fill((0,0,0))
         def add_light(target, world_x, world_y, radius, color, strength=1.0):
             radius=max(1,int(radius))
             lx, ly = int(world_x + ox), int(world_y + oy)
