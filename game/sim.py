@@ -216,12 +216,12 @@ class Sim:
         kept=[]
         attack_interval=float(p.ability.get("drone_attack_interval",1.0))
         damage=float(p.ability.get("drone_damage_mult",1.0))*4.0*p.damage_mult
-        soft_leash=205.0
-        hard_leash=270.0
+        soft_leash=270.0
+        hard_leash=350.0
 
         for i,d in enumerate(self.drones):
-            d.setdefault("orbit_speed",0.38 if i%2==0 else -0.34)
-            d.setdefault("orbit_radius",68.0)
+            d.setdefault("orbit_speed",0.28 if i%2==0 else -0.25)
+            d.setdefault("orbit_radius",82.0)
             d.setdefault("idle_phase",self.rng.random()*math.tau)
             d.setdefault("stuck_time",0.0)
             d.setdefault("repath_time",0.0)
@@ -239,13 +239,13 @@ class Sim:
                 # prevents them from freezing at one point beside Mira.
                 d["orbit"] += d["orbit_speed"]*dt
                 d["idle_phase"] += dt*1.15
-                radius=68.0 + math.sin(d["idle_phase"])*9.0
+                radius=82.0 + math.sin(d["idle_phase"])*6.0
                 # Evenly distribute multiple drones around Mira while preserving
                 # their individual slow orbit direction.
                 slot_offset=(math.tau/max(1,len(self.drones)))*i
                 angle=d["orbit"]+slot_offset
                 target_x=p.x+math.cos(angle)*radius
-                target_y=p.y+math.sin(angle)*radius*0.82
+                target_y=p.y+math.sin(angle)*radius*0.88
             else:
                 ex,ey=nearest_enemy.x-d["x"],nearest_enemy.y-d["y"]
                 ed=math.hypot(ex,ey) or 1.0
@@ -293,10 +293,10 @@ class Sim:
                 min_dist=float(d.get("radius",10.0))+float(other.get("radius",10.0))+18.0
                 if 0.001<od<min_dist:
                     strength=(min_dist-od)/min_dist
-                    sep_x-=ox/od*strength*95.0
-                    sep_y-=oy/od*strength*95.0
-            target_x+=sep_x*0.45
-            target_y+=sep_y*0.45
+                    sep_x-=ox/od*strength*45.0
+                    sep_y-=oy/od*strength*45.0
+            target_x+=sep_x*0.25
+            target_y+=sep_y*0.25
 
             # Keep a physical gap from Mira herself.
             relx,rely=d["x"]-p.x,d["y"]-p.y
@@ -329,8 +329,14 @@ class Sim:
                 pr=min(threats,key=lambda q:math.hypot(q.x-d["x"],q.y-d["y"]))
                 pv=math.hypot(pr.vx,pr.vy) or 1.0
                 side=(-1 if i%2 else 1)
-                d["vx"] += (-pr.vy/pv)*side*78.0*dt
-                d["vy"] += (pr.vx/pv)*side*78.0*dt
+                d.setdefault("avoid_x",0.0); d.setdefault("avoid_y",0.0)
+                d["avoid_x"] += (-pr.vy/pv)*side*38.0*dt
+                d["avoid_y"] += (pr.vx/pv)*side*38.0*dt
+            else:
+                d["avoid_x"] *= max(0.0,1.0-5.0*dt)
+                d["avoid_y"] *= max(0.0,1.0-5.0*dt)
+            d["vx"] += d.get("avoid_x",0.0)
+            d["vy"] += d.get("avoid_y",0.0)
 
             # If the direct route is blocked, probe several headings and choose
             # the one that makes real progress without entering a hitbox.
@@ -374,12 +380,14 @@ class Sim:
                 if not self._drone_collision(nx,ny,d["radius"]):
                     d["x"],d["y"]=nx,ny
                 else:
-                    # Pull toward Mira in short safe increments instead of teleporting
-                    # through a wall/object.
-                    pull=45.0*dt
-                    qx,qy=self.move_actor(d["x"],d["y"],-pdx/pd*pull,-pdy/pd*pull,d["radius"])
-                    if not self._drone_collision(qx,qy,d["radius"]):
+                    # Si Mira está junto a una pared, no fuerces al dron contra ella.
+                    # Sólo corregimos la distancia cuando el trayecto de retirada es libre.
+                    pull=min(32.0*dt,pd-hard_leash+8.0)
+                    qx=d["x"]-pdx/pd*pull; qy=d["y"]-pdy/pd*pull
+                    if self._drone_path_clear(d["x"],d["y"],qx,qy,d["radius"]):
                         d["x"],d["y"]=qx,qy
+                    else:
+                        d["vx"]*=0.35; d["vy"]*=0.35; d["stuck_time"]=0.0
 
             margin=d["radius"]+1.0
             d["x"]=max(margin,min(self.arena.width-margin,d["x"]))
