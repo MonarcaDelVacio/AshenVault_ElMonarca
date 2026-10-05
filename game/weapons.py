@@ -7,6 +7,10 @@ class WeaponState:
     def __init__(self, wdef):
         self.d = wdef
         self.ammo = wdef.magazine
+        self.reserve_magazines = int(getattr(wdef, "max_magazines", 3))
+        self.max_reserve_magazines = self.reserve_magazines
+        self.durability = int(getattr(wdef, "durability", wdef.magazine))
+        self.max_durability = int(getattr(wdef, "durability", wdef.magazine))
         self.cooldown = 0.0
         self.reload_left = 0.0
         self.charge_time = 0.0
@@ -19,10 +23,11 @@ class WeaponState:
     def start_reload(self):
         if getattr(self.d, "class", "") == "melee":
             return False
-        if not self.reloading and self.ammo < self.d.magazine:
-            self.reload_left = self.d.reload_time
-            return True
-        return False
+        if self.reserve_magazines <= 0 or self.reloading or self.ammo >= self.d.magazine:
+            return False
+        self.reserve_magazines -= 1
+        self.reload_left = self.d.reload_time
+        return True
 
     def update(self, dt):
         """Devuelve True en el frame en que termina la recarga."""
@@ -106,6 +111,8 @@ def _fire_projectiles(sim, p, w, charge_ratio=0.0):
 
 def try_fire(sim, p, inp, dt):
     w = p.weapon
+    if w is None:
+        return False
     d = w.d
     if getattr(d, "laser_weapon", False):
         # El láser consume energía de forma continua. La primera línea aparece
@@ -172,8 +179,11 @@ def try_fire(sim, p, inp, dt):
             p.energy -= d.energy_cost
         p.since_shot = 0.0
         w.ammo -= 1
+        w.durability = max(0, w.durability - 1)
         sim.stats["shots"] += 1
         sim.perform_melee_attack(p, d)
+        if w.durability <= 0:
+            sim.break_weapon(p, w)
         # La defensa contra proyectiles existe únicamente durante el golpe real.
         # Apuntar por sí solo nunca activa esta protección.
         p.melee_attack_timer = max(0.08, min(0.18, float(getattr(d, "fire_interval", 0.25)) * 0.45))
