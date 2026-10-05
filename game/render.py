@@ -501,7 +501,7 @@ class Renderer:
                 self.special_effect_frames["new_fireball"] = frames
         ability_atlas_path = new_effect_dir / "spritesheesdeeffectosparahabilidades.png"
         if ability_atlas_path.is_file():
-            frames = self._load_component_frames(ability_atlas_path, minimum=8, merge_gap=10)
+            frames = self._load_component_frames(ability_atlas_path, minimum=8, merge_gap=1)
             if not frames:
                 frames = self._load_sheet_frames(ability_atlas_path)
             if frames:
@@ -577,7 +577,7 @@ class Renderer:
         for key, filename in (("ranged","modelosarmas.png"),("melee","modelosarmasmelee.png")):
             path = new_weapon_dir / filename
             if path.is_file():
-                frames = self._load_component_frames(path, minimum=18, merge_gap=5)
+                frames = self._load_component_frames(path, minimum=18, merge_gap=1)
                 if not frames:
                     frames = self._load_sheet_frames(path)
                 if frames:
@@ -1280,11 +1280,11 @@ class Renderer:
     def _draw_drone_actor(self, screen, drone, ox, oy, t):
         x=int(drone["x"]+ox); y=int(drone["y"]+oy)
         bob=math.sin(float(drone.get("phase",0.0)))*3.0
-        pygame.draw.ellipse(screen,(12,14,20,120),(x-13,y+8,x+13-(x-13),9))
+        pygame.draw.ellipse(screen,(12,14,20,100),(x-8,y+5,x+8-(x-8),6))
         frames=self.drone_frames or self.enemy_sprites.get("drone",{}).get("idle") or self.enemy_sprites.get("drone",{}).get("run") or self.enemy_sprites.get("drone",{}).get("walk") or []
         if frames:
             frame=frames[int(t*8.0)%len(frames)]
-            frame=self._fit_image(frame,42)
+            frame=self._fit_image(frame,24)
             if float(drone.get("flash",0.0)) > 0:
                 frame=frame.copy()
                 mask=pygame.mask.from_surface(frame,threshold=8)
@@ -1955,6 +1955,18 @@ class Renderer:
             if door_frames:
                 state_index = 1 if d.open and len(door_frames) > 1 else 0
                 door_img = pygame.transform.scale(door_frames[state_index], span.size)
+                # El modelo de puerta se apoya sobre un respaldo opaco de pared.
+                # Así ningún píxel transparente del PNG deja ver el vacío/fondo.
+                backing = pygame.Surface(span.size, pygame.SRCALPHA)
+                wall_color = tuple(self.data.biomes[arena.biome]["wall"])
+                wall_top = tuple(self.data.biomes[arena.biome]["wall_top"])
+                backing.fill((*wall_color, 255))
+                pygame.draw.rect(backing, (*wall_top, 255), (0, 0, span.w, max(3, TILE // 6)))
+                screen.blit(backing, span.topleft)
+                # La puerta lateral tiene una orientación canónica hacia la derecha.
+                # En el lado oeste se espeja horizontalmente para mirar hacia fuera.
+                if d.side == "W":
+                    door_img = pygame.transform.flip(door_img, True, False)
                 screen.blit(door_img, span.topleft)
                 continue
             if not d.open:
@@ -2257,7 +2269,7 @@ class Renderer:
             # forma proporcional al número de salas y evita amontonamientos.
             cell=min(18,max(10,int(min(190/cols,92/rows))))
             width,height=max(200, cols*cell+36),rows*cell+36
-            x,y=VIEW_W-width-10,42
+            x,y=VIEW_W-width-10,60
             content_x = (width - cols*cell)//2
             content_y = 10
             origin_y=content_y
@@ -2369,16 +2381,17 @@ class Renderer:
             coin_frame = coin_frames[int(pygame.time.get_ticks() * 0.008) % len(coin_frames)]
             coin_frame = self._fit_image(coin_frame, 14, cache_key="hud_coin")
         coin_text = self.small.render(str(int(p.coins)), True, (255, 225, 135))
-        total_w = (coin_frame.get_width() if coin_frame else 10) + 4 + coin_text.get_width()
-        group_x = coin_panel.centerx - total_w // 2
+        # El fotograma animado puede cambiar de ancho entre imágenes. Reservamos
+        # siempre una caja fija para la moneda para que el contador no "salte".
+        icon_box = pygame.Rect(coin_panel.x + 18, coin_panel.y + 12, 20, 20)
         if coin_frame:
-            screen.blit(coin_frame, coin_frame.get_rect(midleft=(group_x, coin_panel.centery)))
-            text_x = group_x + coin_frame.get_width() + 4
+            screen.blit(coin_frame, coin_frame.get_rect(center=icon_box.center))
         else:
-            pygame.draw.circle(screen, (238, 190, 55), (group_x + 5, coin_panel.centery), 5)
-            pygame.draw.circle(screen, (255, 232, 120), (group_x + 5, coin_panel.centery), 5, 1)
-            text_x = group_x + 14
-        screen.blit(coin_text, coin_text.get_rect(midleft=(text_x, coin_panel.centery)))
+            pygame.draw.circle(screen, (238, 190, 55), icon_box.center, 5)
+            pygame.draw.circle(screen, (255, 232, 120), icon_box.center, 5, 1)
+        # El número queda fijo respecto al panel y centrado verticalmente con la moneda.
+        text_rect = coin_text.get_rect(midleft=(icon_box.right + 5, coin_panel.centery))
+        screen.blit(coin_text, text_rect)
 
         if getattr(sim, "statue_buffs", None):
             buff_labels={"defense":"DEF","melee":"MEL","ranged":"DIST","ability":"HAB","critical":"CRIT"}
