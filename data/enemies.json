@@ -855,5 +855,37 @@
     "sprite_scale": 4.2,
     "visual_has_weapon": true,
     "boss_uses_supplied_model": true
+  },
+  "sky_raider": {
+    "name": "Asaltante Celeste",
+    "ai": "flying",
+    "hp": 34,
+    "speed": 135,
+    "radius": 10,
+    "detect_range": 900,
+    "preferred_distance": 210,
+    "attack_range": 430,
+    "windup": 0.48,
+    "recover": 0.22,
+    "cooldown": 1.15,
+    "damage": 3,
+    "projectile_speed": 300,
+    "projectile_radius": 5,
+    "pellets": 2,
+    "fan_angle": 22,
+    "coins": 4,
+    "color": [
+      210,
+      105,
+      70
+    ],
+    "min_wave": 3,
+    "weight": 2.5,
+    "projectile_pattern": "fan",
+    "damage_type": "fire",
+    "sprite_set": "new_flyer",
+    "sprite_scale": 3.7,
+    "visual_has_weapon": false,
+    "boss_uses_supplied_model": true
   }
 }
