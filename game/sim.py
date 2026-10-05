@@ -945,7 +945,9 @@ class Sim:
             if chosen is not None:
                 sx,sy=chosen
                 used.append((sx,sy,float(e.radius)))
-                self.enemies.append(self._new_enemy(e,sx,sy)); self.emit("spawn",sx,sy)    def _setup_shop(self):
+                self.enemies.append(self._new_enemy(e,sx,sy)); self.emit("spawn",sx,sy)
+
+    def _setup_shop(self):
         self.shop_offers=[]
         cx,cy=self.arena.width/2,self.arena.height/2
         weapon_ids=list(self.data.weapons)
