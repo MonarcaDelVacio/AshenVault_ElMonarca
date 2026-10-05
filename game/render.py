@@ -1734,7 +1734,31 @@ class Renderer:
             pygame.draw.circle(layer,(*h["color"],min(170,alpha+50)),(layer.get_width()//2,layer.get_height()//2),int(h["radius"]),3)
             screen.blit(layer,(int(h["x"]+ox-h["radius"]),int(h["y"]+oy-h["radius"])))
         for wave in getattr(sim,"wave_attacks",[]):
-            pygame.draw.circle(screen,wave.get("color",(255,120,50)),(int(wave["x"]+ox),int(wave["y"]+oy)),int(wave["radius"]),4)
+            # Renderiza solo los sectores de la onda que siguen teniendo línea
+            # de propagación libre; los obstáculos cortan visualmente el anillo.
+            color=wave.get("color",(255,120,50))
+            radius=float(wave["radius"])
+            max_radius=float(wave.get("max_radius",radius))
+            points=[]
+            samples=96
+            for n in range(samples+1):
+                ang=math.tau*n/samples
+                limit=radius
+                if hasattr(sim,"_wave_clear_to"):
+                    step=8.0
+                    d=step
+                    while d<radius:
+                        tx=wave["x"]+math.cos(ang)*d
+                        ty=wave["y"]+math.sin(ang)*d
+                        if not sim._wave_clear_to(wave["x"],wave["y"],tx,ty):
+                            limit=d-step
+                            break
+                        d+=step
+                px=wave["x"]+math.cos(ang)*max(0.0,limit)+ox
+                py=wave["y"]+math.sin(ang)*max(0.0,limit)+oy
+                points.append((int(px),int(py)))
+            if len(points)>1:
+                pygame.draw.lines(screen,color,False,points,4)
 
         # Tienda: objetos físicos flotando, sin tarjetas/botones. Acercarse e
         # interactuar compra la oferta; precio y nombre quedan debajo del objeto.
