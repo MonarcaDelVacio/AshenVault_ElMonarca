@@ -2069,7 +2069,7 @@ class Renderer:
                 self.text(screen, str(slot_index + 1), rect.center, (83, 93, 110), self.small, center=True)
 
         # Habilidad y dash: iconos en paneles compactos con tecla encima.
-        icon_size = 42
+        icon_size = 36
         panel_size = 50
         gap = 10
         dash_x = VIEW_W - 12 - panel_size
@@ -2086,21 +2086,27 @@ class Renderer:
         self.text(screen, ability_key, (ability_x + panel_size // 2, panel_y - 15), (240, 241, 246), self.small, center=True)
         self.text(screen, dash_key, (dash_x + panel_size // 2, panel_y - 15), (240, 241, 246), self.small, center=True)
 
-        def icon_panel(x, image, fallback_color, cooldown_ratio):
+        def icon_panel(x, image, fallback_color, cooldown_ratio, atlas_kind=None):
             rect = pygame.Rect(x, panel_y, panel_size, panel_size)
             if not self.ui_atlas.draw_slot(screen, rect, False):
                 panel(rect, fill=(15, 17, 25, 218), border=(82, 88, 104))
+            center = rect.center
+            if atlas_kind is not None and self.ui_atlas.available:
+                self.ui_atlas.draw_icon_cooldown(screen, center, size=icon_size, kind=atlas_kind, ratio=cooldown_ratio)
+                return
             if image is not None:
                 scaled = pygame.transform.smoothscale(image, (icon_size, icon_size))
-                screen.blit(scaled, scaled.get_rect(center=rect.center))
+                screen.blit(scaled, scaled.get_rect(center=center))
+                if cooldown_ratio > 0:
+                    mask = pygame.mask.from_surface(scaled, 8)
+                    overlay = pygame.Surface(scaled.get_size(), pygame.SRCALPHA)
+                    cover_h = int(scaled.get_height() * max(0.0, min(1.0, cooldown_ratio)))
+                    pygame.draw.rect(overlay, (8, 10, 18, 145), (0, 0, scaled.get_width(), cover_h))
+                    alpha = mask.to_surface(setcolor=(255,255,255,255), unsetcolor=(0,0,0,0))
+                    overlay.blit(alpha, (0,0), special_flags=pygame.BLEND_RGBA_MULT)
+                    screen.blit(overlay, scaled.get_rect(center=center).topleft)
             else:
-                pygame.draw.circle(screen, fallback_color, rect.center, 13, 3)
-            if cooldown_ratio > 0:
-                overlay = pygame.Surface((panel_size, panel_size), pygame.SRCALPHA)
-                cover_h = int(panel_size * max(0.0, min(1.0, cooldown_ratio)))
-                pygame.draw.rect(overlay, (8, 10, 18, 145), (0, 0, panel_size, cover_h), border_radius=7)
-                screen.blit(overlay, rect.topleft)
-
+                pygame.draw.circle(screen, fallback_color, center, 11, 3)
         acd = max(0.0, min(1.0, p.ability_cd / max(0.01, p.c.ability["cooldown"])))
         cd = max(0.0, min(1.0, p.dash_cd / max(0.01, p.c.dash["cooldown"])))
         ability_kind=getattr(p.c,"ability",{}).get("kind","none")
@@ -2108,8 +2114,7 @@ class Renderer:
         ability_kind_icon=ability_icons.get(ability_kind,"buff")
         ability_sprite=self.ability_shield_image if ability_kind=="shield" else None
         if ability_sprite is None and self.ui_atlas.available:
-            icon_panel(ability_x, None, (105,205,170), acd)
-            self.ui_atlas.draw_icon(screen, (ability_x+panel_size//2, panel_y+panel_size//2), size=icon_size, kind=ability_kind_icon)
+            icon_panel(ability_x, None, (105,205,170), acd, atlas_kind=ability_kind_icon)
         else:
             icon_panel(ability_x, ability_sprite, (105,205,170), acd)
         icon_panel(dash_x, self.dash_icon, (95,195,125), cd)
