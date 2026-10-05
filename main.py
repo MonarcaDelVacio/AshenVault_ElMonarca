@@ -356,10 +356,9 @@ class App:
         """Permite navegar y activar las opciones con el ratón."""
         if self.state == SCORE:
             if click:
-                if self.score_continue_ready:
-                    self.go(HUB)
-                else:
-                    self.skip_score()
+                continue_rect = pygame.Rect(VIEW_W // 2 - 82, VIEW_H - 58, 164, 40)
+                if continue_rect.collidepoint(pos):
+                    self.continue_score()
             return
         if self.state == STATUE:
             accept_rect=pygame.Rect(VIEW_W//2-145,390,130,38)
@@ -652,11 +651,10 @@ class App:
                 self.finish_intro()
             return
         if self.state == SCORE:
-            if k in (pygame.K_RETURN, pygame.K_SPACE, pygame.K_ESCAPE):
-                if self.score_continue_ready:
-                    self.go(HUB)
-                else:
-                    self.skip_score()
+            if k in (pygame.K_RETURN, pygame.K_SPACE):
+                self.continue_score()
+            elif k == pygame.K_ESCAPE and self.score_phase == "done":
+                self.continue_score()
             return
         if self.state == PLAY:
             if k == self.key("pause"):
@@ -1028,22 +1026,9 @@ class App:
         self.draw_option_card((VIEW_W // 2 - 100, 488, 200, 30), "Volver", False)
 
     def update_score(self, dt):
-        # Primero se muestran las estadísticas completas de la partida.
-        # Después se pasa, mediante la misma transición, a la recompensa de XP.
-        if self.score_phase == "stats":
-            self.score_timer += dt
-            if self.score_timer >= 2.8:
-                self.score_phase = "fade"
-                self.score_timer = 0.0
-                self._begin_fade(0.18)
-        elif self.score_phase == "fade":
-            self.score_timer += dt
-            if self.score_timer >= 0.7:
-                self.score_phase = "xp"
-                self.score_timer = 0.0
-                self.score_xp_display = 0.0
-                self._begin_fade(0.18)
-        elif self.score_phase == "xp":
+        # La pantalla de estadísticas queda fija hasta que el jugador pulsa
+        # "Continuar". Solo la pantalla de EXP tiene animación automática.
+        if self.score_phase == "xp":
             self.score_xp_display = min(
                 float(self.score_xp_total),
                 self.score_xp_display + max(1.0, self.score_xp_total * dt / 3.2)
@@ -1056,11 +1041,15 @@ class App:
         elif self.score_phase == "done":
             self.score_continue_ready = True
 
-    def skip_score(self):
-        self.score_kills_display=int(self.sim.stats.get("kills",0)) if self.sim else self.score_kills_display
-        self.score_xp_display=float(self.score_xp_total)
-        self.score_phase="done"
-        self.score_continue_ready=True
+    def continue_score(self):
+        if self.score_phase == "stats":
+            self.score_phase = "xp"
+            self.score_timer = 0.0
+            self.score_xp_display = 0.0
+            self.score_continue_ready = False
+            self._begin_fade(0.18)
+        elif self.score_phase == "done":
+            self.go(HUB)
 
     def draw_score(self):
         scr=self.screen
@@ -1091,15 +1080,25 @@ class App:
                 ("Objetos", st.get("items",0)),
                 ("Jefes derrotados", st.get("bosses_defeated",0)),
             ]
+            def score_number(value):
+                try:
+                    number=float(value)
+                    if number.is_integer():
+                        return str(int(number))
+                    return f"{number:.2f}".rstrip("0").rstrip(".")
+                except (TypeError, ValueError):
+                    return str(value)
+
+            col_centers=(VIEW_W//2-180, VIEW_W//2+180)
             for i,(label,value) in enumerate(rows):
                 col=0 if i<4 else 1
                 row=i if i<4 else i-4
-                x=300+col*360
+                x=col_centers[col]
                 y=188+row*48
-                self.r.text(scr,label,(x-16,y),(165,180,198),self.r.menu_small,False)
-                self.r.text(scr,str(value),(x+150,y),(238,240,244),self.r.menu_font,False)
+                self.r.text(scr,label,(x,y),(165,180,198),self.r.menu_small,True)
+                self.r.text(scr,score_number(value),(x,y+19),(238,240,244),self.r.menu_font,True)
 
-            self.r.text(scr,"ESC / ENTER / ESPACIO / CLICK · SKIP",(VIEW_W//2,456),(145,160,180),self.r.menu_small,True)
+            self.draw_option_card((VIEW_W//2-82,VIEW_H-58,164,40),"Continuar",True)
         else:
             panel=pygame.Rect(145,105,670,365)
             pygame.draw.rect(scr,(9,13,23,242),panel,border_radius=14)
@@ -1184,7 +1183,7 @@ class App:
             self.screen.blit(thumb,thumb.get_rect(center=(panel.centerx,142)))
         self.r.text(self.screen,w.name.upper(),(panel.centerx,191),(240,210,135),self.r.menu_font,True)
         rarity=str(getattr(w,"rarity","common")).upper()
-        self.r.text(self.screen,"RARIDAD · "+rarity,(panel.centerx,216),(105,230,218),self.r.menu_small,True)
+        self.r.text(self.screen,"RAREZA · "+rarity,(panel.centerx,216),(105,230,218),self.r.menu_small,True)
         pellets=int(getattr(w,"pellets",1))
         effects=[]
         if getattr(w,"damage_type","physical")!="physical": effects.append(str(getattr(w,"damage_type","")).upper())
