@@ -779,7 +779,7 @@ class Sim:
             roll=self.rng.random()
             if roll<0.12: self.items.append(type("Loot",(),{"kind":"heal","x":x,"y":y})())
             elif roll<0.20: self.items.append(type("Loot",(),{"kind":"energy","x":x,"y":y})())
-            elif roll<0.40:
+            elif roll<0.70:
                 self.items.append(type("AmmoLoot",(),{"kind":"ammo","x":x,"y":y,"magazines":self.rng.choice((1,1,2))})())
             # Las esferas amarillas fueron retiradas.
         else:
