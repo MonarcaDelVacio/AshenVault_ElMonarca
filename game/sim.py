@@ -25,7 +25,7 @@ class Sim:
         self.player=Player(c,data.weapons[c.start_weapon],self.arena.player_spawn,self.meta_upgrades,character_progress)
         self.player.inventory=[self.player.weapon]; self.player.items=[]; self.player.bonus_pierce=0; self.player.bonus_projectiles=0; self.player.attack_speed_mult=1.0; self.player.coin_radius=0
         self.pool=ProjectilePool(); self.enemies=[]; self.enemy_pool=[]; self.items=[]; self.pickups=[]; self.keys=0; self.events=[]; self.chest=None
-        self.props=[]; self.hazards=[]; self.wave_attacks=[]; self.lasers=[]
+        self.props=[]; self.hazards=[]; self.wave_attacks=[]; self.lasers=[]; self.drones=[]
         self.decoration_collider_provider=None
         self.time=0.; self.wave=0; self.wave_delay=0.5; self.over=False; self.victory=False; self.portal=False; self.portal_position=(self.arena.width/2,self.arena.height/2)
         self.stats={"kills":0,"shots":0,"damage_taken":0,"waves":0,"coins":0,"rooms":1,"items":0,"purchases":0,"abilities":0,"bosses_defeated":0,"xp":0}
@@ -37,6 +37,63 @@ class Sim:
         self._enter_room(self.room,initial=True)
     def emit(self,kind,*args):
         if len(self.events)<250:self.events.append((kind,)+args)
+    def spawn_drone(self, angle=0.0):
+        a=self.player.ability
+        drone={"x":self.player.x+math.cos(angle)*34.0,"y":self.player.y+math.sin(angle)*34.0,
+               "angle":float(angle),"orbit":float(angle),"hp":float(a.get("drone_hp",18)),
+               "max_hp":float(a.get("drone_hp",18)),"shot_cd":0.15,"burst_left":0,
+               "burst_cd":0.0,"phase":self.rng.random()*math.tau,"radius":10.0}
+        self.drones.append(drone)
+        self.player.drones=self.drones
+        return drone
+
+    def _update_drones(self,dt):
+        if not self.drones or not self.player.alive:
+            return
+        p=self.player
+        kept=[]
+        attack_interval=float(p.ability.get("drone_attack_interval",0.62))
+        damage=float(p.ability.get("drone_damage_mult",1.0))*4.0*p.damage_mult
+        for i,d in enumerate(self.drones):
+            d["orbit"] += dt*(0.65 + i*0.07)
+            target_x=p.x+math.cos(d["orbit"])*42.0
+            target_y=p.y+math.sin(d["orbit"])*30.0
+            dx,dy=target_x-d["x"],target_y-d["y"]
+            dist=math.hypot(dx,dy)
+            if dist>1:
+                step=min(dist,230.0*dt)
+                d["x"] += dx/dist*step
+                d["y"] += dy/dist*step
+            d["phase"] += dt*3.5
+            d["shot_cd"]=max(0.0,d["shot_cd"]-dt)
+            d["burst_cd"]=max(0.0,d["burst_cd"]-dt)
+            target=min((e for e in self.enemies if e.alive and e.spawn_delay<=0.2),
+                       key=lambda e:math.hypot(e.x-d["x"],e.y-d["y"]),default=None)
+            if target is not None and math.hypot(target.x-d["x"],target.y-d["y"])<520:
+                if d["burst_left"]>0 and d["shot_cd"]<=0:
+                    ang=math.atan2(target.y-d["y"],target.x-d["x"])
+                    self.spawn_projectile(0,d["x"],d["y"],ang,620.0,damage,3.0,1.1,(90,220,235),"energy",0,0,False,None,False,0,False,0,0.85,0.0)
+                    d["burst_left"]-=1
+                    d["shot_cd"]=0.095
+                elif d["burst_left"]<=0 and d["burst_cd"]<=0:
+                    d["burst_left"]=3
+                    d["shot_cd"]=0.01
+                    d["burst_cd"]=attack_interval
+            kept.append(d)
+        self.drones=kept
+        p.drones=self.drones
+
+    def damage_drone(self, drone, amount, sx=0.0, sy=0.0):
+        if drone not in self.drones:
+            return False
+        damage=min(float(amount),max(1.0,drone["max_hp"]*0.42))
+        drone["hp"]-=damage
+        self.emit("drone_hit",drone["x"],drone["y"],damage)
+        if drone["hp"]<=0:
+            self.drones.remove(drone)
+            self.emit("drone_destroy",drone["x"],drone["y"])
+        return True
+
     def spawn_projectile(self,*a):return self.pool.spawn(*a)
 
     def _new_enemy(self, edef, x, y, summoned=False):
@@ -144,7 +201,7 @@ class Sim:
         # Loot y monedas pertenecen a la sala actual; nunca se comparten entre habitaciones.
         self.items=room.items
         self.pickups=room.pickups
-        self.hazards=[]; self.wave_attacks=[]; self.lasers=[]
+        self.hazards=[]; self.wave_attacks=[]; self.lasers=[]; self.drones=[]; self.player.drones=[]
         if not getattr(room, "props_spawned", False):
             self._spawn_room_props(room); room.props_spawned=True
         self.props=getattr(room, "props", [])
@@ -921,6 +978,11 @@ class Sim:
                         hit_radius=w.range
                         if dist <= hit_radius + pr.radius and abs(da) <= getattr(w,"melee_arc",1.2)*0.5:
                             pr.active=False; self.emit("projectile_block",pr.x,pr.y,w.color); continue
+                    drone_hit=next((dr for dr in self.drones if math.hypot(pr.x-dr["x"],pr.y-dr["y"]) < pr.radius+dr["radius"]),None)
+                    if drone_hit is not None:
+                        self.damage_drone(drone_hit,pr.damage,pr.x-pr.vx,pr.y-pr.vy)
+                        pr.active=False
+                        break
                     if math.hypot(pr.x-p.x,pr.y-p.y)<pr.radius+p.radius-2:
                         if pr.explosive:
                             self._explode_projectile(pr)
