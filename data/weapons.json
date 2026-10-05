@@ -1580,5 +1580,30 @@
     "melee_arc": 1,
     "weapon_sprite": "assets/weapons/melee/espada1.png",
     "melee_level": 4
+  },
+  "iria_dart_pistol": {
+    "name": "Pistola de Dardos Médicos",
+    "class": "pistol",
+    "rarity": "common",
+    "damage": 5,
+    "fire_interval": 0.34,
+    "auto": false,
+    "magazine": 8,
+    "reload_time": 1.25,
+    "projectile_speed": 560,
+    "spread": 1.5,
+    "recoil": 25,
+    "damage_type": "physical",
+    "energy_cost": 0,
+    "pellets": 1,
+    "range": 600,
+    "pierce": 0,
+    "bounces": 0,
+    "projectile_radius": 4,
+    "color": [95, 235, 155],
+    "weapon_sprite": "assets/weapons/pistols/pistol2.png",
+    "projectile_sprite": "assets/projectiles/projectile_02.png",
+    "ally_heal": 3
   }
+
 }
