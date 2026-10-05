@@ -1265,7 +1265,7 @@
     "spread": 0,
     "recoil": 25,
     "damage_type": "radiant",
-    "energy_cost": 6,
+    "energy_cost": 0,
     "pellets": 1,
     "range": 400,
     "pierce": 3,
