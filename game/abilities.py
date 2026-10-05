@@ -9,6 +9,14 @@ def use_ability(sim):
     a = getattr(p, "ability", p.c.ability)
     ability_mult = getattr(p, "statue_ability_mult", 1.0)
     kind = a.get("kind", "none")
+    # Mira consumes 75% of her current maximum energy per drone deployment.
+    # The cost is checked before applying the ability so a failed activation is free.
+    energy_cost = p.max_energy * 0.75 if kind == "drone" and getattr(p.c, "id", "") == "engineer" else 0.0
+    if energy_cost > 0.0 and p.energy < energy_cost:
+        return False
+    if energy_cost > 0.0:
+        p.energy = max(0.0, p.energy - energy_cost)
+        p.feedback_flash("energy", .26)
     if kind == "heal":
         amount = a.get("amount", 2) * ability_mult
         if p.hp >= p.max_hp and p.shield >= p.max_shield:
