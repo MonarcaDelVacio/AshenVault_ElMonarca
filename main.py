@@ -13,12 +13,12 @@ from game.ui_atlas import UIAtlas
 from game.intro import IntroPlayer
 from game.sim import Sim, Input
 
-INTRO, MENU, PLAY, PAUSE, MAP, DEAD, VICTORY, SETTINGS, CHAR_SELECT, HUB, STATUE = "intro", "menu", "play", "pause", "map", "dead", "victory", "settings", "char_select", "hub", "statue"
+INTRO, MENU, PLAY, PAUSE, MAP, DEAD, VICTORY, SCORE, SETTINGS, CHAR_SELECT, HUB, STATUE = "intro", "menu", "play", "pause", "map", "dead", "victory", "score", "settings", "char_select", "hub", "statue"
 MENU_ITEMS = ["Jugar", "Configuracion", "Salir"]
 PAUSE_ITEMS = ["Continuar", "Configuracion", "Reiniciar run", "Salir al menu"]
 SETTINGS_ITEMS = ["Volumen efectos", "Volumen musica", "Sensibilidad mouse", "Mover arriba", "Mover abajo", "Mover izquierda", "Mover derecha", "Dash", "Habilidad", "Recargar", "Pausa", "Minimapa", "Pantalla completa", "Restablecer", "Volver"]
 SETTING_KEYS = {"Mover arriba":"up", "Mover abajo":"down", "Mover izquierda":"left", "Mover derecha":"right", "Dash":"dash", "Habilidad":"ability", "Recargar":"reload", "Pausa":"pause", "Minimapa":"map"}
-HUB_ITEMS = ["Iniciar run", "Personajes", "Mejoras", "Volver al menu"]
+HUB_ITEMS = ["Iniciar run", "Personajes", "Mejoras", "Arsenal", "Volver al menu"]
 
 
 class App:
@@ -73,7 +73,19 @@ class App:
         self.character_portraits = {}
         self._load_character_portraits()
         self.reward = 0
-        self.info = None          # panel informativo (Personajes/Arsenal/...)
+        self.info = None
+        self.weapon_info_id = None
+        self.score_phase = "kills"
+        self.score_timer = 0.0
+        self.score_kills_display = 0
+        self.score_level_start = 1
+        self.score_xp_start = 0
+        self.score_level_end = 1
+        self.score_xp_end = 0
+        self.score_xp_display = 0.0
+        self.score_xp_total = 0
+        self.score_dungeon_name = "Dungeon"
+        self.score_continue_ready = false
         self.back_state = MENU
         self.settings_sel = 0
         self.rebind_action = None
@@ -563,6 +575,13 @@ class App:
             if k in (pygame.K_ESCAPE, pygame.K_RETURN, pygame.K_SPACE):
                 self.finish_intro()
             return
+        if self.state == SCORE:
+            if k in (pygame.K_RETURN, pygame.K_SPACE, pygame.K_ESCAPE):
+                if self.score_continue_ready:
+                    self.go(HUB)
+                else:
+                    self.skip_score()
+            return
         if self.state == PLAY:
             if k == self.key("pause"):
                 self.go(PAUSE)
@@ -760,6 +779,9 @@ class App:
         # en MENU, HUB, selección de personaje, información y configuración.
         if self.state not in (PLAY, PAUSE):
             self.menu_visuals.update(dt)
+        if self.state == SCORE:
+            self.update_score(dt)
+            return
         if self.state != PLAY:
             return
         s = self.sim
@@ -777,10 +799,22 @@ class App:
         s.events.clear()
         self.fx.update(dt)
         if s.over:
+            prog_before = self.save.data.get("character_progress", {}).get(self.char_id, {"level":1,"xp":0})
+            self.score_level_start = int(prog_before.get("level", 1))
+            self.score_xp_start = int(prog_before.get("xp", 0))
+            self.score_dungeon_name = getattr(s.dungeon, "name", getattr(s.arena, "biome", "Dungeon"))
             self.reward = self.save.record_run(s.stats, victory=s.victory, char_id=self.char_id)
             self.run_xp = getattr(self.save, "last_run_xp", s.stats.get("xp", 0))
             self.levels_gained = getattr(self.save, "last_levels_gained", 0)
-            self.go(HUB)
+            prog_after = self.save.data.get("character_progress", {}).get(self.char_id, {"level":1,"xp":0})
+            self.score_level_end = int(prog_after.get("level", self.score_level_start))
+            self.score_xp_end = int(prog_after.get("xp", 0))
+            self.score_xp_total = max(0, int(self.run_xp))
+            self.score_kills_display = 0
+            self.score_timer = 0.0
+            self.score_phase = "kills"
+            self.score_continue_ready = False
+            self.go(SCORE)
 
     def world_mouse(self):
         mx, my = self._logical_mouse_pos()
@@ -945,15 +979,20 @@ class App:
             self._present()
             return
         mouse = self._logical_mouse_pos()
-        if self.state in (PLAY, PAUSE, MAP, DEAD, VICTORY, STATUE) and self.sim:
+        if self.state in (PLAY, PAUSE, MAP, DEAD, VICTORY, SCORE, STATUE) and self.sim:
             self.r.draw_world(scr, self.sim, self.fx, self.t)
             self.r.draw_hud(scr, self.sim, self.fx, mouse)
             if self.state == MAP:
                 shade=pygame.Surface((VIEW_W,VIEW_H),pygame.SRCALPHA); shade.fill((3,5,10,205)); scr.blit(shade,(0,0))
                 self.r.draw_minimap(scr,self.sim,large=True)
                 self.r.text(scr,"M / ESC · CERRAR MAPA",(VIEW_W//2,VIEW_H-16),(175,190,205),self.r.menu_small,True)
-        if self.state == HUB:
-            self.draw_hub()
+        if self.state == SCORE:
+            self.draw_score()
+        elif self.state == HUB:
+            if self.info == "Arsenal":
+                self.draw_weapon_collection()
+            else:
+                self.draw_hub()
         elif self.state == MENU:
             if self.info:
                 self.draw_info()
