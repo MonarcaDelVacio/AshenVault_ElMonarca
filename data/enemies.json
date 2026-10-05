@@ -81,7 +81,6 @@
     "sprite_set": "goblin",
     "sprite_scale": 3.8,
     "visual_has_weapon": true,
-    "weapon_id": "thorn_shotgun",
     "boss_uses_supplied_model": true,
     "hit_radius": 38
   },
