@@ -1229,10 +1229,22 @@ class Sim:
                         e.hurt(h["damage"],math.atan2(e.y-h["y"],e.x-h["x"]))
         self.hazards=[h for h in self.hazards if h["life"]>0]
         for wave in self.wave_attacks:
-            wave["life"]-=dt; wave["radius"]+=wave["speed"]*dt
-            if not wave.get("hit") and abs(math.hypot(self.player.x-wave["x"],self.player.y-wave["y"])-wave["radius"])<16:
-                wave["hit"]=True
-                if self.player.take_damage(wave["damage"]): self.on_player_hit(wave["x"],wave["y"],wave["damage"])
+            wave["life"]-=dt
+            wave["radius"]+=wave["speed"]*dt
+            if wave.get("max_radius") is not None and wave["radius"]>=wave["max_radius"]:
+                wave["radius"]=wave["max_radius"]; wave["life"]=min(wave["life"],0.12)
+            if wave.get("team",1)==0:
+                for e in self.enemies:
+                    if not e.alive or e.id in wave.setdefault("hit_ids",set()): continue
+                    if abs(math.hypot(e.x-wave["x"],e.y-wave["y"])-wave["radius"])<max(12.0,e.radius+5):
+                        e.hurt(wave["damage"],math.atan2(e.y-wave["y"],e.x-wave["x"]))
+                        if wave.get("stun",0)>0: e.frozen=max(getattr(e,"frozen",0),wave["stun"])
+                        wave["hit_ids"].add(e.id)
+                        self.emit("enemy_hit",e.x,e.y,wave.get("color",(220,150,80)),wave["damage"],False)
+            else:
+                if not wave.get("hit") and abs(math.hypot(self.player.x-wave["x"],self.player.y-wave["y"])-wave["radius"])<16:
+                    wave["hit"]=True
+                    if self.player.take_damage(wave["damage"]): self.on_player_hit(wave["x"],wave["y"],wave["damage"])
         self.wave_attacks=[w for w in self.wave_attacks if w["life"]>0]
 
     def _update_pickups(self,dt):
@@ -1247,11 +1259,11 @@ class Sim:
             dist=math.hypot(dx,dy)
             magnet=64.0+float(getattr(p,"coin_radius",0))  # 2 bloques (TILE=32)
             if dist <= magnet:
-                # Atracción física suave: la moneda vuela hacia el jugador antes
-                # de ser recogida, en lugar de teletransportarse desde el radio.
-                if dist > 13.0:
-                    pull=420.0*dt
-                    step=min(dist-13.0,max(0.0,pull))
+                pickup_radius=float(pickup.get("radius",7.0))
+                collect_radius=float(getattr(p,"radius",10.0))+pickup_radius
+                if dist > collect_radius:
+                    pull=520.0*dt
+                    step=min(dist-collect_radius,max(0.0,pull))
                     if dist > 0.001:
                         pickup["x"] -= dx/dist*step
                         pickup["y"] -= dy/dist*step
