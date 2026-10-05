@@ -221,14 +221,23 @@ def generate_room(seed=None, room_type="combat", biome="ruins", door_sides=None)
     shape_name, floor_mask = _shape_floor_mask(rng, room_type, active)
     g=[[0 if (x,y) in floor_mask else 1 for x in range(ROOM_W)] for y in range(ROOM_H)]
 
-    all_doors={"N":(ROOM_W//2,0),"S":(ROOM_W//2,ROOM_H-1),"W":(0,ROOM_H//2),"E":(ROOM_W-1,ROOM_H//2)}
+    # Cada puerta tiene exactamente 2 bloques de ancho. El punto almacenado
+    # sigue siendo el ancla para conservar compatibilidad con Arena/Door.
+    cx,cy=ROOM_W//2,ROOM_H//2
+    all_doors={"N":(cx,0),"S":(cx,ROOM_H-1),"W":(0,cy),"E":(ROOM_W-1,cy)}
     doors=[all_doors[k] for k in ("N","S","W","E") if k in active]
     for x,y in doors:
-        g[y][x]=0
-        if x==0:g[y][1]=0
-        elif x==ROOM_W-1:g[y][ROOM_W-2]=0
-        elif y==0:g[1][x]=0
-        else:g[ROOM_H-2][x]=0
+        if x==0:
+            opening=((x,y),(x,y-1)); inward=(1,y)
+        elif x==ROOM_W-1:
+            opening=((x,y),(x,y-1)); inward=(ROOM_W-2,y)
+        elif y==0:
+            opening=((x,y),(x-1,y)); inward=(x,1)
+        else:
+            opening=((x,y),(x-1,y)); inward=(x,ROOM_H-2)
+        for ox,oy in opening:
+            if 0<=ox<ROOM_W and 0<=oy<ROOM_H: g[oy][ox]=0
+        ix,iy=inward; g[iy][ix]=0
     cx,cy=ROOM_W//2,ROOM_H//2
     reserved={(x,y) for y in range(cy-2,cy+3) for x in range(cx-2,cx+3)}
     reserved.update(doors)
