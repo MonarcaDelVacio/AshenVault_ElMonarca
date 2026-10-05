@@ -358,7 +358,7 @@ class App:
             if click:
                 if self.score_phase == "stats":
                     continue_rect = pygame.Rect(VIEW_W // 2 - 82, VIEW_H - 58, 164, 40)
-                elif self.score_phase == "done":
+                elif self.score_phase in ("xp", "done"):
                     continue_rect = pygame.Rect(VIEW_W - 180, VIEW_H - 58, 150, 40)
                 else:
                     continue_rect = None
@@ -1031,18 +1031,11 @@ class App:
         self.draw_option_card((VIEW_W // 2 - 100, 488, 200, 30), "Volver", False)
 
     def update_score(self, dt):
-        # La pantalla de estadísticas queda fija hasta que el jugador pulsa
-        # "Continuar". Solo la pantalla de EXP tiene animación automática.
+        # Las estadisticas quedan fijas hasta Continuar. La pantalla de EXP
+        # tambien queda lista inmediatamente para que el boton sea accionable.
         if self.score_phase == "xp":
-            self.score_xp_display = min(
-                float(self.score_xp_total),
-                self.score_xp_display + max(1.0, self.score_xp_total * dt / 3.2)
-            )
-            if self.score_xp_display >= self.score_xp_total:
-                self.score_xp_display = float(self.score_xp_total)
-                self.score_phase = "done"
-                self.score_continue_ready = True
-                self._begin_fade(0.18)
+            self.score_xp_display = float(self.score_xp_total)
+            self.score_continue_ready = True
         elif self.score_phase == "done":
             self.score_continue_ready = True
 
@@ -1050,10 +1043,10 @@ class App:
         if self.score_phase == "stats":
             self.score_phase = "xp"
             self.score_timer = 0.0
-            self.score_xp_display = 0.0
-            self.score_continue_ready = False
+            self.score_xp_display = float(self.score_xp_total)
+            self.score_continue_ready = True
             self._begin_fade(0.18)
-        elif self.score_phase == "done":
+        elif self.score_phase in ("xp", "done"):
             self.go(HUB)
 
     def draw_score(self):
@@ -1108,13 +1101,7 @@ class App:
             panel=pygame.Rect(145,105,670,365)
             pygame.draw.rect(scr,(9,13,23,242),panel,border_radius=14)
             pygame.draw.rect(scr,(76,95,122,220),panel,2,border_radius=14)
-            self.r.text(scr,"EXPERIENCIA",(VIEW_W//2,132),(240,195,105),self.r.menu_font,True)
-            frames=getattr(self.r,"player_walk_frames",{}).get(self.char_id,[])
-            if frames:
-                frame=frames[int(self.t*7.5)%len(frames)]
-                scr.blit(frame,frame.get_rect(center=(VIEW_W//2,220)))
-            else:
-                self.r.text(scr,cname.upper(),(VIEW_W//2,220),(220,225,235),self.r.menu_font,True)
+            # La pantalla de EXP no muestra un texto central previo al boton.
 
             from game.save import xp_to_next
             remaining=self.score_xp_start
