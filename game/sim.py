@@ -82,10 +82,11 @@ class Sim:
 
     def spawn_drone(self, angle=0.0):
         a=self.player.ability
-        drone={"x":self.player.x+math.cos(angle)*34.0,"y":self.player.y+math.sin(angle)*34.0,
+        drone={"x":self.player.x+math.cos(angle)*62.0,"y":self.player.y+math.sin(angle)*62.0,
                "angle":float(angle),"orbit":float(angle),"hp":float(a.get("drone_hp",18)),
                "max_hp":float(a.get("drone_hp",18)),"shot_cd":1.0,"burst_left":0,
-               "burst_cd":0.0,"phase":self.rng.random()*math.tau,"radius":10.0,"flash":0.0}
+               "burst_cd":0.0,"phase":self.rng.random()*math.tau,"radius":10.0,"flash":0.0,
+               "vx":0.0,"vy":0.0,"strafe_sign":(-1 if len(self.drones)%2 else 1)}
         self.drones.append(drone)
         self.player.drones=self.drones
         return drone
@@ -97,53 +98,116 @@ class Sim:
         kept=[]
         attack_interval=float(p.ability.get("drone_attack_interval",1.0))
         damage=float(p.ability.get("drone_damage_mult",1.0))*4.0*p.damage_mult
+        soft_leash=190.0
+        hard_leash=250.0
+        preferred_side=72.0
         for i,d in enumerate(self.drones):
-            # Drones are autonomous ranged allies, not orbiting satellites.
-            nearest_enemy=min((e for e in self.enemies if e.alive and e.spawn_delay<=0.2),
-                               key=lambda e:math.hypot(e.x-d["x"],e.y-d["y"]),default=None)
-            target_x,target_y=p.x,p.y
-            electric_hazards=[h for h in self.hazards if h.get("dtype")=="electric" and h.get("life",0)>0 and math.hypot(h["x"]-d["x"],h["y"]-d["y"])<115]
+            enemies=[e for e in self.enemies if e.alive and e.spawn_delay<=0.2]
+            nearest_enemy=min(enemies,key=lambda e:math.hypot(e.x-d["x"],e.y-d["y"]),default=None)
+
+            # Los drones combaten siempre que exista un enemigo: no abandonan el
+            # ataque sólo porque el enemigo esté lejos de Mira. Su movimiento, sin
+            # embargo, está limitado por un radio amplio alrededor de Mira.
+            target_x,target_y=p.x+math.cos(d["orbit"])*preferred_side,p.y+math.sin(d["orbit"])*preferred_side
+            if nearest_enemy is not None:
+                ex,ey=nearest_enemy.x-d["x"],nearest_enemy.y-d["y"]
+                ed=math.hypot(ex,ey) or 1.0
+                # Mantiene una distancia de combate y se desplaza lateralmente de
+                # forma estable, evitando recalcular una dirección aleatoria cada frame.
+                px,py=-ey/ed*d["strafe_sign"]*48.0,ex/ed*d["strafe_sign"]*48.0
+                target_x=nearest_enemy.x-ex/ed*145.0+px
+                target_y=nearest_enemy.y-ey/ed*145.0+py
+
+            # Evita zonas eléctricas, pero sin anular el objetivo de combate.
+            electric_hazards=[h for h in self.hazards if h.get("dtype")=="electric" and h.get("life",0)>0 and math.hypot(h["x"]-d["x"],h["y"]-d["y"])<105]
             if electric_hazards:
                 h=min(electric_hazards,key=lambda q:math.hypot(q["x"]-d["x"],q["y"]-d["y"]))
-                hd=math.hypot(d["x"]-h["x"],d["y"]-h["y"]) or 1
-                target_x=d["x"]+(d["x"]-h["x"])/hd*180
-                target_y=d["y"]+(d["y"]-h["y"])/hd*180
-            elif nearest_enemy is not None and math.hypot(nearest_enemy.x-p.x,nearest_enemy.y-p.y)<420:
-                ex,ey=nearest_enemy.x-d["x"],nearest_enemy.y-d["y"]
-                edist=math.hypot(ex,ey) or 1
-                if edist<180:
-                    target_x=d["x"]-ex/edist*170
-                    target_y=d["y"]-ey/edist*170
-                else:
-                    target_x=nearest_enemy.x-ex/edist*80
-                    target_y=nearest_enemy.y-ey/edist*80
-            if math.hypot(d["x"]-p.x,d["y"]-p.y)>128.0:
-                target_x,target_y=p.x,p.y
-            dx,dy=target_x-d["x"],target_y-d["y"]
-            dist=math.hypot(dx,dy)
-            if dist>1:
-                step=min(dist,190.0*dt)
-                d["x"] += dx/dist*step
-                d["y"] += dy/dist*step
-            d["phase"] += dt*3.5
+                hd=math.hypot(d["x"]-h["x"],d["y"]-h["y"]) or 1.0
+                target_x=d["x"]+(d["x"]-h["x"])/hd*120.0
+                target_y=d["y"]+(d["y"]-h["y"])/hd*120.0
+
+            # Si el punto de combate se sale del leash, se proyecta suavemente
+            # hacia un punto lateral de Mira, nunca directamente encima de ella.
+            pdx,pdy=target_x-p.x,target_y-p.y
+            pd=math.hypot(pdx,pdy)
+            if pd>soft_leash:
+                scale=soft_leash/max(pd,1.0)
+                target_x=p.x+pdx*scale
+                target_y=p.y+pdy*scale
+
+            # Separación mínima respecto al jugador: los drones nunca se apilan
+            # sobre el modelo de Mira.
+            relx,rely=d["x"]-p.x,d["y"]-p.y
+            rd=math.hypot(relx,rely) or 1.0
+            if rd<52.0:
+                target_x += relx/rd*(52.0-rd)
+                target_y += rely/rd*(52.0-rd)
+
+            desired_x,desired_y=target_x-d["x"],target_y-d["y"]
+            desired_dist=math.hypot(desired_x,desired_y)
+            if desired_dist>3.0:
+                desired_vx=desired_x/desired_dist*190.0
+                desired_vy=desired_y/desired_dist*190.0
+            else:
+                desired_vx=desired_vy=0.0
+
+            # Aceleración/frenado suave: elimina el temblor causado por cambiar de
+            # objetivo y posición instantáneamente en cada frame.
+            accel=520.0
+            blend=min(1.0,accel*dt/max(1.0,190.0))
+            d["vx"] += (desired_vx-d["vx"])*blend
+            d["vy"] += (desired_vy-d["vy"])*blend
+
+            # Evasión predictiva de proyectiles, una sola vez y con dirección estable.
+            threats=[pr for pr in self.pool.items if pr.active and pr.team==1 and
+                     math.hypot(pr.x-d["x"],pr.y-d["y"])<72]
+            if threats:
+                pr=min(threats,key=lambda q:math.hypot(q.x-d["x"],q.y-d["y"]))
+                pv=math.hypot(pr.vx,pr.vy) or 1.0
+                side=(-1 if i%2 else 1)
+                d["vx"] += (-pr.vy/pv)*side*70.0*dt
+                d["vy"] += (pr.vx/pv)*side*70.0*dt
+
+            # Movimiento con evitación de obstáculos y límites de leash.
+            move_dist=math.hypot(d["vx"],d["vy"])*dt
+            if move_dist>0.01:
+                ux,uy=d["vx"]/max(move_dist/dt,1e-6),d["vy"]/max(move_dist/dt,1e-6)
+                # Prueba primero el rumbo deseado; si hay un obstáculo, rodea usando
+                # ángulos alternativos, igual que los NPC terrestres.
+                nx,ny=self.move_actor(d["x"],d["y"],d["vx"]*dt,d["vy"]*dt,d["radius"])
+                if math.hypot(nx-d["x"],ny-d["y"]) < move_dist*0.35:
+                    base=math.atan2(d["vy"],d["vx"])
+                    options=[]
+                    for deg in (25,-25,50,-50,75,-75,100,-100,135,-135):
+                        a=base+math.radians(deg)
+                        tx,ty=self.move_actor(d["x"],d["y"],math.cos(a)*move_dist,math.sin(a)*move_dist,d["radius"])
+                        progress=math.hypot(tx-d["x"],ty-d["y"])
+                        align=math.cos(a-base)
+                        options.append((progress*(0.72+0.28*max(0,align)),tx,ty))
+                    if options:
+                        _,nx,ny=max(options,key=lambda q:q[0])
+                d["x"],d["y"]=nx,ny
+
+            # Nunca cruza el límite duro de Mira; si una colisión lo empujó fuera,
+            # regresa de forma gradual a un punto lateral, no al centro del modelo.
+            pdx,pdy=d["x"]-p.x,d["y"]-p.y
+            pd=math.hypot(pdx,pdy)
+            if pd>hard_leash:
+                scale=hard_leash/max(pd,1.0)
+                d["x"]=p.x+pdx*scale
+                d["y"]=p.y+pdy*scale
+
+            d["phase"] += dt*1.6
             d["flash"]=max(0.0,float(d.get("flash",0.0))-dt)
             d["shot_cd"]=max(0.0,d["shot_cd"]-dt)
             d["burst_cd"]=max(0.0,d["burst_cd"]-dt)
-            target=min((e for e in self.enemies if e.alive and e.spawn_delay<=0.2),
-                       key=lambda e:math.hypot(e.x-d["x"],e.y-d["y"]),default=None)
-            # 50% de probabilidad de una evasión lateral frente a proyectiles enemigos.
-            threats=[pr for pr in self.pool.items if pr.active and pr.team==1 and
-                     math.hypot(pr.x-d["x"],pr.y-d["y"])<72]
-            if threats and self.rng.random()<0.50:
-                pr=min(threats,key=lambda q:math.hypot(q.x-d["x"],q.y-d["y"]))
-                pv=math.hypot(pr.vx,pr.vy) or 1
-                d["x"] += (-pr.vy/pv)*(1 if i%2 else -1)*120.0*dt
-                d["y"] += (pr.vx/pv)*(1 if i%2 else -1)*120.0*dt
-            if target is not None and math.hypot(target.x-d["x"],target.y-d["y"])<520 and d["shot_cd"]<=0:
+
+            target=nearest_enemy
+            # Ataque sin límite artificial de 520 px: mientras exista un enemigo,
+            # el dron dispara hacia él. El proyectil sigue respetando paredes.
+            if target is not None and d["shot_cd"]<=0:
                 ang=math.atan2(target.y-d["y"],target.x-d["x"])
                 self.spawn_projectile(0,d["x"],d["y"],ang,620.0,damage,3.0,1.1,(90,220,235),"energy",0,0,False,None,False,0,False,0,0.85,0.0)
-                # Por defecto: un disparo por segundo por dron. Las mejoras
-                # de velocidad reducen este intervalo.
                 d["shot_cd"]=attack_interval
             kept.append(d)
         self.drones=kept
