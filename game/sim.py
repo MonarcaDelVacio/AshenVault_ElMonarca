@@ -1687,6 +1687,8 @@ class Sim:
             laser["tick"]=0.12
         visible_length=min(length,float(laser.get("travel",length)))
         visible_point=(owner.x+ux*visible_length,owner.y+uy*visible_length)
+        laser["_render_length"]=visible_length
+        laser["_render_point"]=visible_point
         return visible_length,visible_point,hit_enemy
 
     def _update_lasers(self,dt):
