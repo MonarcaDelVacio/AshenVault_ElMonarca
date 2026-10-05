@@ -922,7 +922,8 @@ class Renderer:
         if floor_img is None:
             fallback_by_biome = {
                 "ruins": 10, "forest": 5, "dungeon": 9,
-                "laboratory": 2, "volcanic": 7, "final": 11,
+                "laboratory": 2, "volcanic": 7, "desert": 10,
+                "swamp": 5, "final": 11,
             }
             floor_img = self.floor_images.get(fallback_by_biome.get(arena.biome, 1))
         # Las texturas de piedra cambian con el bioma cuando están disponibles.
