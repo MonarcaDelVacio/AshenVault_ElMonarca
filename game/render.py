@@ -1784,20 +1784,27 @@ class Renderer:
             self.text(screen, "E  ABRIR COFRE", (chest.x + ox, chest.y + 30), (255, 235, 150), self.small, True)
 
         for h in getattr(sim,"hazards",[]):
-            alpha=max(30,min(100,int(100*h["life"]/5.0)))
-            layer=pygame.Surface((int(h["radius"]*2),int(h["radius"]*2)),pygame.SRCALPHA)
-            pygame.draw.circle(layer,(*h["color"],alpha),(layer.get_width()//2,layer.get_height()//2),int(h["radius"]))
-            pygame.draw.circle(layer,(*h["color"],min(170,alpha+50)),(layer.get_width()//2,layer.get_height()//2),int(h["radius"]),3)
-            screen.blit(layer,(int(h["x"]+ox-h["radius"]),int(h["y"]+oy-h["radius"])))
+            radius=max(1,int(h["radius"]))
+            color=tuple(h["color"])
+            key=(radius,color)
+            layer=self._hazard_surface_cache.get(key)
+            if layer is None:
+                layer=pygame.Surface((radius*2,radius*2),pygame.SRCALPHA)
+                center=(radius,radius)
+                pygame.draw.circle(layer,(*color,255),center,radius)
+                pygame.draw.circle(layer,(*color,255),center,radius,3)
+                self._hazard_surface_cache[key]=layer
+            layer.set_alpha(max(30,min(100,int(100*h["life"]/5.0))))
+            screen.blit(layer,(int(h["x"]+ox-radius),int(h["y"]+oy-radius)))
         for wave in getattr(sim,"wave_attacks",[]):
             color=wave.get("color",(255,120,50))
             radius=max(1,int(wave["radius"]))
             center=(int(wave["x"]+ox),int(wave["y"]+oy))
-            # La simulación ya aplica LOS a los impactos. El render anterior
-            # repetía decenas de consultas de colisión por ángulo y por frame.
+            # LOS ya se calcula en la simulación para los impactos. El render
+            # sólo dibuja el anillo, evitando cientos de consultas de colisión.
             pygame.draw.circle(screen,color,center,radius,4)
             if radius>18:
-                pygame.draw.circle(screen,tuple(min(255,int(c*0.55)) for c in color),center,radius-4,1)
+                pygame.draw.circle(screen,tuple(min(255,int(v*0.55)) for v in color),center,radius-4,1)
 
         # Tienda: objetos físicos flotando, sin tarjetas/botones. Acercarse e
         # interactuar compra la oferta; precio y nombre quedan debajo del objeto.
