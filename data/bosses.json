@@ -283,7 +283,9 @@
     "summon_count": 2,
     "max_summons": 6,
     "ranged_melee_profile": true,
-    "ranged_melee_threshold": 155
+    "ranged_melee_threshold": 155,
+    "sprite_set": "dead_knight",
+    "sprite_scale": 5
   },
   "null_archon": {
     "name": "El Arconte Nulo",
