@@ -1207,6 +1207,19 @@ class Renderer:
             pygame.draw.rect(screen, (65, 225, 220), (bx + 1, by + 1, int((bw - 2) * min(1.0, charge_time / charge_max)), bh - 2), border_radius=2)
             pygame.draw.rect(screen, (125, 190, 205), (bx, by, bw, bh), 1, border_radius=2)
 
+    def prop_collider(self, prop):
+        """Huella física derivada del alpha visible del PNG del prop."""
+        kind=str(prop.get("kind","crate"))
+        key=kind if kind in self.prop_images else ("barrel_broken" if prop.get("broken") else "crate_broken" if kind=="crate" else None)
+        image=self.prop_images.get(key)
+        if image is None:
+            return None
+        bbox=image.get_bounding_rect(min_alpha=8)
+        if not bbox.width or not bbox.height: return None
+        target=(TILE,TILE) if kind=="crate" else (48,48)
+        scale=min(target[0]/max(1,image.get_width()),target[1]/max(1,image.get_height()))
+        return (float(prop.get("x",0)),float(prop.get("y",0)),max(5.0,bbox.width*scale*0.42),max(5.0,min(bbox.height*scale*0.20,bbox.width*scale*0.30)))
+
     def _draw_world_prop(self, screen, prop, ox, oy):
         """Dibuja una caja/barril como objeto con profundidad Y real."""
         x, y = int(prop.get("x", 0) + ox), int(prop.get("y", 0) + oy)
