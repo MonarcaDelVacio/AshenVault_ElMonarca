@@ -339,6 +339,13 @@ class App:
 
     def handle_menu_mouse(self, pos, click=False):
         """Permite navegar y activar las opciones con el ratón."""
+        if self.state == SCORE:
+            if click:
+                if self.score_continue_ready:
+                    self.go(HUB)
+                else:
+                    self.skip_score()
+            return
         if self.state == STATUE:
             accept_rect=pygame.Rect(VIEW_W//2-145,390,130,38)
             cancel_rect=pygame.Rect(VIEW_W//2+15,390,130,38)
