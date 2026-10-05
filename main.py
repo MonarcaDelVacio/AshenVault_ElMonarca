@@ -371,6 +371,25 @@ class App:
                 self.go(HUB)
                 return
             return
+        if self.state == HUB and self.info == "Arsenal":
+            scores=self.save.data.get("weapon_scores",{})
+            used=[wid for wid,count in scores.items() if count>0 and wid in self.data.weapons]
+            used.sort(key=lambda wid:(-int(scores.get(wid,0)), self.data.weapons[wid].name))
+            cols=5; card_w,card_h=166,112; gap_x,gap_y=12,10
+            start_x=(VIEW_W-(cols*card_w+(cols-1)*gap_x))//2; start_y=86
+            if self.weapon_info_id:
+                if click: self.weapon_info_id=None
+                return
+            for n,wid in enumerate(used[:25]):
+                row,col=divmod(n,cols)
+                rect=pygame.Rect(start_x+col*(card_w+gap_x),start_y+row*(card_h+gap_y),card_w,card_h)
+                if rect.collidepoint(pos):
+                    if click: self.weapon_info_id=wid
+                    return
+            back=pygame.Rect(VIEW_W//2-100,488,200,30)
+            if click and back.collidepoint(pos):
+                self.info=None
+            return
         if self.state == HUB and not self.info:
             from game.save import CHARACTER_UPGRADES
             if self.hub_dropdown_open:
@@ -395,12 +414,12 @@ class App:
                 col,row=n%cols,n//cols
                 rect=pygame.Rect(area_x+col*(card_w+gap_x),area_y+row*(card_h+gap_y),card_w,card_h)
                 if rect.collidepoint(pos):
-                    self.hub_sel=n+2
+                    self.hub_sel=n+3
                     if click: self.activate_hub("UPGRADE:"+kind)
                     return
-            actions=["Personajes","Volver al menu"]
+            actions=["Personajes","Arsenal","Volver al menu"]
             for n,item in enumerate(actions):
-                rect=pygame.Rect(250+n*240,438,220,44)
+                rect=pygame.Rect(145+n*235,438,210,44)
                 if rect.collidepoint(pos):
                     self.hub_sel=HUB_ITEMS.index(item)
                     if click: self.activate_hub(item)
@@ -640,7 +659,7 @@ class App:
             if k == pygame.K_ESCAPE:
                 self.go(MENU); return
             from game.save import CHARACTER_UPGRADES
-            dynamic=["Iniciar run","Personajes"]+["UPGRADE:"+kind for kind in CHARACTER_UPGRADES.get(self.char_id,{})]+["Volver al menu"]
+            dynamic=["Iniciar run","Personajes","Arsenal"]+["UPGRADE:"+kind for kind in CHARACTER_UPGRADES.get(self.char_id,{})]+["Volver al menu"]
             if k in (pygame.K_UP, pygame.K_w):
                 self.hub_sel=(self.hub_sel-1)%len(dynamic); return
             if k in (pygame.K_DOWN, pygame.K_s):
@@ -729,6 +748,9 @@ class App:
             self.hub_dropdown_open=True; self.hub_dropdown_sel=self.char_ids.index(self.char_id)
         elif item == "Mejoras":
             self.hub_sel=2
+        elif item == "Arsenal":
+            self.weapon_info_id=None
+            self.info="Arsenal"
         elif item.startswith("UPGRADE:"):
             kind=item.split(":",1)[1]
             if self.save.buy_character_upgrade(self.char_id,kind): self.audio.play("ui",self.t)
@@ -1096,17 +1118,22 @@ class App:
         card_h=min(125,(area_h-gap_y*(rows-1))//rows)
         for n,(kind,up) in enumerate(upgrade_items):
             col,row=n%cols,n//cols; x=area_x+col*(card_w+gap_x); y=area_y+row*(card_h+gap_y); w,h=card_w,card_h
-            selected=self.hub_sel==n+2
+            selected=self.hub_sel==n+3
             card=pygame.Rect(x,y,w,h); pygame.draw.rect(self.screen,(10,13,23,235),card,border_radius=8); pygame.draw.rect(self.screen,(74,226,220) if selected else (75,91,113),card,2 if selected else 1,border_radius=8)
             self.r.text(self.screen,up["name"].upper(),(x+w//2,y+20),(105,232,222) if selected else (214,223,235),self.r.menu_font if h>=112 else self.r.menu_small,True)
             self.r.text(self.screen,up["description"],(x+w//2,y+45),(183,198,213),self.r.menu_small,True)
             lvl=int(prog.get("upgrades",{}).get(kind,0)); self.r.text(self.screen,"NIVEL %d / %d"%(lvl,up["max"]),(x+w//2,y+h-37),(232,222,190),self.r.menu_small,True)
             if lvl>=up["max"]: price="MAXIMO"; color=(124,231,173)
             else:
-                cost=self.save.character_upgrade_cost(cid,kind); price="MEJORAR · %d FRAGMENTOS"%cost; color=(255,219,133) if s["meta_currency"]>=cost else (161,167,181)
+                cost=self.save.character_upgrade_cost(cid,kind)
+                required=self.save.character_upgrade_requirement(cid,kind)
+                if level < required:
+                    price="NIVEL %d REQUERIDO"%required; color=(220,150,120)
+                else:
+                    price="MEJORAR · %d FRAGMENTOS"%cost; color=(255,219,133) if s["meta_currency"]>=cost else (161,167,181)
             self.r.text(self.screen,price,(x+w//2,y+h-15),color,self.r.menu_small,True)
-        for n,item in enumerate(("Personajes","Volver al menu")):
-            self.draw_option_card((250+n*240,438,220,44),item,self.hub_sel==HUB_ITEMS.index(item))
+        for n,item in enumerate(("Personajes","Arsenal","Volver al menu")):
+            self.draw_option_card((145+n*235,438,210,44),item,self.hub_sel==HUB_ITEMS.index(item))
         self.r.text(self.screen,"Las mejoras son exclusivas de %s y afectan sus partidas."%c.name.split(",")[0],(VIEW_W//2,518),(150,165,180),self.r.menu_small,True)
         if self.hub_dropdown_open:
             panel=pygame.Rect(120,250,720,176)
