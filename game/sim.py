@@ -340,8 +340,9 @@ class Sim:
         if self.drones:
             for idx, drone in enumerate(self.drones):
                 angle = float(drone.get("orbit", 0.0)) + idx * (math.tau / max(1, len(self.drones)))
-                drone["x"] = self.player.x + math.cos(angle) * 34.0
-                drone["y"] = self.player.y + math.sin(angle) * 24.0
+                # Reentrada lateral amplia: nunca reaparecer directamente encima de Mira.
+                drone["x"] = self.player.x + math.cos(angle) * 62.0
+                drone["y"] = self.player.y + math.sin(angle) * 48.0
                 drone["orbit"] = angle
                 drone["shot_cd"] = min(float(drone.get("shot_cd", 1.0)), 0.25)
             self.player.drones = self.drones
