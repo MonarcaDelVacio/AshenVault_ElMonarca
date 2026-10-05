@@ -376,7 +376,7 @@ class Dungeon:
 
         # Fase 3: cada dungeon ofrece al menos una tienda accesible; se coloca en una rama existente.
         if not any(r.room_type == "shop" for r in self.rooms.values()):
-            branch=[rid for rid in self.rooms if rid not in path_set and rid not in (tuple(self.layout["start"]),tuple(self.layout["boss"]))]
+            branch=[rid for rid in self.rooms if rid not in path_set and rid not in (tuple(self.layout["start"]),tuple(self.layout["boss"])) and all(self.rooms[n].room_type not in special_no_enemy and self.rooms[n].room_type!="miniboss" for n in adjacent(rid))]
             if branch:
                 rid=rng.choice(branch); room=self.rooms[rid]
                 sides=[]
