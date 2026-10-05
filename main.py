@@ -376,9 +376,9 @@ class App:
         if self.state == SETTINGS:
             # Las zonas clicables coinciden exactamente con los elementos dibujados.
             for idx in (0, 1):
-                y = 177 + idx * 82
-                bar = pygame.Rect(250, y + 13, 128, 10)
-                row_rect = pygame.Rect(126, y, 266, 58)
+                y = 157 + idx * 57
+                bar = pygame.Rect(244, y + 17, 120, 8)
+                row_rect = pygame.Rect(126, y, 266, 45)
                 if row_rect.collidepoint(pos):
                     self.settings_sel = idx
                     if (click or pygame.mouse.get_pressed()[0]) and bar.collidepoint(pos):
@@ -389,7 +389,7 @@ class App:
                         else: self.audio.set_music_volume(value)
                         self.save.save()
                     return
-            sens_rect = pygame.Rect(126, 318, 266, 24)
+            sens_rect = pygame.Rect(126, 275, 266, 32)
             if sens_rect.collidepoint(pos):
                 self.settings_sel = 2
                 if click:
@@ -399,25 +399,25 @@ class App:
                 return
             for offset in range(9):
                 idx = offset + 3
-                rect = pygame.Rect(438, 160 + offset * 27, 392, 27)
+                rect = pygame.Rect(438, 153 + offset * 29, 392, 26)
                 if rect.collidepoint(pos):
                     self.settings_sel = idx
                     if click:
                         self.rebind_action = SETTING_KEYS[SETTINGS_ITEMS[idx]]
                     return
-            fullscreen_rect = pygame.Rect(126, 390, 266, 42)
+            fullscreen_rect = pygame.Rect(126, 314, 266, 32)
             if fullscreen_rect.collidepoint(pos):
                 self.settings_sel = 12
                 if click:
                     self._apply_fullscreen(not self.save.data["settings"].get("fullscreen", False))
                 return
-            reset_rect = pygame.Rect(126, 340, 266, 36)
+            reset_rect = pygame.Rect(126, 353, 266, 32)
             if reset_rect.collidepoint(pos):
                 self.settings_sel = 13
                 if click:
                     self._reset_settings()
                 return
-            back = pygame.Rect(VIEW_W // 2 - 82, 475, 164, 29)
+            back = pygame.Rect(VIEW_W // 2 - 82, 442, 164, 29)
             if back.collidepoint(pos) and click:
                 self.go(self.back_state)
             return
@@ -1046,65 +1046,64 @@ class App:
             mv = settings.get("music_volume", 0.6)
             k = settings["keys"]
 
-            # Dos paneles con margen interior suficiente y títulos separados del contenido.
-            left_rect = pygame.Rect(112, 112, 294, 330)
-            right_rect = pygame.Rect(420, 112, 428, 330)
+            # Layout compacto: cada control ocupa su propia fila y no se superponen.
+            left_rect = pygame.Rect(112, 112, 294, 300)
+            right_rect = pygame.Rect(420, 112, 428, 300)
             for rect in (left_rect, right_rect):
                 pygame.draw.rect(scr, (10, 13, 23, 232), rect, border_radius=9)
                 pygame.draw.rect(scr, (105, 126, 151, 220), rect, 1, border_radius=9)
-            self.r.text(scr, "AUDIO", (left_rect.centerx, 137), (92, 226, 218), self.r.menu_font, True)
-            self.r.text(scr, "CONTROLES", (right_rect.centerx, 137), (92, 226, 218), self.r.menu_font, True)
+            self.r.text(scr, "AUDIO", (left_rect.centerx, 135), (92, 226, 218), self.r.menu_small, True)
+            self.r.text(scr, "CONTROLES", (right_rect.centerx, 135), (92, 226, 218), self.r.menu_small, True)
 
-            for idx, (label, value, atlas_label) in enumerate((("EFECTOS", v, "Sonido"), ("MUSICA", mv, "Musica"))):
-                y = 177 + idx * 82
+            for idx, (label, value, atlas_label) in enumerate((( "EFECTOS", v, "Sonido"), ("MUSICA", mv, "Musica"))):
+                y = 157 + idx * 57
                 selected = self.settings_sel == idx
-                row_rect = pygame.Rect(126, y, 266, 58)
+                row_rect = pygame.Rect(126, y, 266, 45)
                 if selected:
                     pygame.draw.rect(scr, (20, 35, 45), row_rect, border_radius=6)
                     pygame.draw.rect(scr, (80, 223, 215), row_rect, 1, border_radius=6)
-                self.ui_atlas.draw_button(scr, pygame.Rect(132, y + 2, 112, 31), atlas_label, selected=selected)
-                self.r.text(scr, "%d%%" % round(value * 100), (378, y + 6), (240, 245, 247) if selected else (174, 191, 204), self.r.menu_small, True)
-                bar_rect = pygame.Rect(250, y + 13, 128, 10)
+                self.ui_atlas.draw_button(scr, pygame.Rect(132, y + 7, 96, 26), atlas_label, selected=selected)
+                self.r.text(scr, "%d%%" % round(value * 100), (374, y + 5), (240, 245, 247) if selected else (174, 191, 204), self.r.menu_small, True)
+                bar_rect = pygame.Rect(244, y + 17, 120, 8)
                 pygame.draw.rect(scr, (35, 42, 56), bar_rect, border_radius=4)
                 fill_rect = pygame.Rect(bar_rect.x, bar_rect.y, int(bar_rect.width * value), bar_rect.height)
                 if fill_rect.width:
                     pygame.draw.rect(scr, (73, 221, 211) if selected else (90, 157, 164), fill_rect, border_radius=4)
                 pygame.draw.rect(scr, (126, 151, 171), bar_rect, 1, border_radius=4)
 
-            self.r.text(scr, "SENSIBILIDAD", (145, 312), (205, 215, 225), self.r.menu_small)
-            sens=settings.get("mouse_sensitivity",1.0)
-            sens_selected=self.settings_sel==2
-            sens_rect=pygame.Rect(126,326,266,42)
+            sens_rect = pygame.Rect(126, 275, 266, 32)
+            sens_selected = self.settings_sel == 2
             if sens_selected:
-                pygame.draw.rect(scr,(20,35,45),sens_rect,border_radius=6)
-                pygame.draw.rect(scr,(80,223,215),sens_rect,1,border_radius=6)
-            self.r.text(scr, "MOUSE", (145,330), (240,245,247) if sens_selected else (174,191,204), self.r.menu_small, True)
-            self.r.text(scr, "%.2fx"%sens, (365,330), (240,245,247) if sens_selected else (174,191,204), self.r.menu_small, True)
+                pygame.draw.rect(scr, (20, 35, 45), sens_rect, border_radius=6)
+                pygame.draw.rect(scr, (80, 223, 215), sens_rect, 1, border_radius=6)
+            self.r.text(scr, "SENSIBILIDAD MOUSE", (139, 291), (240, 245, 247) if sens_selected else (174, 191, 204), self.r.menu_small, True)
+            self.r.text(scr, "%.2fx" % sens, (370, 291), (240, 245, 247) if sens_selected else (174, 191, 204), self.r.menu_small, True)
+
+            fullscreen = bool(settings.get("fullscreen", False))
+            fullscreen_rect = pygame.Rect(126, 314, 266, 32)
+            if self.settings_sel == 12:
+                pygame.draw.rect(scr, (20, 35, 45), fullscreen_rect, border_radius=6)
+                pygame.draw.rect(scr, (80, 223, 215), fullscreen_rect, 1, border_radius=6)
+            checkbox = pygame.Rect(139, 321, 18, 18)
+            pygame.draw.rect(scr, (12, 16, 25), checkbox, border_radius=3)
+            pygame.draw.rect(scr, (80, 223, 215) if self.settings_sel == 12 else (116, 132, 151), checkbox, 1, border_radius=3)
+            if fullscreen:
+                pygame.draw.line(scr, (105, 235, 180), (143, 330), (148, 334), 2)
+                pygame.draw.line(scr, (105, 235, 180), (148, 334), (155, 325), 2)
+            self.r.text(scr, "PANTALLA COMPLETA", (166, 330), (225, 232, 240), self.r.menu_small)
+
+            reset_rect = pygame.Rect(126, 353, 266, 32)
+            self.ui_atlas.draw_button(scr, reset_rect, "Restablecer", selected=self.settings_sel == 13)
 
             control_items = SETTINGS_ITEMS[3:12]
             for offset, item in enumerate(control_items):
                 idx = offset + 3
-                y = 160 + offset * 27
+                y = 153 + offset * 29
                 selected = self.settings_sel == idx
                 key_name = k[SETTING_KEYS[item]].upper()
-                self.draw_option_card((438, y, 392, 27), item, selected, key_name, compact=True, use_atlas=False)
+                self.draw_option_card((438, y, 392, 26), item, selected, key_name, compact=True, use_atlas=False)
 
-            fullscreen = bool(settings.get("fullscreen", False))
-            reset_rect = pygame.Rect(170, 344, 150, 31)
-            self.ui_atlas.draw_button(scr, reset_rect, "Restablecer", selected=self.settings_sel == 14)
-
-            fullscreen_rect = pygame.Rect(126, 390, 266, 42)
-            if self.settings_sel == 12:
-                pygame.draw.rect(scr, (20, 35, 45), fullscreen_rect, border_radius=6)
-                pygame.draw.rect(scr, (80, 223, 215), fullscreen_rect, 1, border_radius=6)
-            checkbox = pygame.Rect(140, 401, 18, 18)
-            pygame.draw.rect(scr, (12, 16, 25), checkbox, border_radius=3)
-            pygame.draw.rect(scr, (80, 223, 215) if self.settings_sel == 12 else (116, 132, 151), checkbox, 1, border_radius=3)
-            if fullscreen:
-                pygame.draw.line(scr, (105, 235, 180), (144, 410), (148, 414), 2)
-                pygame.draw.line(scr, (105, 235, 180), (148, 414), (155, 405), 2)
-            self.r.text(scr, "PANTALLA COMPLETA", (170, 397), (225, 232, 240), self.r.menu_small)
-            self.draw_option_card((VIEW_W // 2 - 82, 475, 164, 29), "Volver", self.settings_sel == 13)
+            self.draw_option_card((VIEW_W // 2 - 82, 442, 164, 29), "Volver", self.settings_sel == 14)
             if self.rebind_action:
                 self.r.text(scr, "PULSA UNA TECLA PARA ASIGNAR · ESC CANCELA", (VIEW_W // 2, 514), (123, 238, 222), self.r.menu_small, True)
             else:
