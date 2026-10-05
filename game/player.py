@@ -90,6 +90,13 @@ class Player:
             return
         self.status_timers[str(kind)] = max(float(duration), float(self.status_timers.get(str(kind), 0.0)))
 
+    def feedback_flash(self, kind, duration=0.24):
+        duration=max(0.0,float(duration))
+        if kind == "heal":
+            self.heal_flash=max(self.heal_flash,duration)
+        elif kind == "energy":
+            self.energy_flash=max(self.energy_flash,duration)
+
     # ---- daño: primero escudo, luego vida ----
     def take_damage(self, amount):
         if self.invuln > 0 or not self.alive:
@@ -97,6 +104,8 @@ class Player:
         self.since_hit = 0.0
         self.invuln = 0.6
         self.hurt_flash = 0.25
+        self.heal_flash = 0.0
+        self.energy_flash = 0.0
         amount = max(0.0, float(amount) * getattr(self, "statue_damage_taken_mult", 1.0))
         left = amount
         if self.shield > 0:
@@ -115,6 +124,8 @@ class Player:
         self.since_shot += dt
         self.invuln = max(0.0, self.invuln - dt)
         self.hurt_flash = max(0.0, self.hurt_flash - dt)
+        self.heal_flash = max(0.0, self.heal_flash - dt)
+        self.energy_flash = max(0.0, self.energy_flash - dt)
         self.noenergy_cd = max(0.0, self.noenergy_cd - dt)
         self.dash_cd = max(0.0, self.dash_cd - dt)
         self.ability_cd = max(0.0, self.ability_cd - dt)
