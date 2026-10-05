@@ -24,9 +24,12 @@ class WeaponState:
     def start_reload(self):
         if getattr(self.d, "class", "") == "melee":
             return False
-        if self.unlimited_ammo or self.reserve_magazines <= 0 or self.reloading or self.ammo >= self.d.magazine:
+        # Las armas iniciales tienen cargadores infinitos, pero siguen
+        # consumiendo la munición del cargador y recargando normalmente.
+        if (not self.unlimited_ammo and self.reserve_magazines <= 0) or self.reloading or self.ammo >= self.d.magazine:
             return False
-        self.reserve_magazines -= 1
+        if not self.unlimited_ammo:
+            self.reserve_magazines -= 1
         self.reload_left = self.d.reload_time
         return True
 
@@ -44,7 +47,7 @@ class WeaponState:
 
 def _fire_projectiles(sim, p, w, charge_ratio=0.0):
     d = w.d
-    if not w.unlimited_ammo and w.ammo <= 0:
+    if w.ammo <= 0:
         if w.start_reload():
             sim.emit("reload_start", p.x, p.y)
         return False
@@ -58,8 +61,9 @@ def _fire_projectiles(sim, p, w, charge_ratio=0.0):
     speed_mult = 1.0 + (getattr(d, "charge_speed_mult", 1.8) - 1.0) * charge_ratio
     range_mult = 1.0 + (getattr(d, "charge_range_mult", 2.0) - 1.0) * charge_ratio
     damage_mult = 1.0 + (getattr(d, "charge_damage_mult", 2.2) - 1.0) * charge_ratio
-    if not w.unlimited_ammo:
-        w.ammo -= 1
+    # Incluso las armas iniciales consumen la munición del cargador.
+    # Lo infinito son los cargadores de reserva, no el cargador actual.
+    w.ammo -= 1
     sim.stats.setdefault("weapon_usage", {})[d.id] = sim.stats.get("weapon_usage", {}).get(d.id, 0) + 1
     w.cooldown = d.fire_interval / max(0.1, getattr(p, "attack_speed_mult", 1.0))
     p.energy -= d.energy_cost
@@ -108,7 +112,7 @@ def _fire_projectiles(sim, p, w, charge_ratio=0.0):
     sim.emit("shoot", mx, my, p.aim, d.color)
     if getattr(d, "charged_projectile", False):
         sim.emit("charge_release", p.x, p.y, charge_ratio)
-    if not w.unlimited_ammo and w.ammo <= 0 and w.start_reload():
+    if w.ammo <= 0 and w.start_reload():
         sim.emit("reload_start", p.x, p.y)
     return True
 
