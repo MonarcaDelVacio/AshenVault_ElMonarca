@@ -1040,7 +1040,7 @@ class Sim:
             if hit_enemy is not None: break
         if hit_point is None:
             hit_point=(owner.x+ux*length,owner.y+uy*length)
-        if hit_enemy is not None and laser["tick"]<=0 and dt>0.0:
+        if hit_enemy is not None and laser["tick"]<=0 and dt>0.0 and float(laser.get("travel",length)) >= length-8.0:
             if laser["team"]==0:
                 damage=min(laser["damage"],hit_enemy.max_hp*(0.24 if getattr(hit_enemy,"is_boss",False) else 0.55))
                 if not self._damage_shield(hit_enemy,damage,math.atan2(owner.y-hit_enemy.y,owner.x-hit_enemy.x),"laser"):
