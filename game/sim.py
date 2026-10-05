@@ -49,7 +49,7 @@ class Sim:
             if candidates:
                 variant=self.rng.choice(candidates)
                 for key,value in variant.items():
-                    if key in ("id","name_suffix","tint","projectile_color"):
+                    if key in ("id","name_suffix","tint","projectile_color","hue_shift","saturation","lightness"):
                         continue
                     if key.endswith("_mult"):
                         base=float(getattr(scaled_def, key[:-5], 1.0))
@@ -60,6 +60,9 @@ class Sim:
                 scaled_def.variant_name_suffix=variant.get("name_suffix","")
                 scaled_def.variant_tint=tuple(variant.get("tint", getattr(edef, "color", (200,80,80))))
                 scaled_def.projectile_color=tuple(variant.get("projectile_color", scaled_def.variant_tint))
+                scaled_def.variant_hue_shift=float(variant.get("hue_shift", 0.0))
+                scaled_def.variant_saturation=float(variant.get("saturation", 0.0))
+                scaled_def.variant_lightness=float(variant.get("lightness", 0.0))
         scale=1.0 + 0.12*(self.difficulty-1)
         scaled_def.hp=float(scaled_def.hp)*scale
         scaled_def.damage=float(scaled_def.damage)*scale
