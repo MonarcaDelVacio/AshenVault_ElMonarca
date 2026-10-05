@@ -47,6 +47,7 @@ RECIPES = {
     "coin": dict(freq=1200, dur=0.08, sweep=500, vol=0.2),
     "coin_pickup": dict(freq=1200, dur=0.08, sweep=500, vol=0.2),
     "laser_impact": dict(freq=980, dur=0.055, sweep=180, noise=0.15, vol=0.16),
+    "laser_start": dict(freq=420, dur=0.18, sweep=760, noise=0.08, vol=0.18),
     "dash": dict(freq=500, dur=0.14, sweep=-300, noise=0.5, vol=0.25),
     "no_energy": dict(freq=160, dur=0.08, vol=0.25),
     "swing": dict(freq=260, dur=0.1, sweep=-100, noise=0.5, vol=0.2),
