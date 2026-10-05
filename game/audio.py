@@ -62,6 +62,8 @@ RECIPES = {
     "weapon_pickup": dict(freq=700, dur=0.14, sweep=600, vol=0.22),
     "weapon_switch": dict(freq=500, dur=0.05, sweep=180, vol=0.12),
     "ability_heal": dict(freq=520, dur=0.22, sweep=600, vol=0.2),
+    "heal_pickup": dict(freq=560, dur=0.24, sweep=820, vol=0.24, decay=2.8),
+    "energy_pickup": dict(freq=980, dur=0.16, sweep=420, vol=0.22, decay=3.2),
     "ability_shield": dict(freq=360, dur=0.25, sweep=900, vol=0.2),
     "ability_burst": dict(freq=120, dur=0.3, sweep=450, noise=0.2, vol=0.3, decay=2.8),
     "ability_haste": dict(freq=700, dur=0.2, sweep=500, vol=0.18),
