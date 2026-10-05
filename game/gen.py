@@ -82,6 +82,8 @@ def _choose_floor_surface(seed, room_type, biome):
         "dungeon": ("sueloderocaoscura2", "sueloderocas", "sueloderocas2"),
         "laboratory": ("sueloderocasyfuegoazul", "sueloderocasypasto", "sueloderocasyhierba"),
         "volcanic": ("suelodelava", "sueloderocaylava", "suelodelavarosa", "tierracalienterojiza"),
+        "desert": ("suelodearena", "suelodearena2", "suelodearenadedecierto", "tierracalientemarron"),
+        "swamp": ("suelodepantano", "suelodehierbaytierra", "tierracalienteverde"),
         "final": ("sueloderocaoscura2", "sueloderocaylava", "tierracalientemorada", "sueloderocasyfuegoazul"),
     }
     # El tipo de sala ya no cambia el bioma visual. Todas las habitaciones de
@@ -152,6 +154,11 @@ def _generate_decorations(rng, room_type, biome, floor, reserved, seed_value=0):
             take("rock", rng.randint(3,5), 6)
             take("biome_lava_rock", rng.randint(1,2), 7)
             if rng.random() < 0.55: take("biome_lava_rock_purple", 1, 8)
+        elif biome == "desert":
+            take("biome_shared_rock", rng.randint(2,4), 6)
+        elif biome == "swamp":
+            take("biome_shared_rock", rng.randint(2,4), 6)
+            if rng.random() < 0.65: take("biome_red_bush", 1, 7)
         elif biome == "final":
             take("rock", rng.randint(2,4), 6)
     return result
