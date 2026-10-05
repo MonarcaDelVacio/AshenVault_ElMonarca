@@ -1003,6 +1003,26 @@ class Sim:
             target.frozen = max(float(getattr(target, "frozen", 0.0)), duration)
         self.emit("freeze", target.x, target.y, duration)
 
+    def perform_fist_attack(self, p):
+        reach=30.0+p.radius; arc=1.9; damage=max(1.0,1.5*p.damage_mult)
+        for e in self.enemies:
+            if not e.alive: continue
+            dx,dy=e.x-p.x,e.y-p.y; dist=math.hypot(dx,dy)
+            if dist>reach: continue
+            da=(math.atan2(dy,dx)-p.aim+math.pi)%(2*math.pi)-math.pi
+            if abs(da)>arc*0.5: continue
+            if self._damage_shield(e,damage,math.atan2(p.y-e.y,p.x-e.x),"melee"): continue
+            e.hurt(damage,p.aim); e.kx += math.cos(p.aim)*70.0; e.ky += math.sin(p.aim)*70.0
+            self.emit("enemy_hit",e.x,e.y,(205,205,205),damage,False)
+        for prop in self.props:
+            if prop.get("broken"): continue
+            dx,dy=prop["x"]-p.x,prop["y"]-p.y; dist=math.hypot(dx,dy)
+            if dist<=reach+prop.get("radius",24):
+                da=(math.atan2(dy,dx)-p.aim+math.pi)%(2*math.pi)-math.pi
+                if abs(da)<=arc*0.55:
+                    prop["hp"]-=max(1.0,damage/8.0)
+                    if prop["hp"]<=0:self._break_prop(prop,(205,205,205))
+
     def perform_melee_attack(self, p, d):
         # El hitbox cubre toda la zona visible del corte, con margen de seguridad.
         reach=max(float(d.range)+p.radius, float(d.range)*1.20+p.radius)
@@ -1138,7 +1158,7 @@ class Sim:
                     if math.hypot(pr.x-p.x,pr.y-p.y)<pr.radius+p.radius-2:
                         if pr.explosive:
                             self._explode_projectile(pr)
-                        elif p.take_damage(pr.damage):
+                        elif p.take_damage(pr.damage, math.atan2(-pr.vy,-pr.vx)):
                             self.on_player_hit(pr.x-pr.vx,pr.y-pr.vy,pr.damage)
                             if pr.dtype == "ice":
                                 self._apply_freeze(p, pr.damage)
@@ -1153,7 +1173,7 @@ class Sim:
         for prop in self.props:
             if not prop.get("broken") and math.hypot(prop["x"]-pr.x,prop["y"]-pr.y)<=radius+prop.get("radius",24): self._break_prop(prop,pr.color)
         if pr.team == 1 and math.hypot(self.player.x-pr.x,self.player.y-pr.y) <= radius+self.player.radius:
-            if self.player.take_damage(pr.damage):
+            if self.player.take_damage(pr.damage, math.atan2(self.player.y-pr.y,self.player.x-pr.x)):
                 self.on_player_hit(pr.x,pr.y,pr.damage)
                 if pr.dtype == "ice":
                     self._apply_freeze(self.player, pr.damage)
@@ -1262,7 +1282,7 @@ class Sim:
                         hit_enemy.hurt(damage,angle)
                         self.emit("enemy_hit",hit_enemy.x,hit_enemy.y,laser["color"],damage,False)
                 else:
-                    if self.player.take_damage(laser["damage"]): self.on_player_hit(owner.x,owner.y,laser["damage"])
+                    if self.player.take_damage(laser["damage"], laser["angle"]): self.on_player_hit(owner.x,owner.y,laser["damage"])
             self.emit("laser_impact",hit_point[0],hit_point[1],laser["color"],laser["explosion_radius"])
             laser["tick"]=0.12
         visible_length=min(length,float(laser.get("travel",length)))
@@ -1317,7 +1337,7 @@ class Sim:
             if h["tick"]<=0:
                 h["tick"]=0.65
                 if math.hypot(self.player.x-h["x"],self.player.y-h["y"])<=h["radius"]:
-                    if self.player.take_damage(h["damage"]):
+                    if self.player.take_damage(h["damage"], math.atan2(self.player.y-h["y"],self.player.x-h["x"])):
                         self.player.set_status({"fire":"burn","poison":"poison","electric":"electric"}.get(h["dtype"], h["dtype"]), 1.3)
                         self.on_player_hit(h["x"],h["y"],h["damage"])
                 for e in self.enemies:
@@ -1353,7 +1373,7 @@ class Sim:
                 if not wave.get("hit") and abs(math.hypot(self.player.x-wave["x"],self.player.y-wave["y"])-wave["radius"])<16:
                     if self._wave_clear_to(wave["x"],wave["y"],self.player.x,self.player.y):
                         wave["hit"]=True
-                        if self.player.take_damage(wave["damage"]): self.on_player_hit(wave["x"],wave["y"],wave["damage"])
+                        if self.player.take_damage(wave["damage"], math.atan2(self.player.y-wave["y"],self.player.x-wave["x"])): self.on_player_hit(wave["x"],wave["y"],wave["damage"])
         self.wave_attacks=[w for w in self.wave_attacks if w["life"]>0]
 
     def _update_pickups(self,dt):
