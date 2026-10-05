@@ -425,7 +425,6 @@ class Renderer:
             "nomuerto": {"walk":"Nomuerto/NoMuerto_caminando.png","attack":"Nomuerto/NoMuerto_atacando.png","death":"Nomuerto/NoMuerto_muriendo.png"},
             "nomuerto2": {"walk":"Nomuerto2/NoMuerto_caminando2.png","attack":"Nomuerto2/NoMuerto_atacando2.png","death":"Nomuerto2/NoMuerto_muriendo2.png"},
             "monodehielo": {"walk":"Monodehielo/Monodehielo_caminando.png","attack":"Monodehielo/Monodehielo_atacando.png","death":"Monodehielo/Monodehielo_muriendo.png"},
-            "ogro": {"attack":"Ogro/ogro_ataquedesendente.png","attack_heavy":"Ogro/ogro_ataquedesendentepesado.png","death":"Ogro/ogro_grito.png"},
             "minotaurogigante": {"idle":"Minotaurogigante/MinotauroGigante_quieto.png","attack":"Minotaurogigante/MinotauroGigante_ataque.png","death":"Minotaurogigante/MinotauroGigante_muerte.png"},
             "skeleton": {"walk":"skeleton/walk.png","attack":"skeleton/attack.png","death":"skeleton/death.png"},
             "ghost": {"walk":"ghost/walk.png","attack":"ghost/attack.png","death":"ghost/death.png","projectile":"ghost/projectile.png"},
@@ -999,6 +998,8 @@ class Renderer:
             return
         col = (255, 255, 255) if e.flash > 0 else e.d.color
         light_level = self._actor_light_level(arena, e.x, e.y, sim, decor_lights, t)
+        if getattr(e.d, "sprite_set", None) == "minigolem":
+            light_level = max(light_level, 0.72)
         col = tuple(max(0, min(255, int(channel * light_level))) for channel in col)
         # Los modelos suministrados son la representación visual completa.
         # No se dibuja sombra/círculo legacy detrás de ellos.
@@ -1095,7 +1096,7 @@ class Renderer:
         if weapon_image is not None:
             weapon_class = getattr(weapon_def, "class", "")
             # Las espadas, varitas y lanzas se dibujaron en diagonal hacia arriba/derecha.
-            base_angle = {"melee": -35, "magic": -32, "special": -25}.get(weapon_class, 0)
+            base_angle = 45 if "lanza" in getattr(weapon_def, "weapon_sprite", "").lower() else {"melee": -35, "magic": -32, "special": -25}.get(weapon_class, 0)
             # Los sprites base miran a la derecha. Al apuntar a la izquierda se espejan
             # horizontalmente y se ajusta la rotación para conservar la orientación vertical.
             if math.cos(p.aim) < 0:
@@ -1517,7 +1518,7 @@ class Renderer:
                 pygame.draw.circle(screen, (20, 20, 25), (px, py), 12)
                 pygame.draw.circle(screen, (255, 210, 70), (px, py), 7)
 
-        for pickup_index, c in enumerate(sim.pickups):
+        for pickup_index, c in enumerate(()):
             px, py = int(c[0] + ox), int(c[1] + oy)
             if self.coin_frames:
                 # Cinco fotogramas a 8 FPS, sincronizados con el tiempo de juego.
@@ -1572,7 +1573,7 @@ class Renderer:
                 filename = Path(sprite_path).name
                 max_dim = 12
                 if "assets/weapons/melee/lanza" in sprite_path or "assets/weapons/snipers/sniper5" in sprite_path:
-                    max_dim = 26
+                    max_dim = 42 if "assets/weapons/melee/lanza" in sprite_path else 26
                 if filename == "projectile_04.png": max_dim = 19
                 elif filename == "projectile_05.png": max_dim = 18
                 elif filename in ("projectile_06.png", "projectile_07.png", "projectile_08.png", "projectile_09.png"): max_dim = 14
@@ -1588,7 +1589,8 @@ class Renderer:
                                       "assets/weapons/snipers/sniper5" in sprite_path)
                 if scaled.get_width() > scaled.get_height() * 1.35 or directional_sprite:
                     angle = math.degrees(math.atan2(pr.vy, pr.vx)) if not pr.stuck else math.degrees(pr.stuck_angle)
-                    scaled = pygame.transform.rotate(scaled, -angle)
+                    correction = 45.0 if "assets/weapons/melee/lanza" in sprite_path else 0.0
+                    scaled = pygame.transform.rotate(scaled, correction - angle)
                 if pr.stuck and pr.stuck_timer < 1.0:
                     scaled = scaled.copy()
                     scaled.set_alpha(max(0, int(255 * pr.stuck_timer)))
@@ -1680,7 +1682,7 @@ class Renderer:
                 if nr in rooms:
                     nx=content_x+(nr[0]-min_x)*cell+cell//2; ny=origin_y+(nr[1]-min_y)*cell+cell//2; pygame.draw.line(panel,(47,59,74),(cx,cy),(nx,ny),max(1,cell//10))
         for rid,room in rooms.items():
-            rx=6+(rid[0]-min_x)*cell; ry=origin_y+(rid[1]-min_y)*cell; rect=pygame.Rect(rx+2,ry+2,max(8,cell-4),max(8,cell-4)); current=tuple(rid)==tuple(dungeon.current)
+            rx=content_x+(rid[0]-min_x)*cell; ry=origin_y+(rid[1]-min_y)*cell; rect=pygame.Rect(rx+2,ry+2,max(8,cell-4),max(8,cell-4)); current=tuple(rid)==tuple(dungeon.current)
             color=(255,202,102) if current else ((83,174,184) if getattr(room,"entered",False) else (48,58,72)); pygame.draw.rect(panel,color,rect,border_radius=4)
             if current: pygame.draw.rect(panel,(255,232,150),rect.inflate(4,4),1,border_radius=4)
             cx,cy=rect.center; ms=max(12,min(20,int(cell*.34))) if large else max(9,min(13,int(cell*.55)))
