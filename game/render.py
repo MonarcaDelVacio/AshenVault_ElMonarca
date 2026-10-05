@@ -1754,55 +1754,43 @@ class Renderer:
         self._draw_dynamic_shadows(screen, arena, sim, ox, oy)
         self._draw_decor_lights(screen, decor_lights, ox, oy, t)
         self.cam = (ox, oy)
-        # Puertas arquitectónicas: los umbrales bloqueados tienen una reja visible;
-        # al despejar la sala desaparece la barrera y aparece una flecha blanca grande.
-        # Las columnas de los laterales forman el marco usando los mismos sprites.
+        # Puertas arquitectónicas de exactamente 2 bloques de ancho.
         for d in arena.doors.values():
-            x,y=d.x*TILE+int(ox),d.y*TILE+int(oy)
-            cx,cy=x+TILE//2,y+TILE//2
             horizontal=d.side in ("N","S")
+            if horizontal:
+                x=(d.x-1)*TILE+int(ox); y=d.y*TILE+int(oy)
+                span=pygame.Rect(x,y,TILE*2,TILE); cx,cy=span.center
+            else:
+                x=d.x*TILE+int(ox); y=(d.y-1)*TILE+int(oy)
+                span=pygame.Rect(x,y,TILE,TILE*2); cx,cy=span.center
             frame=self.column_image
             if frame is not None and horizontal:
-                # En accesos norte/sur, los postes se apoyan en el suelo interior:
-                # no flotan en el centro del tile de puerta.
                 narrow=self._fit_cache.get(("door_narrow",id(frame)))
                 if narrow is None:
-                    narrow=pygame.transform.smoothscale(frame,(8,44))
-                    self._fit_cache[("door_narrow",id(frame))]=narrow
-                base_y = y + TILE * 2 if d.side == "N" else y
-                for frame_x in (x,x+TILE-8):
-                    screen.blit(narrow,narrow.get_rect(midbottom=(frame_x+4,base_y)))
+                    narrow=pygame.transform.smoothscale(frame,(8,44)); self._fit_cache[("door_narrow",id(frame))]=narrow
+                base_y=span.y+TILE*2 if d.side=="N" else span.y
+                for frame_x in (span.left,span.right-8): screen.blit(narrow,narrow.get_rect(midbottom=(frame_x+4,base_y)))
             elif frame is not None:
-                # Para los accesos laterales se reutiliza la piedra como dintel,
-                # con la pieza girada y anclada al lado interior del umbral.
                 lintel=self._fit_cache.get(("door_lintel",id(frame)))
                 if lintel is None:
-                    lintel=pygame.transform.smoothscale(pygame.transform.rotate(frame,90),(32,8))
-                    self._fit_cache[("door_lintel",id(frame))]=lintel
-                left = x if d.side == "W" else x
-                for fy in (y,y+TILE-8):
-                    screen.blit(lintel,(left,fy))
+                    lintel=pygame.transform.smoothscale(pygame.transform.rotate(frame,90),(32,8)); self._fit_cache[("door_lintel",id(frame))]=lintel
+                for fy in (span.top,span.bottom-8): screen.blit(lintel,(span.x,fy))
             if not d.open:
-                pygame.draw.rect(screen,(24,22,29),(x+3,y+3,TILE-6,TILE-6),border_radius=3)
-                pygame.draw.rect(screen,(130,55,58),(x+3,y+3,TILE-6,TILE-6),2,border_radius=3)
+                inner=span.inflate(-6,-6)
+                pygame.draw.rect(screen,(24,22,29),inner,border_radius=3); pygame.draw.rect(screen,(130,55,58),inner,2,border_radius=3)
                 if horizontal:
-                    for bx in (x+8,x+16,x+24):
-                        pygame.draw.line(screen,(150,135,125),(bx,y+5),(bx,y+TILE-5),3)
-                    pygame.draw.line(screen,(190,80,70),(x+4,cy),(x+TILE-4,cy),3)
+                    for bx in (span.left+12,span.left+TILE,span.right-12): pygame.draw.line(screen,(150,135,125),(bx,span.top+5),(bx,span.bottom-5),3)
+                    pygame.draw.line(screen,(190,80,70),(span.left+4,span.centery),(span.right-4,span.centery),3)
                 else:
-                    for by in (y+8,y+16,y+24):
-                        pygame.draw.line(screen,(150,135,125),(x+5,by),(x+TILE-5,by),3)
-                    pygame.draw.line(screen,(190,80,70),(cx,y+4),(cx,y+TILE-4),3)
+                    for by in (span.top+12,span.top+TILE,span.bottom-12): pygame.draw.line(screen,(150,135,125),(span.left+5,by),(span.right-5,by),3)
+                    pygame.draw.line(screen,(190,80,70),(span.centerx,span.top+4),(span.centerx,span.bottom-4),3)
             else:
-                # Flecha blanca con contorno oscuro, orientada hacia la sala siguiente.
                 if d.side=="N": points=[(cx,cy-15),(cx-12,cy+1),(cx-5,cy+1),(cx-5,cy+11),(cx+5,cy+11),(cx+5,cy+1),(cx+12,cy+1)]
                 elif d.side=="S": points=[(cx,cy+15),(cx-12,cy-1),(cx-5,cy-1),(cx-5,cy-11),(cx+5,cy-11),(cx+5,cy-1),(cx+12,cy-1)]
                 elif d.side=="W": points=[(cx-15,cy),(cx+1,cy-12),(cx+1,cy-5),(cx+11,cy-5),(cx+11,cy+5),(cx+1,cy+5),(cx+1,cy+12)]
                 else: points=[(cx+15,cy),(cx-1,cy-12),(cx-1,cy-5),(cx-11,cy-5),(cx-11,cy+5),(cx-1,cy+5),(cx-1,cy+12)]
                 pygame.draw.polygon(screen,(22,24,30),points)
-                inner=[]
-                for px,py in points:
-                    inner.append((cx+(px-cx)*0.82,cy+(py-cy)*0.82))
+                inner=[(cx+(px-cx)*0.82,cy+(py-cy)*0.82) for px,py in points]
                 pygame.draw.polygon(screen,(250,250,255),inner)
         # Cofres y props ya fueron dibujados dentro de la pasada de profundidad
         # compartida con actores y decoraciones. Aquí solo queda el prompt del cofre,
