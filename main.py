@@ -526,6 +526,7 @@ class App:
         self._last_room_key = tuple(getattr(self.sim.room, "id", ()))
         self.fx = Fx()
         self.inp = Input()
+        self._begin_fade(0.20)
         self.state = PLAY
         self.statue_message = ""
         pygame.event.set_grab(True)
