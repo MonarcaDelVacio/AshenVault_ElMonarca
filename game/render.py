@@ -44,6 +44,10 @@ class Renderer:
         self._player_flip_cache = {}
         self._weapon_rotation_cache = {}
         self._rotation_cache = {}
+        # Cachés de sprites de enemigos. Se inicializan aquí porque el render puede
+        # necesitarlas desde el primer frame de una partida.
+        self._enemy_frame_cache = {}
+        self._enemy_flash_cache = {}
         self._light_surface_cache = {}
         self._hazard_surface_cache = {}
         self._ambient_surface = pygame.Surface((VIEW_W, VIEW_H), pygame.SRCALPHA)
