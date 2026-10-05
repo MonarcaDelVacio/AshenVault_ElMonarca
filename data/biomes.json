@@ -81,7 +81,8 @@
       "runner",
       "wisp",
       "gargoyle",
-      "ice_monkey"
+      "ice_monkey",
+      "sky_raider"
     ]
   },
   "dungeon": {
@@ -210,7 +211,8 @@
       "grunt",
       "spreader",
       "ogre",
-      "giant_minotaur"
+      "giant_minotaur",
+      "sky_raider"
     ]
   },
   "final": {
@@ -259,6 +261,90 @@
       "stone_golem",
       "arcane_acolyte",
       "stone_colossus"
+    ]
+  },
+  "desert": {
+    "name": "Desierto Carmesí",
+    "floor_a": [
+      92,
+      66,
+      42
+    ],
+    "floor_b": [
+      108,
+      76,
+      46
+    ],
+    "wall": [
+      112,
+      78,
+      52
+    ],
+    "wall_top": [
+      158,
+      112,
+      70
+    ],
+    "pillar": [
+      118,
+      82,
+      48
+    ],
+    "pillar_top": [
+      175,
+      125,
+      75
+    ],
+    "enemy_pool": [
+      "scavenger",
+      "sniper",
+      "charger",
+      "flyer",
+      "gargoyle",
+      "sky_raider",
+      "ogre"
+    ]
+  },
+  "swamp": {
+    "name": "Pantano Maldito",
+    "floor_a": [
+      42,
+      58,
+      48
+    ],
+    "floor_b": [
+      48,
+      68,
+      54
+    ],
+    "wall": [
+      52,
+      72,
+      60
+    ],
+    "wall_top": [
+      82,
+      108,
+      86
+    ],
+    "pillar": [
+      58,
+      74,
+      52
+    ],
+    "pillar_top": [
+      88,
+      112,
+      72
+    ],
+    "enemy_pool": [
+      "spitter",
+      "wisp",
+      "runner",
+      "flyer",
+      "gargoyle",
+      "sky_raider",
+      "ice_monkey"
     ]
   }
 }
