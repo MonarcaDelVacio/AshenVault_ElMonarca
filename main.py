@@ -1045,6 +1045,7 @@ class App:
             v = settings.get("effects_volume", 0.6)
             mv = settings.get("music_volume", 0.6)
             k = settings["keys"]
+            sens = float(settings.get("mouse_sensitivity", 1.0))
 
             # Layout compacto: cada control ocupa su propia fila y no se superponen.
             left_rect = pygame.Rect(112, 112, 294, 300)
