@@ -2185,7 +2185,7 @@ class Renderer:
         coin_frames = self.coin_frames
         coin_center = (hud_panel.right - 62, hud_panel.y + 20)
         if coin_frames:
-            coin_frame = coin_frames[int(t * 8.0) % len(coin_frames)]
+            coin_frame = coin_frames[int(pygame.time.get_ticks() * 0.008) % len(coin_frames)]
             screen.blit(coin_frame, coin_frame.get_rect(center=coin_center))
         else:
             pygame.draw.circle(screen, (238, 190, 55), coin_center, 8)
