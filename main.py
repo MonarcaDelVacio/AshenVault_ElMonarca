@@ -75,7 +75,7 @@ class App:
         self.reward = 0
         self.info = None
         self.weapon_info_id = None
-        self.score_phase = "kills"
+        self.score_phase = "stats"
         self.score_timer = 0.0
         self.score_kills_display = 0
         self.score_level_start = 1
@@ -902,9 +902,9 @@ class App:
             self.score_level_end = int(prog_after.get("level", self.score_level_start))
             self.score_xp_end = int(prog_after.get("xp", 0))
             self.score_xp_total = max(0, int(self.run_xp))
-            self.score_kills_display = 0
+            self.score_kills_display = int(s.stats.get("kills", 0))
             self.score_timer = 0.0
-            self.score_phase = "kills"
+            self.score_phase = "stats"
             self.score_continue_ready = False
             self.go(SCORE)
 
@@ -1024,29 +1024,33 @@ class App:
         self.draw_option_card((VIEW_W // 2 - 100, 488, 200, 30), "Volver", False)
 
     def update_score(self, dt):
-        dt=max(0.0,min(0.1,float(dt)))
-        kills=int(self.sim.stats.get("kills",0)) if self.sim else 0
-        if self.score_phase=="kills":
-            if kills <= 0:
-                self.score_phase="hold"; self.score_timer=0.0; self._begin_fade(0.18)
-            else:
-                self.score_kills_display=min(kills, self.score_kills_display + max(1, int(kills*dt*2.4)))
-                if self.score_kills_display>=kills:
-                    self.score_kills_display=kills; self.score_phase="hold"; self.score_timer=0.0
-        elif self.score_phase=="hold":
-            self.score_timer+=dt
-            if self.score_timer>=2.2:
-                self.score_phase="fade"; self.score_timer=0.0; self._begin_fade(0.18)
-        elif self.score_phase=="fade":
-            self.score_timer+=dt
-            if self.score_timer>=0.7:
-                self.score_phase="xp"; self.score_timer=0.0; self.score_xp_display=0.0; self._begin_fade(0.18)
-        elif self.score_phase=="xp":
-            self.score_xp_display=min(float(self.score_xp_total), self.score_xp_display + max(1.0, self.score_xp_total*dt/3.2))
-            if self.score_xp_display>=self.score_xp_total:
-                self.score_xp_display=float(self.score_xp_total); self.score_phase="done"; self.score_continue_ready=True; self._begin_fade(0.18)
-        elif self.score_phase=="done":
-            self.score_continue_ready=True
+        # Primero se muestran las estadísticas completas de la partida.
+        # Después se pasa, mediante la misma transición, a la recompensa de XP.
+        if self.score_phase == "stats":
+            self.score_timer += dt
+            if self.score_timer >= 2.8:
+                self.score_phase = "fade"
+                self.score_timer = 0.0
+                self._begin_fade(0.18)
+        elif self.score_phase == "fade":
+            self.score_timer += dt
+            if self.score_timer >= 0.7:
+                self.score_phase = "xp"
+                self.score_timer = 0.0
+                self.score_xp_display = 0.0
+                self._begin_fade(0.18)
+        elif self.score_phase == "xp":
+            self.score_xp_display = min(
+                float(self.score_xp_total),
+                self.score_xp_display + max(1.0, self.score_xp_total * dt / 3.2)
+            )
+            if self.score_xp_display >= self.score_xp_total:
+                self.score_xp_display = float(self.score_xp_total)
+                self.score_phase = "done"
+                self.score_continue_ready = True
+                self._begin_fade(0.18)
+        elif self.score_phase == "done":
+            self.score_continue_ready = True
 
     def skip_score(self):
         self.score_kills_display=int(self.sim.stats.get("kills",0)) if self.sim else self.score_kills_display
@@ -1059,32 +1063,51 @@ class App:
         scr.fill((5,7,13))
         overlay=pygame.Surface((VIEW_W,VIEW_H),pygame.SRCALPHA)
         overlay.fill((4,7,14,245)); scr.blit(overlay,(0,0))
-        c=self.data.characters.get(self.char_id)
-        cname=c.name.split(",")[0] if c else self.char_id
-        self.r.text(scr,"SCORE",(VIEW_W//2,58),(240,195,105),self.r.menu_title,True)
-        self.r.text(scr,cname.upper(),(VIEW_W//2,96),(105,230,218),self.r.menu_font,True)
-        if self.score_phase in ("kills","hold","fade"):
-            panel=pygame.Surface((620,300),pygame.SRCALPHA)
-            alpha=255 if self.score_phase!="fade" else max(0,int(255*(1.0-self.score_timer/0.7)))
+        cdef=self.data.characters.get(self.char_id)
+        cname=cdef.name.split(",")[0] if cdef else self.char_id
+        self.r.text(scr,"SCORE",(VIEW_W//2,48),(240,195,105),self.r.menu_title,True)
+        self.r.text(scr,cname.upper(),(VIEW_W//2,84),(105,230,218),self.r.menu_font,True)
+
+        if self.score_phase in ("stats","fade"):
+            st=self.sim.stats if self.sim else {}
+            panel=pygame.Surface((720,330),pygame.SRCALPHA)
+            alpha=255 if self.score_phase=="stats" else max(0,int(255*(1.0-self.score_timer/0.7)))
             panel.fill((10,14,25,max(0,int(235*alpha/255))))
             pygame.draw.rect(panel,(76,95,122,max(0,int(220*alpha/255))),panel.get_rect(),2,border_radius=14)
-            scr.blit(panel,panel.get_rect(center=(VIEW_W//2,285)))
-            self.r.text(scr,"DUNGEON",(VIEW_W//2,190),(150,170,190),self.r.menu_small,True)
-            self.r.text(scr,self.score_dungeon_name.upper(),(VIEW_W//2,226),(238,224,190),self.r.menu_title,True)
-            self.r.text(scr,"BAJAS",(VIEW_W//2,282),(150,170,190),self.r.menu_small,True)
-            self.r.text(scr,str(self.score_kills_display),(VIEW_W//2,350),(245,235,210),self.r.big,True)
-            self.r.text(scr,"ESC / ENTER / ESPACIO / CLICK · SKIP",(VIEW_W//2,416),(145,160,180),self.r.menu_small,True)
+            scr.blit(panel,panel.get_rect(center=(VIEW_W//2,280)))
+
+            self.r.text(scr,"ESTADÍSTICAS DE LA PARTIDA",(VIEW_W//2,145),(240,195,105),self.r.menu_font,True)
+            rows=[
+                ("Salas", st.get("rooms",0)),
+                ("Oleadas", st.get("waves",0)),
+                ("Enemigos derrotados", st.get("kills",0)),
+                ("Disparos", st.get("shots",0)),
+                ("Daño recibido", st.get("damage_taken",0)),
+                ("Monedas", st.get("coins",0)),
+                ("Objetos", st.get("items",0)),
+                ("Jefes derrotados", st.get("bosses_defeated",0)),
+            ]
+            for i,(label,value) in enumerate(rows):
+                col=0 if i<4 else 1
+                row=i if i<4 else i-4
+                x=300+col*360
+                y=188+row*48
+                self.r.text(scr,label,(x-16,y),(165,180,198),self.r.menu_small,False)
+                self.r.text(scr,str(value),(x+150,y),(238,240,244),self.r.menu_font,False)
+
+            self.r.text(scr,"ESC / ENTER / ESPACIO / CLICK · SKIP",(VIEW_W//2,456),(145,160,180),self.r.menu_small,True)
         else:
-            panel=pygame.Rect(145,116,670,350)
+            panel=pygame.Rect(145,105,670,365)
             pygame.draw.rect(scr,(9,13,23,242),panel,border_radius=14)
             pygame.draw.rect(scr,(76,95,122,220),panel,2,border_radius=14)
-            self.r.text(scr,"EXPERIENCIA",(VIEW_W//2,142),(240,195,105),self.r.menu_font,True)
+            self.r.text(scr,"EXPERIENCIA",(VIEW_W//2,132),(240,195,105),self.r.menu_font,True)
             frames=getattr(self.r,"player_walk_frames",{}).get(self.char_id,[])
             if frames:
                 frame=frames[int(self.t*7.5)%len(frames)]
-                scr.blit(frame,frame.get_rect(center=(VIEW_W//2,235)))
+                scr.blit(frame,frame.get_rect(center=(VIEW_W//2,220)))
             else:
-                self.r.text(scr,cname.upper(),(VIEW_W//2,235),(220,225,235),self.r.menu_font,True)
+                self.r.text(scr,cname.upper(),(VIEW_W//2,220),(220,225,235),self.r.menu_font,True)
+
             from game.save import xp_to_next
             remaining=self.score_xp_start
             gained=self.score_xp_display
@@ -1097,13 +1120,13 @@ class App:
                     remaining+=gained; gained=0
             need=xp_to_next(lvl)
             ratio=max(0.0,min(1.0,remaining/max(1,need)))
-            self.r.text(scr,"NIVEL %d"%lvl,(VIEW_W//2,282),(105,230,218),self.r.menu_font,True)
-            bar=pygame.Rect(240,310,480,24)
+            self.r.text(scr,"NIVEL %d"%lvl,(VIEW_W//2,268),(105,230,218),self.r.menu_font,True)
+            bar=pygame.Rect(240,296,480,24)
             pygame.draw.rect(scr,(18,24,36),bar,border_radius=8)
             pygame.draw.rect(scr,(88,222,205),(bar.x,bar.y,int(bar.w*ratio),bar.h),border_radius=8)
             pygame.draw.rect(scr,(105,125,145),bar,1,border_radius=8)
-            self.r.text(scr,"%d / %d XP"%(int(remaining),need),(VIEW_W//2,350),(220,226,236),self.r.menu_small,True)
-            self.r.text(scr,"+%d XP"%self.score_xp_total,(VIEW_W//2,380),(245,220,145),self.r.menu_small,True)
+            self.r.text(scr,"%d / %d XP"%(int(remaining),need),(VIEW_W//2,336),(220,226,236),self.r.menu_small,True)
+            self.r.text(scr,"+%d XP"%self.score_xp_total,(VIEW_W//2,366),(245,220,145),self.r.menu_small,True)
             if self.score_continue_ready:
                 self.draw_option_card((VIEW_W-180,VIEW_H-58,150,40),"Continuar",True)
             else:
