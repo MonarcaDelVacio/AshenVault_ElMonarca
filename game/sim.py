@@ -80,26 +80,46 @@ class Sim:
         self.emit("weapon_switch",p.x,p.y)
 
     def enemy_target(self, enemy):
-        """Selecciona jugador o dron como objetivo; los drones pueden atraer fuego enemigo."""
+        """Selecciona jugador o dron, manteniendo el objetivo durante un breve lock."""
         p=self.player
         candidates=[{"x":p.x,"y":p.y,"kind":"player","obj":p}]
         for d in self.drones:
             if d.get("hp",0)>0:
                 candidates.append({"x":d["x"],"y":d["y"],"kind":"drone","obj":d})
+
+        # No se cambia de objetivo cada frame. Esto es especialmente importante
+        # cuando Mira despliega varios drones: evita que los NPC hagan flicker
+        # entre objetivos y parezca que están apuntando a todos a la vez.
+        locked=getattr(enemy,"target",None)
+        if locked is not None and getattr(enemy,"target_lock_timer",0.0)>0:
+            obj=locked.get("obj")
+            alive=(obj is p and p.alive) or (obj in self.drones and obj.get("hp",0)>0)
+            if alive:
+                locked["x"]=obj.x if hasattr(obj,"x") else obj.get("x",locked["x"])
+                locked["y"]=obj.y if hasattr(obj,"y") else obj.get("y",locked["y"])
+                dist=math.hypot(locked["x"]-enemy.x,locked["y"]-enemy.y)
+                if dist <= float(getattr(enemy.d,"detect_range",700)) and self.arena.line_of_sight(enemy.x,enemy.y,locked["x"],locked["y"]):
+                    return locked
+
         visible=[]
         for target in candidates:
             dist=math.hypot(target["x"]-enemy.x,target["y"]-enemy.y)
             if dist <= float(getattr(enemy.d,"detect_range",700)) and self.arena.line_of_sight(enemy.x,enemy.y,target["x"],target["y"]):
                 visible.append((dist,target))
         if not visible:
-            return candidates[0]
-        visible.sort(key=lambda q:q[0])
-        if len(visible)>1 and visible[0][1]["kind"]=="drone":
-            return visible[0][1] if self.rng.random()<0.55 else visible[1][1]
-        drones=[q for q in visible if q[1]["kind"]=="drone"]
-        if drones and self.rng.random()<0.28:
-            return min(drones,key=lambda q:q[0])[1]
-        return visible[0][1]
+            chosen=candidates[0]
+        else:
+            visible.sort(key=lambda q:q[0])
+            # Drones remain attractive targets, but selection happens only when
+            # the previous lock expires or becomes invalid.
+            drones=[q for q in visible if q[1]["kind"]=="drone"]
+            if drones and self.rng.random()<0.30:
+                chosen=min(drones,key=lambda q:q[0])[1]
+            else:
+                chosen=visible[0][1]
+        enemy.target=chosen
+        enemy.target_lock_timer=1.15
+        return chosen
 
     def spawn_drone(self, angle=0.0):
         a=self.player.ability
@@ -781,7 +801,7 @@ class Sim:
             roll=self.rng.random()
             if roll<0.12: self.items.append(type("Loot",(),{"kind":"heal","x":x,"y":y})())
             elif roll<0.20: self.items.append(type("Loot",(),{"kind":"energy","x":x,"y":y})())
-            elif roll<0.70:
+            elif roll<0.42:
                 self.items.append(type("AmmoLoot",(),{"kind":"ammo","x":x,"y":y,"magazines":self.rng.choice((1,1,2))})())
             # Las esferas amarillas fueron retiradas.
         else:
@@ -1312,7 +1332,7 @@ class Sim:
         old=state.get(kind,{})
         state[kind]={"time":max(float(duration),float(old.get("time",0.0))),
                      "tick":min(float(old.get("tick",0.0)),0.25),
-                     "damage":max(float(old.get("damage",0.0)),max(0.5,float(base_damage)*0.22))}
+                     "damage":max(float(old.get("damage",0.0)),min(0.4,max(0.1,float(base_damage)*0.12)))}
         if hasattr(target,"set_status"):
             target.set_status({"fire":"burn","poison":"poison"}[kind],duration)
 
@@ -1323,7 +1343,7 @@ class Sim:
                 effect["time"]-=dt; effect["tick"]-=dt
                 if effect["tick"]<=0 and effect["time"]>0:
                     effect["tick"]=0.65
-                    damage=max(0.5,float(effect.get("damage",0.5)))
+                    damage=min(0.4,max(0.1,float(effect.get("damage",0.1))))
                     if target is self.player:
                         if self.player.take_damage(damage,None):
                             self.on_player_hit(self.player.x,self.player.y,damage)
@@ -1618,7 +1638,7 @@ class Sim:
         self.lasers.append({"owner":owner,"team":1,"angle":angle,"charge":1.0,"duration":float(duration),"tick":0.0,
                             "color":tuple(color or getattr(owner.d,"color",(255,100,100))),"damage":float(damage),
                             "width":float(width),"max_width":float(max_width),"range":float(range_),
-                            "explosion_radius":float(explosion_radius),"travel":0.0,"travel_speed":2600.0})
+                            "explosion_radius":float(explosion_radius),"travel":0.0,"travel_speed":620.0,"turn_speed":1.65})
         self.emit("laser_start",owner.x,owner.y,angle,tuple(color or getattr(owner.d,"color",(255,100,100))))
 
     def _laser_hit_target(self, laser, dt):
@@ -1668,10 +1688,14 @@ class Sim:
                 laser["charge"]=min(3.0,float(owner.weapon.charge_time))
             else:
                 laser["duration"]-=dt
-                laser["angle"]=getattr(owner,"facing",laser.get("angle",0.0))
+                target_angle=getattr(owner,"facing",laser.get("angle",0.0))
+                current=float(laser.get("angle",target_angle))
+                delta=(target_angle-current+math.pi)%(2*math.pi)-math.pi
+                max_turn=float(laser.get("turn_speed",1.65))*dt
+                laser["angle"]=current+max(-max_turn,min(max_turn,delta))
                 if laser["duration"]<=0: continue
             laser["tick"]=max(0.0,laser.get("tick",0.0)-dt)
-            laser["travel"]=min(float(laser.get("range",760.0)),float(laser.get("travel",0.0))+float(laser.get("travel_speed",2600.0))*dt)
+            laser["travel"]=min(float(laser.get("range",760.0)),float(laser.get("travel",0.0))+float(laser.get("travel_speed",620.0))*dt)
             charge=max(1.0,min(3.0,float(laser.get("charge",1.0))))
             base_width=laser.get("base_width",laser.get("width",2.0))
             laser["width"]=base_width+(charge-1.0)/2.0*max(0.0,laser.get("max_width",12.0)-base_width)
