@@ -264,7 +264,7 @@
     "stick_on_hit": true,
     "pellets": 1,
     "bounces": 0,
-    "projectile_rotation_offset": 62,
+    "projectile_rotation_offset": 0,
     "projectile_visual_scale": 1.65
   },
   "ricochet_disc": {
@@ -344,7 +344,7 @@
     "stick_on_hit": true,
     "pellets": 1,
     "bounces": 0,
-    "projectile_rotation_offset": 45,
+    "projectile_rotation_offset": 0,
     "projectile_visual_scale": 1.65
   },
   "ember_greatsword": {
@@ -1014,7 +1014,7 @@
     "pellets": 1,
     "range": 400,
     "pierce": 0,
-    "bounces": 1,
+    "bounces": 0,
     "projectile_radius": 7,
     "color": [
       160,
@@ -1043,7 +1043,7 @@
     "pellets": 1,
     "range": 400,
     "pierce": 1,
-    "bounces": 1,
+    "bounces": 0,
     "projectile_radius": 7,
     "color": [
       160,
@@ -1072,7 +1072,7 @@
     "pellets": 1,
     "range": 400,
     "pierce": 2,
-    "bounces": 1,
+    "bounces": 0,
     "projectile_radius": 7,
     "color": [
       160,
@@ -1251,7 +1251,7 @@
     "charge_range_mult": 2,
     "charge_damage_mult": 2.2,
     "stick_on_hit": true,
-    "projectile_rotation_offset": 45,
+    "projectile_rotation_offset": 0,
     "projectile_visual_scale": 1.65
   },
   "prism_beam": {
@@ -1466,7 +1466,7 @@
     "charge_damage_mult": 2.2,
     "projectile_sprite": "assets/weapons/melee/lanza2.png",
     "stick_on_hit": true,
-    "projectile_rotation_offset": 45,
+    "projectile_rotation_offset": 0,
     "projectile_visual_scale": 1.65
   },
   "void_hammer": {
@@ -1822,7 +1822,7 @@
     "range": 505,
     "pellets": 1,
     "pierce": 1,
-    "bounces": 1,
+    "bounces": 0,
     "projectile_radius": 7,
     "color": [
       160,
