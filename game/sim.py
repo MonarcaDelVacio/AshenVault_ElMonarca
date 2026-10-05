@@ -354,10 +354,12 @@ class Sim:
         elif room.room_type=="healing":
             old=self.player.hp; self.player.hp=min(self.player.max_hp,self.player.hp+3)
             self.player.shield=min(self.player.max_shield,self.player.shield+2)
-            self.player.energy=min(self.player.max_energy,self.player.energy+25)
-            self.player.set_status("heal", 1.8)
-            self.player.set_status("shield", 2.2)
-            self.emit("heal_room",cx,cy,self.player.hp-old)
+            old_energy=self.player.energy; self.player.energy=min(self.player.max_energy,self.player.energy+25)
+            self.player.set_status("heal", 1.8); self.player.set_status("shield", 2.2)
+            self.player.feedback_flash("heal",.26)
+            if self.player.energy>old_energy:
+                self.player.feedback_flash("energy",.26); self.emit("energy_pickup",cx,cy,self.player.energy-old_energy)
+            self.emit("heal_pickup",cx,cy,self.player.hp-old); self.emit("heal_room",cx,cy,self.player.hp-old)
         elif room.room_type=="event":
             # Evento de riesgo/recompensa: ofrece moneda y un objeto, sin bloquear la run.
             gain=12+self.rng.randint(0,10); self.player.coins+=gain; self.stats["coins"]+=gain
@@ -368,12 +370,14 @@ class Sim:
             self.keys+=1; self.emit("secret_reward",cx,cy)
 
     def _spawn_miniboss(self):
-        pool=[e for e in self.data.enemies.values() if e.min_wave>=2]
-        e=self.rng.choice(pool or list(self.data.enemies.values()))
+        pool=[e for e in self.data.enemies.values() if e.min_wave>=2 and getattr(e,"sprite_set",None)]
+        e=self.rng.choice(pool or [x for x in self.data.enemies.values() if getattr(x,"sprite_set",None)])
         x,y=self.arena.tile_center(self.arena.cols//2,self.arena.rows//3)
-        mini_def=copy.copy(e); mini_def.hp*=3.0; mini_def.damage*=1.35; mini_def.speed*=0.9
+        mini_def=copy.copy(e); mini_def.hp*=2.45; mini_def.damage*=1.25; mini_def.speed*=.94
+        mini_def.radius*=1.16; mini_def.sprite_scale=float(getattr(e,"sprite_scale",3.5))*1.12
+        mini_def.miniboss_pulse_interval=4.2
         mini=Enemy(mini_def,x,y,self.rng); mini.is_miniboss=True
-        scale=1.0 + 0.14*(self.difficulty-1); mini.hp*=scale; mini.max_hp*=scale; mini.d.damage*=scale
+        scale=1.0 + 0.14*(self.difficulty-1); mini.hp*=scale; mini.max_hp=mini.hp; mini.d.damage*=scale
         self.enemies.append(mini); self.emit("miniboss_spawn",x,y,e.name)
     def _spawn_room_enemies(self):
         self.wave+=1; self.stats["waves"]=max(self.stats["waves"],self.wave)
@@ -428,7 +432,9 @@ class Sim:
             p.set_status("shield", 2.2)
         elif offer.kind == "energy":
             if p.energy >= p.max_energy: return False
-            p.energy=min(p.max_energy,p.energy+offer.amount)
+            old_energy=p.energy; p.energy=min(p.max_energy,p.energy+offer.amount)
+            if p.energy>old_energy:
+                p.feedback_flash("energy",.26); self.emit("energy_pickup",offer.x,offer.y,p.energy-old_energy)
         elif offer.kind == "item":
             item_def=self.data.items.get(offer.id)
             if item_def is None: return False
@@ -445,6 +451,21 @@ class Sim:
         x,y=self.arena.tile_center(self.arena.cols//2,self.arena.rows//3)
         boss=Boss(b,x,y,self.rng, difficulty=self.difficulty)
         self.enemies.append(boss); self.emit("boss_spawn",x,y,b.name)
+        biome_pool=self.data.biomes.get(biome,{}).get("enemy_pool",[])
+        guard_pool=[self.data.enemies[eid] for eid in biome_pool if eid in self.data.enemies and self.data.enemies[eid].min_wave <= max(1,self.wave) and self.data.enemies[eid].radius <= 16 and getattr(self.data.enemies[eid],"sprite_set",None)]
+        if not guard_pool:
+            guard_pool=[e for e in self.data.enemies.values() if e.min_wave <= max(2,self.wave) and e.radius <= 16 and getattr(e,"sprite_set",None)]
+        guard_count=min(4,max(2,len(self.arena.enemy_spawns)//4))
+        candidates=list(self.arena.enemy_spawns) or [(x+TILE*3,y),(x-TILE*3,y),(x,y+TILE*3),(x,y-TILE*3)]
+        candidates.sort(key=lambda pos:math.hypot(pos[0]-x,pos[1]-y))
+        spawned=0
+        for sx,sy in candidates:
+            if spawned>=guard_count or math.hypot(sx-x,sy-y)<TILE*1.8: continue
+            edef=self.rng.choice(guard_pool)
+            if self.arena.box_hits(sx,sy,edef.radius*.9) or self._crate_collision(sx,sy,edef.radius*.9): continue
+            if any(o.alive and math.hypot(sx-o.x,sy-o.y)<edef.radius+o.radius+8 for o in self.enemies): continue
+            guard=self._new_enemy(edef,sx,sy); guard.is_boss_guard=True; guard.spawn_delay=.45
+            self.enemies.append(guard); self.emit("boss_guard_spawn",sx,sy,edef.name); spawned+=1
     def _complete_room(self):
         if self.room.cleared:return
         self.room.cleared=True; self.room.doors_locked=False; self.arena.open_doors(); self.emit("room_clear",self.room.id)
@@ -605,9 +626,13 @@ class Sim:
                         item.x, item.y = self._safe_drop_position(ix + 28, iy, 10.0)
                     self.emit('weapon_pickup',p.x,p.y,weapon_id); return
                 if getattr(item,'kind',None)=='heal':
-                    p.hp=min(p.max_hp,p.hp+2); p.set_status("heal", 1.8); self.items.remove(item); self.emit('item_pickup',p.x,p.y,'heal'); return
+                    old_hp=p.hp; p.hp=min(p.max_hp,p.hp+2)
+                    if p.hp>old_hp: p.set_status("heal",1.8); p.feedback_flash("heal",.26); self.emit('heal_pickup',p.x,p.y,p.hp-old_hp)
+                    self.items.remove(item); self.emit('item_pickup',p.x,p.y,'heal'); return
                 if getattr(item,'kind',None)=='energy':
-                    p.energy=min(p.max_energy,p.energy+30); self.items.remove(item); self.emit('item_pickup',p.x,p.y,'energy'); return
+                    old_energy=p.energy; p.energy=min(p.max_energy,p.energy+30)
+                    if p.energy>old_energy: p.feedback_flash("energy",.26); self.emit('energy_pickup',p.x,p.y,p.energy-old_energy)
+                    self.items.remove(item); self.emit('item_pickup',p.x,p.y,'energy'); return
                 apply_item_bonuses(p,item); self.items.remove(item); self.emit('item_pickup',p.x,p.y,item.id); return
     def _enter_next_dungeon(self):
         """Usa el portal de la sala final y encadena otra dungeon mas dificil."""
