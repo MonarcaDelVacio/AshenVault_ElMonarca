@@ -124,7 +124,8 @@
       "summoner",
       "undead_swordsman",
       "undead_knight",
-      "stone_golem"
+      "stone_golem",
+      "stone_colossus"
     ]
   },
   "laboratory": {
@@ -166,7 +167,8 @@
       "wisp",
       "summoner",
       "arcane_acolyte",
-      "stone_golem"
+      "stone_golem",
+      "stone_colossus"
     ]
   },
   "volcanic": {
@@ -255,7 +257,8 @@
       "ogre",
       "giant_minotaur",
       "stone_golem",
-      "arcane_acolyte"
+      "arcane_acolyte",
+      "stone_colossus"
     ]
   }
 }
