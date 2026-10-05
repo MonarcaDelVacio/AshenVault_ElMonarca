@@ -42,7 +42,10 @@ if errorlevel 1 (
 echo.
 echo [OK] Intro validada. Iniciando AshenVault...
 echo.
-python main.py
+echo [INFO] Iniciando Python en modo sin buffer; todos los errores se mostraran aqui.
+echo [INFO] Si ocurre un fallo, conserva desde "[ERROR]" hasta el traceback completo.
+echo.
+python -u main.py 2>&1
 set EXITCODE=%ERRORLEVEL%
 
 echo.
