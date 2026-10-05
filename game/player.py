@@ -54,6 +54,7 @@ class Player:
             self.ability["drone_hp"] = 18 + self.drone_hp_bonus
         self.weapon = WeaponState(wdef)
         self.inventory = [self.weapon]
+        self.selected_slot = 0
         self.items = []
         self.synergies = []
         self.bonus_pierce = 0
@@ -85,6 +86,7 @@ class Player:
         # Ventana breve en la que el golpe cuerpo a cuerpo puede interceptar proyectiles.
         # Apuntar por sí solo nunca activa esta protección.
         self.melee_attack_timer = 0.0
+        self.fist_cooldown = 0.0
         self.alive = True
         self.frozen = 0.0
         # Estados temporales mostrados en el HUD. La simulación los actualiza
@@ -146,6 +148,7 @@ class Player:
         self.ability_shield_fx = max(0.0, self.ability_shield_fx - dt)
         self.ability_shot_timer = max(0.0, self.ability_shot_timer - dt)
         self.melee_attack_timer = max(0.0, self.melee_attack_timer - dt)
+        self.fist_cooldown = max(0.0, self.fist_cooldown - dt)
         self.frozen = max(0.0, self.frozen - dt)
         for key in list(self.status_timers):
             self.status_timers[key] = max(0.0, self.status_timers[key] - dt)
