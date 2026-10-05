@@ -1041,13 +1041,14 @@ class Sim:
         if hit_point is None:
             hit_point=(owner.x+ux*length,owner.y+uy*length)
         if blocked and laser["tick"]<=0 and dt>0.0 and float(laser.get("travel",length)) >= length-8.0:
-            if laser["team"]==0:
-                damage=min(laser["damage"],hit_enemy.max_hp*(0.24 if getattr(hit_enemy,"is_boss",False) else 0.55))
-                if not self._damage_shield(hit_enemy,damage,math.atan2(owner.y-hit_enemy.y,owner.x-hit_enemy.x),"laser"):
-                    hit_enemy.hurt(damage,angle)
-                    self.emit("enemy_hit",hit_enemy.x,hit_enemy.y,laser["color"],damage,False)
-            else:
-                if self.player.take_damage(laser["damage"]): self.on_player_hit(owner.x,owner.y,laser["damage"])
+            if hit_enemy is not None:
+                if laser["team"]==0:
+                    damage=min(laser["damage"],hit_enemy.max_hp*(0.24 if getattr(hit_enemy,"is_boss",False) else 0.55))
+                    if not self._damage_shield(hit_enemy,damage,math.atan2(owner.y-hit_enemy.y,owner.x-hit_enemy.x),"laser"):
+                        hit_enemy.hurt(damage,angle)
+                        self.emit("enemy_hit",hit_enemy.x,hit_enemy.y,laser["color"],damage,False)
+                else:
+                    if self.player.take_damage(laser["damage"]): self.on_player_hit(owner.x,owner.y,laser["damage"])
             self.emit("laser_impact",hit_point[0],hit_point[1],laser["color"],laser["explosion_radius"])
             laser["tick"]=0.12
         visible_length=min(length,float(laser.get("travel",length)))
