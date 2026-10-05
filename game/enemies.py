@@ -41,6 +41,7 @@ class Enemy:
         self.dodge_cd = 0.0
         self.target = None
         self.target_lock_timer = 0.0
+        self.confused = 0.0
         self.shield_active = False
         self.shield_timer = 0.0
         self.dot_effects = {}
@@ -60,7 +61,7 @@ class Enemy:
         self.shield_integrity=0.0
         self.shield_timer=0.0
         self.brain_state="observe"; self.brain_timer=r.uniform(0.45,1.15); self.dodge_cd=0.0
-        self.target=None; self.target_lock_timer=0.0; self.shield_active=False; self.shield_timer=0.0; self.dot_effects = {}
+        self.target=None; self.target_lock_timer=0.0; self.confused=0.0; self.shield_active=False; self.shield_timer=0.0; self.dot_effects = {}
         self.stomp_timer=r.uniform(2.8,5.2) if float(getattr(edef,"radius",0))>=22 else 999.0
         return self
 
@@ -90,6 +91,7 @@ class Enemy:
         self.miniboss_pulse_cd = max(0.0, self.miniboss_pulse_cd - dt)
         self.dodge_cd = max(0.0, self.dodge_cd - dt)
         self.target_lock_timer = max(0.0, self.target_lock_timer - dt)
+        self.confused = max(0.0, getattr(self, "confused", 0.0) - dt)
         self.target_lock_timer = max(0.0, self.target_lock_timer - dt)
         if self.shield_active:
             self.shield_timer = max(0.0, self.shield_timer - dt)
