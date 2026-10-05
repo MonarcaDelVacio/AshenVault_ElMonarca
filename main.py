@@ -1017,6 +1017,71 @@ class App:
             else:
                 self.r.text(scr,"ESC / ENTER / ESPACIO / CLICK · SKIP",(VIEW_W//2,VIEW_H-32),(145,160,180),self.r.menu_small,True)
 
+    def draw_weapon_collection(self):
+        self.draw_menu_bg()
+        self.r.text(self.screen,"ARSENAL",(VIEW_W//2,42),(240,195,105),self.r.menu_title,True)
+        scores=self.save.data.get("weapon_scores",{})
+        used=[wid for wid,count in scores.items() if count>0 and wid in self.data.weapons]
+        used.sort(key=lambda wid:(-int(scores.get(wid,0)), self.data.weapons[wid].name))
+        if not used:
+            self.r.text(self.screen,"AUN NO HAS UTILIZADO ARMAS EN UNA PARTIDA",(VIEW_W//2,230),(175,190,205),self.r.menu_font,True)
+        else:
+            cols=5; card_w,card_h=166,112; gap_x,gap_y=12,10
+            start_x=(VIEW_W-(cols*card_w+(cols-1)*gap_x))//2; start_y=86
+            for n,wid in enumerate(used[:25]):
+                w=self.data.weapons[wid]; row,col=divmod(n,cols)
+                rect=pygame.Rect(start_x+col*(card_w+gap_x),start_y+row*(card_h+gap_y),card_w,card_h)
+                selected=self.weapon_info_id==wid
+                pygame.draw.rect(self.screen,(10,14,24,235),rect,border_radius=8)
+                pygame.draw.rect(self.screen,(80,223,214) if selected else (76,91,113),rect,2 if selected else 1,border_radius=8)
+                image=getattr(self.r,"weapon_images",{}).get(wid)
+                if image:
+                    iw,ih=image.get_size(); scale=min(74/max(1,iw),60/max(1,ih))
+                    thumb=pygame.transform.smoothscale(image,(max(1,int(iw*scale)),max(1,int(ih*scale))))
+                    self.screen.blit(thumb,thumb.get_rect(center=(rect.centerx,rect.y+43)))
+                img=self.r.menu_small.render(w.name,True,(224,230,238))
+                if img.get_width()>rect.w-8: img=pygame.transform.smoothscale(img,(rect.w-8,img.get_height()))
+                self.screen.blit(img,img.get_rect(center=(rect.centerx,rect.y+79)))
+                self.r.text(self.screen,"PARTIDAS %d"%scores[wid],(rect.centerx,rect.y+98),(155,210,195),self.r.small,True)
+        if self.weapon_info_id:
+            self.draw_weapon_info(self.weapon_info_id)
+        else:
+            self.draw_option_card((VIEW_W//2-100,488,200,30),"Volver",False)
+
+    def draw_weapon_info(self,wid):
+        w=self.data.weapons.get(wid)
+        if not w:return
+        shade=pygame.Surface((VIEW_W,VIEW_H),pygame.SRCALPHA); shade.fill((2,5,10,190)); self.screen.blit(shade,(0,0))
+        panel=pygame.Rect(190,88,580,370)
+        pygame.draw.rect(self.screen,(8,12,22,250),panel,border_radius=12)
+        pygame.draw.rect(self.screen,(95,140,155,230),panel,2,border_radius=12)
+        image=getattr(self.r,"weapon_images",{}).get(wid)
+        if image:
+            iw,ih=image.get_size(); scale=min(100/max(1,iw),85/max(1,ih))
+            thumb=pygame.transform.smoothscale(image,(max(1,int(iw*scale)),max(1,int(ih*scale))))
+            self.screen.blit(thumb,thumb.get_rect(center=(panel.centerx,155)))
+        self.r.text(self.screen,w.name.upper(),(panel.centerx,215),(240,210,135),self.r.menu_font,True)
+        self.r.text(self.screen,"RAREZA: %s"%str(w.rarity).upper(),(panel.centerx,241),(105,230,218),self.r.menu_small,True)
+        pellets=int(getattr(w,"pellets",1))
+        effects=[]
+        if getattr(w,"damage_type","physical")!="physical": effects.append(str(getattr(w,"damage_type","")).upper())
+        if getattr(w,"explosive",False): effects.append("EXPLOSION")
+        if getattr(w,"status_chance",0)>0: effects.append("ESTADO")
+        if getattr(w,"pierce",0)>0: effects.append("PERFORA")
+        if getattr(w,"bounces",0)>0: effects.append("REBOTE")
+        effects_text=", ".join(effects) if effects else "NINGUNO"
+        rows=[
+            "DAÑO: %s"%getattr(w,"damage",0),
+            "VELOCIDAD DE ATAQUE: %.2f s"%getattr(w,"fire_interval",0),
+            "CANTIDAD DE PROYECTILES: %d"%pellets,
+            "MUNICION: %d"%getattr(w,"magazine",0),
+            "EFECTOS: %s"%effects_text,
+            "RARIDAD: %s"%str(getattr(w,"rarity","common")).upper(),
+        ]
+        for i,line in enumerate(rows):
+            self.r.text(self.screen,line,(panel.centerx,275+i*25),(215,224,235),self.r.menu_small,True)
+        self.r.text(self.screen,"CLICK / ENTER / ESC · CERRAR",(panel.centerx,442),(150,170,185),self.r.small,True)
+
     def draw_hub(self):
         if self.info: self.draw_info(); return
         from game.save import CHARACTER_UPGRADES, xp_to_next
