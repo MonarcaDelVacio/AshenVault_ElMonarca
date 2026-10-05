@@ -505,7 +505,12 @@ class Renderer:
             if not frames:
                 frames = self._load_sheet_frames(ability_atlas_path)
             if frames:
+                # El atlas contiene efectos independientes. Cada habilidad recibe
+                # un único componente, evitando que varios efectos se superpongan.
                 self.special_effect_frames["new_ability_atlas"] = frames
+                for idx, key in enumerate(("ability_shield","ability_heal","ability_burst","ability_freeze","ability_haste","ability_drone")):
+                    if idx < len(frames):
+                        self.special_effect_frames[key] = [frames[idx]]
 
         # Enemy sprites supplied as transparent spritesheets. Frames are detected
         # from transparent gaps, so sheets may contain different frame sizes and
@@ -776,7 +781,7 @@ class Renderer:
         if getattr(e,"is_boss",False): target=max(128.0, target)
         elif getattr(e,"is_miniboss",False): target=max(82.0, target)
         target_key=max(1,int(round(target)))
-        flip=math.cos(e.facing)<0
+        flip=(math.cos(e.facing)<0) ^ bool(getattr(e.d, "sprite_mirror", False))
         cache_key=(key,variant_id,id(frame),target_key,flip)
         cached=self._enemy_frame_cache.get(cache_key)
         if cached is None:
@@ -2125,7 +2130,9 @@ class Renderer:
             # se orientan siguiendo su trayectoria, tanto para jugador como enemigos.
             fire_projectile_frames = self.special_effect_frames.get("new_fireball") or self.ignite_projectile_frames
             if pr.dtype == "fire" and fire_projectile_frames:
-                angle = math.atan2(pr.vy, pr.vx) if not pr.stuck else pr.stuck_angle
+                # boladefuego_spritesheet.png tiene la silueta orientada hacia la izquierda;
+                # compensamos 180° para que el proyectil visual apunte en su trayectoria.
+                angle = (math.atan2(pr.vy, pr.vx) + math.pi) if not pr.stuck else (pr.stuck_angle + math.pi)
                 self._draw_combat_sprite_animation(
                     screen, fire_projectile_frames, pr.age,
                     pr.x + ox, pr.y + oy, max(18.0, pr.radius * 5.5 * getattr(pr, "visual_scale", 1.0)),
