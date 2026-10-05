@@ -15,7 +15,7 @@ class Fx:
         # si faltan, el renderer simplemente no dibuja la animacion.
         self.melee_slashes = []   # [x, y, angle, life, max_life, size]
         self.explosions = []      # [x, y, life, max_life, size]
-        self.enemy_deaths = []    # [x, y, life, max_life, sprite_set, size, facing]
+        self.enemy_deaths = []    # [x, y, life, max_life, sprite_set, size, facing, variant_id]
         self.special_effects = [] # [kind, x, y, angle, life, max_life, size]
 
     def burst(self, x, y, color, n=8, speed=140, life=0.35, size=2.5, angle=None, arc=math.tau):
@@ -50,7 +50,7 @@ class Fx:
                 sprite_set = extra[0]
                 size = float(extra[1]) if len(extra) > 1 else 70.0
                 facing = float(extra[2]) if len(extra) > 2 else 0.0
-                self.enemy_deaths.append([x, y, 0.0, 0.48, sprite_set, size, facing])
+                self.enemy_deaths.append([x, y, 0.0, 0.48, sprite_set, size, facing, extra[1] if len(extra) > 1 else None])
             self.add_shake(1.5)
         elif k == "player_hit":
             _, x, y, a = ev
