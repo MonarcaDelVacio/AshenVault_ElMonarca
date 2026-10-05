@@ -1329,8 +1329,8 @@ class Renderer:
         kind=str(deco.get("kind",""))
         variant=int(deco.get("variant",0))
         key=(kind,variant)
-        mask=self._decoration_mask_cache.get(key)
-        if mask is None:
+        cached=self._decoration_mask_cache.get(key)
+        if cached is None:
             image=self.decoration_images.get(kind)
             frames=self.decoration_frames.get(kind)
             if frames:
@@ -1349,28 +1349,20 @@ class Renderer:
             image=self._fit_image(image,max_size)
             if image is None:
                 return False
-            mask=pygame.mask.from_surface(image,threshold=8)
-            self._decoration_mask_cache[key]=(mask,image.get_size())
-        else:
-            mask,size=mask
-        if isinstance(mask, tuple):
-            mask,size=mask
-        else:
-            size=mask.get_size()
-        base_x=float(deco.get("x",0))*TILE+TILE/2
-        base_y=float(deco.get("y",0))*TILE+TILE
-        left=base_x-size[0]/2
-        top=base_y-size[1]
+            cached=(pygame.mask.from_surface(image,threshold=8),image.get_size())
+            self._decoration_mask_cache[key]=cached
+        mask,size=cached
         ir=max(1,int(round(radius)))
         circle=self._circle_mask_cache.get(ir)
         if circle is None:
-            circle=pygame.mask.Mask((ir*2+1,ir*2+1), fill=False)
-            circle.draw(pygame.mask.from_surface(pygame.Surface((ir*2+1,ir*2+1),pygame.SRCALPHA)))
-            # Construir un círculo sin depender de un sprite auxiliar.
             circle_surface=pygame.Surface((ir*2+1,ir*2+1),pygame.SRCALPHA)
             pygame.draw.circle(circle_surface,(255,255,255,255),(ir,ir),ir)
             circle=pygame.mask.from_surface(circle_surface,threshold=8)
             self._circle_mask_cache[ir]=circle
+        base_x=float(deco.get("x",0))*TILE+TILE/2
+        base_y=float(deco.get("y",0))*TILE+TILE
+        left=base_x-size[0]/2
+        top=base_y-size[1]
         offset=(int(round(x-radius-left)),int(round(y-radius-top)))
         return mask.overlap(circle,offset) is not None
 
