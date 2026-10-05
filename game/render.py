@@ -2145,7 +2145,7 @@ class Renderer:
         for slot_index in range(3):
             rect = pygame.Rect(inv_x + slot_index * (inv_slot + inv_gap), inv_y, inv_slot, inv_slot)
             occupied = slot_index < len(p.inventory)
-            selected = occupied and p.inventory[slot_index] is p.weapon
+            selected = getattr(p, "selected_slot", 0) == slot_index
             fill = (28, 26, 32, 225) if occupied else (12, 15, 22, 170)
             border = (255, 203, 105) if selected else ((86, 145, 168) if occupied else (54, 61, 75))
             if not self.ui_atlas.draw_slot(screen, rect, selected):
