@@ -1542,7 +1542,7 @@ class Renderer:
     def decoration_overlap(self, deco, x, y, radius):
         """Prueba la colisión real contra los píxeles opacos del modelo."""
         kind=str(deco.get("kind",""))
-        variant=int(deco.get("variant",0))
+        variant=deco.get("variant",0)
         key=(kind,variant)
         cached=self._decoration_mask_cache.get(key)
         if cached is None:
@@ -1566,6 +1566,8 @@ class Renderer:
                 "crate_pair":68,"table":72,"counter":84,"wood_chest_decor":68,
                 "statue_goddess":640,"statue_archer":640,"statue_assassin":640,
                 "statue_knight":640,"statue_mage":640,"bush":56,"rock":58,
+                "biome_red_bush":86,"biome_lava_rock":88,
+                "biome_lava_rock_purple":82,"biome_shared_rock":88,
             }.get(kind,56)
             image=self._fit_image(image,max_size)
             if image is None:
@@ -1594,7 +1596,7 @@ class Renderer:
         las zonas transparentes y el volumen vertical decorativo no bloquean al actor.
         """
         kind=str(deco.get("kind",""))
-        variant=int(deco.get("variant",0))
+        variant=deco.get("variant",0)
         key=(kind,variant)
         if key in self._decoration_collider_cache:
             rx,ry,ox,oy=self._decoration_collider_cache[key]
