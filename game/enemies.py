@@ -184,8 +184,12 @@ class Enemy:
             if dist <= d.hit_radius + p.radius:
                 if p.take_damage(d.damage):
                     sim.on_player_hit(self.x, self.y, d.damage)
-                    if getattr(d, "damage_type", "physical") == "ice":
+                    dtype=getattr(d, "damage_type", "physical")
+                    if dtype == "ice":
                         sim._apply_freeze(p, d.damage)
+                        p.set_status("freeze", 1.6)
+                    elif dtype in ("fire", "poison", "electric"):
+                        p.set_status({"fire":"burn","poison":"poison","electric":"electric"}[dtype], 2.4)
             rank_scale = 1.0
             if getattr(self, "is_miniboss", False): rank_scale = 1.28
             elif getattr(self, "is_boss", False): rank_scale = 1.65
@@ -228,7 +232,7 @@ class Enemy:
         weapon_def = sim.data.weapons.get(getattr(d, "weapon_id", ""))
         projectile_sprite = getattr(weapon_def, "projectile_sprite", None) if weapon_def else None
         dtype = getattr(d, "damage_type", None) or (getattr(weapon_def, "damage_type", "physical") if weapon_def else "physical")
-        color = tuple(getattr(weapon_def, "color", getattr(d, "color", (255, 120, 90)))) if weapon_def else tuple(getattr(d, "color", (255, 120, 90)))
+        color = tuple(getattr(d, "projectile_color", getattr(weapon_def, "color", getattr(d, "color", (255, 120, 90))))) if weapon_def else tuple(getattr(d, "projectile_color", getattr(d, "color", (255, 120, 90))))
         explosive = bool(getattr(d, "explosive", False) or (weapon_def and getattr(weapon_def, "explosive", False)))
         rank_scale = 1.0
         if getattr(self, "is_miniboss", False): rank_scale = 1.28
