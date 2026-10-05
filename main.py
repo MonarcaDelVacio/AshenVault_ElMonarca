@@ -96,7 +96,7 @@ class App:
         self._intro_transition_duration = 0.85
         self._fade_surface = None
         self._fade_t = 0.0
-        self._fade_half = 0.22
+        self._fade_half = 0.12
         self._last_room_key = None
         self.running = True
         self.large_minimap = False
@@ -284,40 +284,46 @@ class App:
 
     @staticmethod
     def _remove_portrait_background(image):
-        """Elimina fondos blancos/negros sólidos conectados al borde del PNG."""
+        """Elimina únicamente el fondo sólido conectado al borde del retrato.
+        Los blancos/negros dentro del personaje se conservan.
+        """
         if image is None:
             return None
         out = image.convert_alpha()
         w, h = out.get_size()
-        samples = [out.get_at((x, y))[:3] for x, y in ((0,0),(w-1,0),(0,h-1),(w-1,h-1))]
-        avg = tuple(sum(c[i] for c in samples)//len(samples) for i in range(3))
-        if min(avg) > 220:
-            bg, tol = (255,255,255), 28
-        elif max(avg) < 35:
-            bg, tol = (0,0,0), 22
+        corners = [out.get_at((x,y)) for x,y in ((0,0),(w-1,0),(0,h-1),(w-1,h-1))]
+        opaque = [p for p in corners if p.a > 8]
+        if not opaque:
+            return out
+        avg = tuple(sum(p[i] for p in opaque)//len(opaque) for i in range(3))
+        if min(avg) > 205:
+            bg, tol = (255,255,255), 48
+        elif max(avg) < 55:
+            bg, tol = (0,0,0), 42
         else:
             return out
-        px = pygame.PixelArray(out)
-        seen = set()
+
+        # Flood-fill desde el borde. Se acepta una tolerancia mayor para los
+        # píxeles anti-alias del contorno, pero nunca se eliminan regiones
+        # interiores desconectadas del fondo.
         stack = []
+        seen = set()
         for x in range(w):
             stack.extend(((x,0),(x,h-1)))
         for y in range(h):
             stack.extend(((0,y),(w-1,y)))
         while stack:
             x,y = stack.pop()
-            if (x,y) in seen or not (0 <= x < w and 0 <= y < h):
-                continue
-            rgba = out.unmap_rgb(px[x, y])
-            r,g,b,a = rgba.r, rgba.g, rgba.b, rgba.a
-            if a == 0:
-                seen.add((x,y)); continue
-            if max(abs(r-bg[0]), abs(g-bg[1]), abs(b-bg[2])) > tol:
+            if not (0 <= x < w and 0 <= y < h) or (x,y) in seen:
                 continue
             seen.add((x,y))
+            r,g,b,a = out.get_at((x,y))
+            if a == 0:
+                continue
+            if max(abs(r-bg[0]),abs(g-bg[1]),abs(b-bg[2])) > tol:
+                continue
             out.set_at((x,y),(r,g,b,0))
             stack.extend(((x-1,y),(x+1,y),(x,y-1),(x,y+1)))
-        del px
         return out
 
     def _load_character_portraits(self):
@@ -381,10 +387,12 @@ class App:
             if click and weapons_rect.collidepoint(pos):
                 self.weapon_info_id=None
                 self.info="Armas"
+                self.back_state = CHAR_SELECT
                 self.go(HUB)
                 return
             if click and upgrades_rect.collidepoint(pos):
                 self.hub_sel = 2
+                self.back_state = CHAR_SELECT
                 self.go(HUB)
                 return
             return
@@ -392,10 +400,11 @@ class App:
             scores=self.save.data.get("weapon_scores",{})
             used=[wid for wid,count in scores.items() if count>0 and wid in self.data.weapons]
             used.sort(key=lambda wid:(-int(scores.get(wid,0)), self.data.weapons[wid].name))
-            cols=5; card_w,card_h=166,112; gap_x,gap_y=12,10
+            cols=8; card_w,card_h=83,56; gap_x,gap_y=8,8
             start_x=(VIEW_W-(cols*card_w+(cols-1)*gap_x))//2; start_y=86
             if self.weapon_info_id:
-                if click: self.weapon_info_id=None
+                if click:
+                    self.weapon_info_id=None
                 return
             for n,wid in enumerate(used[:25]):
                 row,col=divmod(n,cols)
@@ -406,8 +415,14 @@ class App:
             back=pygame.Rect(VIEW_W//2-100,488,200,30)
             if click and back.collidepoint(pos):
                 self.info=None
+                self.go(CHAR_SELECT)
             return
         if self.state == HUB and not self.info:
+            # El botón inferior de Mejoras conserva el origen de navegación.
+            back_rect = pygame.Rect(490,438,220,44)
+            if click and back_rect.collidepoint(pos) and self.back_state == CHAR_SELECT:
+                self.go(CHAR_SELECT)
+                return
             from game.save import CHARACTER_UPGRADES
             if self.hub_dropdown_open:
                 dropdown=pygame.Rect(120,250,720,176)
@@ -531,10 +546,12 @@ class App:
         self.statue_message = ""
         pygame.event.set_grab(True)
 
-    def _begin_fade(self, duration=0.22):
+    def _begin_fade(self, duration=0.12):
+        # Crossfade corto: conserva la pantalla anterior encima de la nueva
+        # durante unas décimas, sin pasar por un negro sólido que resulte brusco.
         self._fade_surface = self.screen.copy()
-        self._fade_half = max(0.12, float(duration))
-        self._fade_t = self._fade_half * 2.0
+        self._fade_half = max(0.08, float(duration))
+        self._fade_t = self._fade_half
 
     def go(self, state):
         if state != self.state and self.state != INTRO:
@@ -665,6 +682,17 @@ class App:
             if k in (pygame.K_RETURN, pygame.K_SPACE): self.char_id=self.char_ids[self.char_sel]; self.confirm_character_selection(); return
             return
         if self.state == HUB:
+            if self.info == "Armas":
+                if self.weapon_info_id:
+                    if k in (pygame.K_ESCAPE, pygame.K_RETURN, pygame.K_SPACE):
+                        self.weapon_info_id = None
+                    return
+                if k == pygame.K_ESCAPE:
+                    self.info = None
+                    self.go(CHAR_SELECT)
+                    return
+                if k in (pygame.K_RETURN, pygame.K_SPACE):
+                    return
             if self.info:
                 if k == pygame.K_ESCAPE or k in (pygame.K_RETURN, pygame.K_SPACE): self.info=None
                 return
@@ -683,7 +711,7 @@ class App:
                     self.char_id=self.char_ids[self.hub_dropdown_sel]; self.hub_dropdown_open=False; self.hub_sel=0; self.audio.play("ui",self.t); return
                 return
             if k == pygame.K_ESCAPE:
-                self.go(MENU); return
+                self.go(self.back_state if self.back_state in (CHAR_SELECT, MENU) else MENU); return
             from game.save import CHARACTER_UPGRADES
             dynamic=["Iniciar run","Personajes"]+["UPGRADE:"+kind for kind in CHARACTER_UPGRADES.get(self.char_id,{})]+["Volver al menu"]
             if k in (pygame.K_UP, pygame.K_w):
@@ -1090,13 +1118,13 @@ class App:
                 pygame.draw.rect(self.screen,(80,223,214) if selected else (76,91,113),rect,2 if selected else 1,border_radius=8)
                 image=getattr(self.r,"weapon_images",{}).get(wid)
                 if image:
-                    iw,ih=image.get_size(); scale=min(74/max(1,iw),60/max(1,ih))
+                    iw,ih=image.get_size(); scale=min(48/max(1,iw),32/max(1,ih))
                     thumb=pygame.transform.smoothscale(image,(max(1,int(iw*scale)),max(1,int(ih*scale))))
-                    self.screen.blit(thumb,thumb.get_rect(center=(rect.centerx,rect.y+43)))
-                img=self.r.menu_small.render(w.name,True,(224,230,238))
-                if img.get_width()>rect.w-8: img=pygame.transform.smoothscale(img,(rect.w-8,img.get_height()))
-                self.screen.blit(img,img.get_rect(center=(rect.centerx,rect.y+79)))
-                self.r.text(self.screen,"PARTIDAS %d"%scores[wid],(rect.centerx,rect.y+98),(155,210,195),self.r.small,True)
+                    self.screen.blit(thumb,thumb.get_rect(center=(rect.centerx,rect.y+22)))
+                img=self.r.small.render(w.name,True,(224,230,238))
+                if img.get_width()>rect.w-4: img=pygame.transform.smoothscale(img,(rect.w-8,img.get_height()))
+                self.screen.blit(img,img.get_rect(center=(rect.centerx,rect.y+39)))
+                self.r.text(self.screen,"x%d"%scores[wid],(rect.centerx,rect.y+50),(155,210,195),self.r.small,True)
         if self.weapon_info_id:
             self.draw_weapon_info(self.weapon_info_id)
         else:
@@ -1164,8 +1192,9 @@ class App:
                 else:
                     price="MEJORAR · %d FRAGMENTOS"%cost; color=(255,219,133) if s["meta_currency"]>=cost else (161,167,181)
             self.r.text(self.screen,price,(x+w//2,y+h-15),color,self.r.menu_small,True)
-        for n,item in enumerate(("Personajes","Volver al menu")):
-            self.draw_option_card((250+n*240,438,220,44),item,self.hub_sel==HUB_ITEMS.index(item))
+        upgrade_back_label = "Volver" if self.back_state == CHAR_SELECT else "Volver al menu"
+        for n,item in enumerate(("Personajes",upgrade_back_label)):
+            self.draw_option_card((250+n*240,438,220,44),item,self.hub_sel==HUB_ITEMS.index("Volver al menu") if item == "Volver al menu" else False)
         self.r.text(self.screen,"Las mejoras son exclusivas de %s y afectan sus partidas."%c.name.split(",")[0],(VIEW_W//2,518),(150,165,180),self.r.menu_small,True)
         if self.hub_dropdown_open:
             panel=pygame.Rect(120,250,720,176)
@@ -1410,21 +1439,15 @@ class App:
             overlay.set_alpha(alpha)
             scr.blit(overlay, (0, 0))
 
-        # Transición global: imagen anterior -> negro -> pantalla nueva.
+        # Transición global: crossfade breve. La pantalla anterior se
+        # desvanece sobre la nueva sin intercalar un negro sólido.
         if self._fade_surface is not None and self._fade_t > 0.0:
-            half=self._fade_half
-            if self._fade_t > half:
-                old_alpha=int(255*max(0.0,min(1.0,(self._fade_t-half)/half)))
-                overlay=self._fade_surface.copy()
+            progress = max(0.0, min(1.0, self._fade_t / max(0.001, self._fade_half)))
+            old_alpha = int(255 * (progress * progress))
+            if old_alpha:
+                overlay = self._fade_surface.copy()
                 overlay.set_alpha(old_alpha)
-                scr.blit(overlay,(0,0))
-                black_alpha=255-old_alpha
-            else:
-                black_alpha=int(255*max(0.0,min(1.0,self._fade_t/half)))
-            if black_alpha:
-                fade=pygame.Surface((VIEW_W,VIEW_H),pygame.SRCALPHA)
-                fade.fill((0,0,0,black_alpha))
-                scr.blit(fade,(0,0))
+                scr.blit(overlay, (0, 0))
 
         self._present()
 
