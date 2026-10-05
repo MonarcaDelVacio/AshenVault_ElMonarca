@@ -77,13 +77,13 @@ def _flood(grid, start):
 def _choose_floor_surface(seed, room_type, biome):
     """Elige una única superficie para toda la sala. Nunca mezcla texturas nuevas."""
     families = {
-        "ruins": ("suelodeladrillosdepiedra", "sueloderocas", "sueloderocas2", "sueloderocasypasto"),
-        "forest": ("suelodehierbas", "suelodehierbas2", "suelodehierbas3", "suelodehierbaytierra", "suelodehierbaocura", "sueloderocasyhierba", "sueloderocasyhierba2"),
+        "ruins": ("suelodeladrillosdepiedra", "sueloderocas", "sueloderocas2", "sueloderocasyfuegoazul"),
+        "forest": ("suelodehierbas", "suelodehierbas2", "suelodehierbas3", "suelodehierbaytierra", "suelodehierbaocura", "sueloderocasyhierba", "sueloderocasyhierba2", "sueloderocasypasto", "suelodepasto"),
         "dungeon": ("sueloderocaoscura2", "sueloderocas", "sueloderocas2", "suelodeladrillosdepiedra"),
         "laboratory": ("sueloderocasyfuegoazul", "sueloderocasypasto", "sueloderocasyhierba", "sueloderocasyhierba2"),
         "volcanic": ("suelodelava", "sueloderocaylava", "suelodelavarosa", "tierracalienteazul", "tierracalientegris", "tierracalienterojiza", "tierracalientemorada"),
         "desert": ("arena", "suelodearena", "suelodearena2", "suelodearenadedecierto", "tierracalientemarron", "tierracalienterojiza"),
-        "swamp": ("suelodepantano", "suelodehierbaytierra", "sueloderocasyhierba", "tierracalienteverde", "tierracalientegris"),
+        "swamp": ("suelodepantano", "suelodehierbaytierra", "sueloderocasyhierba", "sueloderocasypasto", "suelodepasto", "tierracalienteverde", "tierracalientegris"),
         "final": ("sueloderocaoscura2", "sueloderocaylava", "tierracalientemorada", "sueloderocasyfuegoazul", "suelodelavarosa"),
     }
     # El tipo de sala ya no cambia el bioma visual. Todas las habitaciones de
@@ -113,7 +113,8 @@ def _generate_decorations(rng, room_type, biome, floor, reserved, seed_value=0):
             if (tx,ty) in used: continue
             if abs(tx-ROOM_W//2)+abs(ty-ROOM_H//2) < min_center: continue
             if any(abs(tx-x)<=1 and abs(ty-y)<=1 for x,y in used): continue
-            result.append({"kind":kind,"x":tx,"y":ty,"variant":rng.randrange(6)})
+            variant = rng.random() if kind.startswith("biome_") else rng.randrange(6)
+            result.append({"kind":kind,"x":tx,"y":ty,"variant":variant})
             used.add((tx,ty)); picked+=1
 
     # Salas especiales: la estatua representa un punto de interés, no relleno.
