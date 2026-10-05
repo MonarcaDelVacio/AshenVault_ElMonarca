@@ -41,7 +41,7 @@ class Sim:
         a=self.player.ability
         drone={"x":self.player.x+math.cos(angle)*34.0,"y":self.player.y+math.sin(angle)*34.0,
                "angle":float(angle),"orbit":float(angle),"hp":float(a.get("drone_hp",18)),
-               "max_hp":float(a.get("drone_hp",18)),"shot_cd":0.15,"burst_left":0,
+               "max_hp":float(a.get("drone_hp",18)),"shot_cd":1.0,"burst_left":0,
                "burst_cd":0.0,"phase":self.rng.random()*math.tau,"radius":10.0}
         self.drones.append(drone)
         self.player.drones=self.drones
@@ -69,16 +69,12 @@ class Sim:
             d["burst_cd"]=max(0.0,d["burst_cd"]-dt)
             target=min((e for e in self.enemies if e.alive and e.spawn_delay<=0.2),
                        key=lambda e:math.hypot(e.x-d["x"],e.y-d["y"]),default=None)
-            if target is not None and math.hypot(target.x-d["x"],target.y-d["y"])<520:
-                if d["burst_left"]>0 and d["shot_cd"]<=0:
-                    ang=math.atan2(target.y-d["y"],target.x-d["x"])
-                    self.spawn_projectile(0,d["x"],d["y"],ang,620.0,damage,3.0,1.1,(90,220,235),"energy",0,0,False,None,False,0,False,0,0.85,0.0)
-                    d["burst_left"]-=1
-                    d["shot_cd"]=0.095
-                elif d["burst_left"]<=0 and d["burst_cd"]<=0:
-                    d["burst_left"]=3
-                    d["shot_cd"]=0.01
-                    d["burst_cd"]=attack_interval
+            if target is not None and math.hypot(target.x-d["x"],target.y-d["y"])<520 and d["shot_cd"]<=0:
+                ang=math.atan2(target.y-d["y"],target.x-d["x"])
+                self.spawn_projectile(0,d["x"],d["y"],ang,620.0,damage,3.0,1.1,(90,220,235),"energy",0,0,False,None,False,0,False,0,0.85,0.0)
+                # Por defecto: un disparo por segundo por dron. Las mejoras
+                # de velocidad reducen este intervalo.
+                d["shot_cd"]=attack_interval
             kept.append(d)
         self.drones=kept
         p.drones=self.drones
@@ -201,10 +197,19 @@ class Sim:
         # Loot y monedas pertenecen a la sala actual; nunca se comparten entre habitaciones.
         self.items=room.items
         self.pickups=room.pickups
-        self.hazards=[]; self.wave_attacks=[]; self.lasers=[]; self.drones=[]; self.player.drones=[]
+        self.hazards=[]; self.wave_attacks=[]; self.lasers=[]
+        # Mira mantiene sus drones entre salas; solo se reposicionan alrededor del jugador.
         if not getattr(room, "props_spawned", False):
             self._spawn_room_props(room); room.props_spawned=True
         self.props=getattr(room, "props", [])
+        if self.drones:
+            for idx, drone in enumerate(self.drones):
+                angle = float(drone.get("orbit", 0.0)) + idx * (math.tau / max(1, len(self.drones)))
+                drone["x"] = self.player.x + math.cos(angle) * 34.0
+                drone["y"] = self.player.y + math.sin(angle) * 24.0
+                drone["orbit"] = angle
+                drone["shot_cd"] = min(float(drone.get("shot_cd", 1.0)), 0.25)
+            self.player.drones = self.drones
         self._flow_tile=self.arena.tile_of(self.player.x,self.player.y); self._flow_refresh=0.; self.flow=self.arena.flow_field(*self._flow_tile)
         if room.room_type=="boss" and not room.cleared:
             self.chest=None
