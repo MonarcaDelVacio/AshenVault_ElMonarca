@@ -3,6 +3,7 @@ import pygame
 
 ROOT = Path(__file__).resolve().parents[1]
 pygame.init()
+pygame.display.set_mode((1, 1))
 
 for p in [ROOT/'assets/weapons/new/modelosarmas.png', ROOT/'assets/weapons/new/modelosarmasmelee.png']:
     image = pygame.image.load(str(p)).convert_alpha()
