@@ -259,7 +259,10 @@ def generate_room(seed=None, room_type="combat", biome="ruins", door_sides=None)
     # según la semilla de la sala; así se ve planificado, pero no idéntico en todas.
     torch_row = cy-5 if (seed or 0) % 2 == 0 else cy+5
     for x, y in pillar_positions:
-        if (x, y) in reserved:
+        # Un pilar solo puede ocupar una casilla que ya pertenece al suelo de
+        # la silueta generada. Esto evita que sobresalga de paredes en salas
+        # octogonales, diagonales o con chaflán.
+        if (x, y) in reserved or (x, y) not in floor_mask:
             continue
         g[y][x] = 4 if y == torch_row and room_type in ("combat", "elite", "challenge", "miniboss", "boss") else 2
 
