@@ -77,14 +77,14 @@ def _flood(grid, start):
 def _choose_floor_surface(seed, room_type, biome):
     """Elige una única superficie para toda la sala. Nunca mezcla texturas nuevas."""
     families = {
-        "ruins": ("suelodeladrillosdepiedra", "sueloderocas", "sueloderocas2"),
-        "forest": ("suelodehierbas", "suelodehierbas2", "sueloderocasyhierba", "sueloderocasyhierba2"),
-        "dungeon": ("sueloderocaoscura2", "sueloderocas", "sueloderocas2"),
-        "laboratory": ("sueloderocasyfuegoazul", "sueloderocasypasto", "sueloderocasyhierba"),
-        "volcanic": ("suelodelava", "sueloderocaylava", "suelodelavarosa", "tierracalienterojiza"),
-        "desert": ("suelodearena", "suelodearena2", "suelodearenadedecierto", "tierracalientemarron"),
-        "swamp": ("suelodepantano", "suelodehierbaytierra", "tierracalienteverde"),
-        "final": ("sueloderocaoscura2", "sueloderocaylava", "tierracalientemorada", "sueloderocasyfuegoazul"),
+        "ruins": ("suelodeladrillosdepiedra", "sueloderocas", "sueloderocas2", "sueloderocasypasto"),
+        "forest": ("suelodehierbas", "suelodehierbas2", "suelodehierbas3", "suelodehierbaytierra", "suelodehierbaocura", "sueloderocasyhierba", "sueloderocasyhierba2"),
+        "dungeon": ("sueloderocaoscura2", "sueloderocas", "sueloderocas2", "suelodeladrillosdepiedra"),
+        "laboratory": ("sueloderocasyfuegoazul", "sueloderocasypasto", "sueloderocasyhierba", "sueloderocasyhierba2"),
+        "volcanic": ("suelodelava", "sueloderocaylava", "suelodelavarosa", "tierracalienteazul", "tierracalientegris", "tierracalienterojiza", "tierracalientemorada"),
+        "desert": ("arena", "suelodearena", "suelodearena2", "suelodearenadedecierto", "tierracalientemarron", "tierracalienterojiza"),
+        "swamp": ("suelodepantano", "suelodehierbaytierra", "sueloderocasyhierba", "tierracalienteverde", "tierracalientegris"),
+        "final": ("sueloderocaoscura2", "sueloderocaylava", "tierracalientemorada", "sueloderocasyfuegoazul", "suelodelavarosa"),
     }
     # El tipo de sala ya no cambia el bioma visual. Todas las habitaciones de
     # una misma dungeon comparten la familia de suelo de su temática.
