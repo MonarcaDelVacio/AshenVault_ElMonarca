@@ -1175,7 +1175,11 @@ class Renderer:
                 rotation = base_angle + 180 - math.degrees(e.facing)
             else:
                 rotation = base_angle - math.degrees(e.facing)
-            enemy_rotated = pygame.transform.rotate(enemy_weapon, rotation)
+            enemy_rot_key=(enemy_weapon_id,int(round(rotation/5.0))*5)
+            enemy_rotated=self._weapon_rotation_cache.get(enemy_rot_key)
+            if enemy_rotated is None:
+                enemy_rotated=pygame.transform.rotate(enemy_weapon,rotation)
+                self._weapon_rotation_cache[enemy_rot_key]=enemy_rotated
             enemy_pos = (int(x + math.cos(e.facing) * (e.radius + 3)), int(y + math.sin(e.facing) * (e.radius + 3)))
             screen.blit(enemy_rotated, enemy_rotated.get_rect(center=enemy_pos))
         shield_ratio = getattr(e, "shield_integrity", 0.0) / max(1.0, getattr(e.d, "shield_durability", 48.0))
@@ -1272,7 +1276,11 @@ class Renderer:
                 else:
                     rotation = base_angle - math.degrees(p.aim)
                 hand_offset = (p.radius + 1 - kick) if is_melee_asset else (p.radius - 1 - kick)
-                rotated = self._rotate_weapon_from_grip(weapon_image, weapon_def, rotation) if is_melee_asset else pygame.transform.rotate(weapon_image, rotation)
+                rot_key=(weapon_id, bool(is_melee_asset), int(round(rotation/5.0))*5)
+                rotated=self._weapon_rotation_cache.get(rot_key)
+                if rotated is None:
+                    rotated=self._rotate_weapon_from_grip(weapon_image, weapon_def, rotation) if is_melee_asset else pygame.transform.rotate(weapon_image, rotation)
+                    self._weapon_rotation_cache[rot_key]=rotated
                 center = (int(x + ax * hand_offset), int(y + ay * hand_offset))
                 screen.blit(rotated, rotated.get_rect(center=center))
             else:
@@ -1955,7 +1963,12 @@ class Renderer:
                 if scaled.get_width() > scaled.get_height() * 1.35 or directional_sprite:
                     angle = math.degrees(math.atan2(pr.vy, pr.vx)) if not pr.stuck else math.degrees(pr.stuck_angle)
                     correction = 62.0 if "assets/weapons/melee/lanza" in sprite_path else 0.0
-                    scaled = pygame.transform.rotate(scaled, correction - angle)
+                    rot_key=(sprite_path,max_dim,round(float(getattr(pr,"visual_scale",1.0)),2),int(round((correction-angle)/8.0))*8)
+                    rotated=self._rotation_cache.get(rot_key)
+                    if rotated is None:
+                        rotated=pygame.transform.rotate(scaled,correction-angle)
+                        self._rotation_cache[rot_key]=rotated
+                    scaled=rotated
                 if pr.stuck and pr.stuck_timer < 1.0:
                     scaled = scaled.copy()
                     scaled.set_alpha(max(0, int(255 * pr.stuck_timer)))
