@@ -52,6 +52,12 @@ class Sim:
 
     def emit(self,kind,*args):
         if len(self.events)<250:self.events.append((kind,)+args)
+    def select_weapon_slot(self, slot):
+        p=self.player
+        p.selected_slot=max(0,min(2,int(slot)))
+        p.weapon=p.inventory[p.selected_slot] if p.selected_slot < len(p.inventory) else None
+        self.emit("weapon_switch",p.x,p.y)
+
     def enemy_target(self, enemy):
         """Selecciona jugador o dron como objetivo; los drones pueden atraer fuego enemigo."""
         p=self.player
@@ -923,8 +929,8 @@ class Sim:
         dt=min(dt,1/20)
         if self.over or self.statue_menu:return
         self.time+=dt; p=self.player
-        if inp.switch_weapon_pressed and len(p.inventory)>1:
-            idx=p.inventory.index(p.weapon); p.weapon=p.inventory[(idx+1)%len(p.inventory)]; self.emit("weapon_switch",p.x,p.y)
+        if inp.switch_weapon_pressed:
+            self.select_weapon_slot((getattr(p,"selected_slot",0)+1)%3)
         if inp.interact_pressed:self._try_interact()
         # Invariante de seguridad: una sala ya despejada nunca puede conservar
         # las puertas cerradas, incluso si un evento de jefe/estado ocurrió
@@ -974,7 +980,7 @@ class Sim:
             self._try_transition()
     def _damage_shield(self, enemy, damage, incoming_from_target, source="projectile"):
         """Devuelve True si el escudo frontal absorbe el golpe; su integridad se agota."""
-        if not getattr(enemy.d, "shielded", False) or getattr(enemy, "shield_integrity", 0) <= 0:
+        if not getattr(enemy, "shield_active", False) or getattr(enemy, "shield_integrity", 0) <= 0:
             return False
         da = (incoming_from_target - enemy.facing + math.pi) % (2 * math.pi) - math.pi
         if abs(da) >= getattr(enemy.d, "shield_arc", 2.1) * 0.5:
@@ -982,6 +988,8 @@ class Sim:
         drain = max(2.0, float(damage) * 0.5)
         enemy.shield_integrity = max(0.0, enemy.shield_integrity - drain)
         if enemy.shield_integrity <= 0:
+            enemy.shield_active=False
+            enemy.shield_timer=0.0
             self.emit("shield_break", enemy.x, enemy.y, getattr(enemy.d, "color", (120, 190, 255)))
         else:
             self.emit("projectile_block", enemy.x, enemy.y, (120, 190, 255))
