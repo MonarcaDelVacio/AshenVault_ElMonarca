@@ -1805,7 +1805,7 @@ class Renderer:
                 elif filename == "projectile_10.png": max_dim = 17
                 elif filename in ("projectile_12.png", "projectile_13.png", "projectile_14.png"): max_dim = 16
                 elif filename == "projectile_15.png": max_dim = 15
-                cache_key = (sprite_path, max_dim)
+                cache_key = (sprite_path, max_dim, round(float(getattr(pr, "visual_scale", 1.0)),2))
                 scaled = self.projectile_scaled_images.get(cache_key)
                 if scaled is None:
                     scaled = self._fit_image(image, max_dim * getattr(pr, "visual_scale", 1.0))
