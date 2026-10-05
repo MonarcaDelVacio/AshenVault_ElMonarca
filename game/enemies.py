@@ -266,6 +266,11 @@ class Enemy:
         p = sim.player
         self.cooldown = d.cooldown
         if d.ai in ("melee", "charger"):
+            target=self.target or {"kind":"player","obj":p,"x":p.x,"y":p.y}
+            if target.get("kind")=="drone":
+                if dist <= d.hit_radius + target["obj"].get("radius",10):
+                    sim.damage_drone(target["obj"],d.damage,self.x,self.y)
+                return
             if dist <= d.hit_radius + p.radius:
                 if p.take_damage(d.damage):
                     sim.on_player_hit(self.x, self.y, d.damage)
