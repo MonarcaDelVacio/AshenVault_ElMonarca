@@ -504,49 +504,47 @@ class Sim:
         return sum(1 for e in self.enemies if getattr(e, "is_summoned", False) and e.alive)
 
     def spawn_summons(self, source, ids, count=1):
-        """Invoca esbirros en casillas transitables, nunca dentro de muros/cajas/actores."""
-        pool = [self.data.enemies[i] for i in ids if i in self.data.enemies]
+        """Invoca esbirros en puntos transitables, con un bloque de margen."""
+        pool=[self.data.enemies[i] for i in ids if i in self.data.enemies]
         if not pool:
             return False
-        spawned = 0
-        for _ in range(max(1, int(count))):
+        spawned=0
+        for _ in range(max(1,int(count))):
             if self.count_summoned() >= 7:
                 break
-            d = self.rng.choice(pool)
-            min_sep = source.radius + d.radius + 7
-            candidates = []
-            for ty in range(1, self.arena.rows - 1):
-                for tx in range(1, self.arena.cols - 1):
-                    x, y = self.arena.tile_center(tx, ty)
-                    dist = math.hypot(x - source.x, y - source.y)
-                    if dist < min_sep or dist > TILE * 5.5:
+            d=self.rng.choice(pool)
+            min_sep=source.radius+d.radius+7
+            candidates=[]
+            for ty in range(1,self.arena.rows-1):
+                for tx in range(1,self.arena.cols-1):
+                    px,py=self.arena.tile_center(tx,ty)
+                    dist=math.hypot(px-source.x,py-source.y)
+                    if dist < min_sep or dist > TILE*5.5:
                         continue
-                    if self.arena.box_hits(x, y, d.radius * .85) or self._crate_collision(x, y, d.radius * .85):
-                        continue
-                    if any(other.alive and math.hypot(x - other.x, y - other.y) < d.radius + other.radius + 5
-                           for other in self.enemies):
-                        continue
-                    candidates.append((dist + self.rng.random() * 7, x, y))
-            if not candidates:
-                # Si la zona inmediata está bloqueada, se busca en cualquier punto libre de la sala.
-                for ty in range(1, self.arena.rows - 1):
-                    for tx in range(1, self.arena.cols - 1):
-                        x, y = self.arena.tile_center(tx, ty)
-                        if self.arena.box_hits(x, y, d.radius * .85) or self._crate_collision(x, y, d.radius * .85):
-                            continue
-                        if any(other.alive and math.hypot(x - other.x, y - other.y) < d.radius + other.radius + 5
-                               for other in self.enemies):
-                            continue
-                        candidates.append((math.hypot(x - source.x, y - source.y) + self.rng.random() * 7, x, y))
-            if not candidates:
+                    candidates.append((dist+self.rng.random()*7,px,py))
+            candidates.sort(key=lambda q:q[0])
+            chosen=None
+            for _,px,py in candidates:
+                safe=self._safe_npc_position(px,py,float(d.radius))
+                if safe is not None:
+                    chosen=safe; break
+            if chosen is None:
+                for ty in range(1,self.arena.rows-1):
+                    for tx in range(1,self.arena.cols-1):
+                        px,py=self.arena.tile_center(tx,ty)
+                        safe=self._safe_npc_position(px,py,float(d.radius))
+                        if safe is not None:
+                            chosen=safe; break
+                    if chosen is not None:
+                        break
+            if chosen is None:
                 continue
-            _, x, y = min(candidates, key=lambda item: item[0])
-            e = self._new_enemy(d, x, y, summoned=True)
-            e.spawn_delay = 0.8
+            px,py=chosen
+            e=self._new_enemy(d,px,py,summoned=True)
+            e.spawn_delay=0.8
             self.enemies.append(e)
-            spawned += 1
-        return spawned > 0
-    def break_secret(self, tx, ty):
+            spawned+=1
+        return spawned>0    def break_secret(self, tx, ty):
         """Las paredes especiales ya no son destructibles ni entregan loot; usa cajas para eso."""
         return False
 
@@ -849,13 +847,62 @@ class Sim:
     def _spawn_miniboss(self):
         pool=[e for e in self.data.enemies.values() if e.min_wave>=2 and getattr(e,"sprite_set",None)]
         e=self.rng.choice(pool or [x for x in self.data.enemies.values() if getattr(x,"sprite_set",None)])
-        x,y=self.arena.tile_center(self.arena.cols//2,self.arena.rows//3)
+        desired_x,desired_y=self.arena.tile_center(self.arena.cols//2,self.arena.rows//3)
+        safe=self._safe_npc_position(desired_x,desired_y,float(e.radius),min_distance=120)
+        if safe is None:
+            return
+        x,y=safe
         mini_def=copy.copy(e); mini_def.hp*=2.45; mini_def.damage*=1.25; mini_def.speed*=.94
         mini_def.radius*=1.16; mini_def.sprite_scale=float(getattr(e,"sprite_scale",3.5))*1.12
         mini_def.miniboss_pulse_interval=4.2
         mini=Enemy(mini_def,x,y,self.rng); mini.is_miniboss=True
         scale=1.0 + 0.14*(self.difficulty-1); mini.hp*=scale; mini.max_hp=mini.hp; mini.d.damage*=scale
         self.enemies.append(mini); self.emit("miniboss_spawn",x,y,e.name)
+    def _safe_npc_position(self, desired_x, desired_y, radius, min_distance=0.0, occupied=()):
+        """Busca un spawn con un bloque completo de margen respecto a paredes y decoraciones."""
+        radius=float(radius)
+        margin=radius + TILE
+        occupied=tuple(occupied or ())
+
+        def valid(x, y):
+            if x < margin or y < margin or x > self.arena.width-margin or y > self.arena.height-margin:
+                return False
+            if self.arena.box_hits(x, y, margin):
+                return False
+            if self._decoration_collision(x, y, margin):
+                return False
+            if self._crate_collision(x, y, margin):
+                return False
+            if min_distance > 0 and math.hypot(x-self.player.x, y-self.player.y) < min_distance:
+                return False
+            for ox, oy, oradius in occupied:
+                if math.hypot(x-ox, y-oy) < radius + float(oradius) + TILE:
+                    return False
+            for other in self.enemies:
+                if not getattr(other, "alive", False):
+                    continue
+                if math.hypot(x-other.x, y-other.y) < radius + float(other.radius) + 8:
+                    return False
+            return True
+
+        base_tx, base_ty=self.arena.tile_of(desired_x, desired_y)
+        max_r=max(self.arena.cols, self.arena.rows)
+        for ring in range(max_r):
+            candidates=[]
+            for dy in range(-ring, ring+1):
+                for dx in range(-ring, ring+1):
+                    if max(abs(dx),abs(dy)) != ring:
+                        continue
+                    tx,ty=base_tx+dx,base_ty+dy
+                    if tx < 0 or ty < 0 or tx >= self.arena.cols or ty >= self.arena.rows:
+                        continue
+                    px,py=self.arena.tile_center(tx,ty)
+                    if valid(px,py):
+                        candidates.append((math.hypot(px-desired_x,py-desired_y),px,py))
+            if candidates:
+                candidates.sort(key=lambda q:q[0])
+                return candidates[0][1],candidates[0][2]
+        return None
     def _spawn_room_enemies(self):
         self.wave+=1; self.stats["waves"]=max(self.stats["waves"],self.wave)
         budget=self.data.rooms.get(self.room.room_type,{}).get("enemy_budget",5) or 5
@@ -865,7 +912,6 @@ class Sim:
         if not pool: pool=[e for e in self.data.enemies.values() if e.min_wave<=self.wave]
         spots=list(self.arena.enemy_spawns) or [self.arena.player_spawn]; self.rng.shuffle(spots)
         weights=[e.weight for e in pool]
-        # La temática también modifica la composición, no solo el suelo.
         for idx,e in enumerate(pool):
             wid=getattr(e,"weapon_id",None)
             wd=self.data.weapons.get(wid) if wid else None
@@ -884,26 +930,20 @@ class Sim:
             candidates=spots[i:]+spots[:i]
             chosen=None
             for sx,sy in candidates:
-                if math.hypot(sx-self.player.x,sy-self.player.y)<120: continue
-                if self.arena.point_solid(sx,sy): continue
-                if self._decoration_collision(sx,sy,float(e.radius)): continue
-                if any(not q.get("broken") and math.hypot(sx-q["x"],sy-q["y"])<e.radius+q.get("radius",24)
-                       for q in self.props): continue
-                if any(math.hypot(sx-ux,sy-uy)<e.radius+ur+10 for ux,uy,ur in used): continue
-                chosen=(sx,sy); break
+                pos=self._safe_npc_position(sx,sy,float(e.radius),min_distance=120,occupied=used)
+                if pos is not None:
+                    chosen=pos; break
             if chosen is None:
-                for _ in range(30):
-                    sx=self.rng.uniform(e.radius+16,self.arena.width-e.radius-16)
-                    sy=self.rng.uniform(e.radius+16,self.arena.height-e.radius-16)
-                    if self.arena.point_solid(sx,sy) or self._decoration_collision(sx,sy,float(e.radius)): continue
-                    if any(not q.get("broken") and math.hypot(sx-q["x"],sy-q["y"])<e.radius+q.get("radius",24) for q in self.props): continue
-                    if math.hypot(sx-self.player.x,sy-self.player.y)<120: continue
-                    chosen=(sx,sy); break
+                for _ in range(80):
+                    sx=self.rng.uniform(TILE,self.arena.width-TILE)
+                    sy=self.rng.uniform(TILE,self.arena.height-TILE)
+                    pos=self._safe_npc_position(sx,sy,float(e.radius),min_distance=120,occupied=used)
+                    if pos is not None:
+                        chosen=pos; break
             if chosen is not None:
                 sx,sy=chosen
                 used.append((sx,sy,float(e.radius)))
-                self.enemies.append(self._new_enemy(e,sx,sy)); self.emit("spawn",sx,sy)
-    def _setup_shop(self):
+                self.enemies.append(self._new_enemy(e,sx,sy)); self.emit("spawn",sx,sy)    def _setup_shop(self):
         self.shop_offers=[]
         cx,cy=self.arena.width/2,self.arena.height/2
         weapon_ids=list(self.data.weapons)
@@ -962,7 +1002,11 @@ class Sim:
         boss_id=self.data.biome_bosses.get(biome) if hasattr(self.data,"biome_bosses") else None
         b=self.data.bosses.get(boss_id) if boss_id else None
         b=b or next(iter(self.data.bosses.values()))
-        x,y=self.arena.tile_center(self.arena.cols//2,self.arena.rows//3)
+        desired_x,desired_y=self.arena.tile_center(self.arena.cols//2,self.arena.rows//3)
+        safe=self._safe_npc_position(desired_x,desired_y,float(getattr(b,"radius",28)),min_distance=120)
+        if safe is None:
+            return
+        x,y=safe
         boss=Boss(b,x,y,self.rng, difficulty=self.difficulty)
         self.enemies.append(boss); self.emit("boss_spawn",x,y,b.name)
         biome_pool=self.data.biomes.get(biome,{}).get("enemy_pool",[])
@@ -976,8 +1020,9 @@ class Sim:
         for sx,sy in candidates:
             if spawned>=guard_count or math.hypot(sx-x,sy-y)<TILE*1.8: continue
             edef=self.rng.choice(guard_pool)
-            if self.arena.box_hits(sx,sy,edef.radius*.9) or self._crate_collision(sx,sy,edef.radius*.9): continue
-            if any(o.alive and math.hypot(sx-o.x,sy-o.y)<edef.radius+o.radius+8 for o in self.enemies): continue
+            safe=self._safe_npc_position(sx,sy,float(edef.radius),min_distance=120)
+            if safe is None: continue
+            sx,sy=safe
             guard=self._new_enemy(edef,sx,sy); guard.is_boss_guard=True; guard.spawn_delay=.45
             self.enemies.append(guard); self.emit("boss_guard_spawn",sx,sy,edef.name); spawned+=1
     def _complete_room(self):
