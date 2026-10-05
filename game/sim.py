@@ -1271,6 +1271,9 @@ class Sim:
         tile=self.arena.tile_of(p.x,p.y); self._flow_refresh-=dt
         if tile!=self._flow_tile and self._flow_refresh<=0:
             self._flow_tile=tile; self._flow_refresh=0.12; self.flow=self.arena.flow_field(*tile)
+        # Defensive AI needs only player projectiles. Build this list once per
+        # frame instead of making every enemy scan the entire 600-slot pool.
+        self._active_player_projectiles=[pr for pr in self.pool.items if pr.active and pr.team==0]
         p.update(self,inp,dt)
         for e in self.enemies:e.update(self,dt)
         self._update_lasers(dt)
