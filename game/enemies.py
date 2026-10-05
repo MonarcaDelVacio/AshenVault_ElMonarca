@@ -50,6 +50,7 @@ class Enemy:
         self.shield_integrity=float(getattr(edef, "shield_durability", 48.0)) if getattr(edef, "shielded", False) else 0.0
         self.brain_state="observe"; self.brain_timer=r.uniform(0.45,1.15); self.dodge_cd=0.0
         self.target=None; self.shield_active=False; self.shield_timer=0.0
+; self.stomp_timer=r.uniform(2.8,5.2) if float(getattr(edef,"radius",0))>=22 else 999.0
         return self
 
     @property
@@ -98,10 +99,25 @@ class Enemy:
                     return
             self.summon_timer = min(0.5, getattr(d, "summon_interval", 0))
 
-        dx, dy = p.x - self.x, p.y - self.y
+        target = sim.enemy_target(self)
+        self.target = target
+        tx, ty = (target["x"], target["y"]) if target else (p.x, p.y)
+        dx, dy = tx - self.x, ty - self.y
         dist = math.hypot(dx, dy) or 0.001
         self.facing = math.atan2(dy, dx)
-        sees = dist < d.detect_range and sim.arena.line_of_sight(self.x, self.y, p.x, p.y)
+        sees = dist < d.detect_range and sim.arena.line_of_sight(self.x, self.y, tx, ty)
+        if self._defensive_reaction(sim, dt):
+            return
+        if (not self.is_boss and not self.is_miniboss and float(getattr(d,"radius",0)) >= 22
+                and self.stomp_timer <= 0 and self.state not in (WINDUP,RECOVER)):
+            self.stomp_timer=float(getattr(d,"stomp_interval",5.0))
+            radius=float(getattr(d,"stomp_radius",145.0))
+            damage=float(getattr(d,"stomp_damage",d.damage*1.15))
+            sim.wave_attacks.append({"x":self.x,"y":self.y,"radius":10.0,"speed":360.0,
+                "life":radius/360.0+0.25,"damage":damage,"color":tuple(getattr(d,"color",(180,160,140))),
+                "team":1,"max_radius":radius,"hit":False})
+            sim.emit("boss_stomp",self.x,self.y,radius,damage)
+            return
 
         # Los jefes expulsan al jugador si logra pegarse demasiado. Es un pulso de
         # control de espacio, sin daño, con telegráfico visual y enfriamiento propio.
