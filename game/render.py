@@ -39,6 +39,7 @@ class Renderer:
         self._decoration_mask_cache = {}
         self._circle_mask_cache = {}
         self._merchant_room_seen = set()
+        self._confusion_star_cache = {}
         self.chest_images = {}
         self.chest_type_images = {}
         self.decoration_images = {}
