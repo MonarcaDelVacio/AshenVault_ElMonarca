@@ -4,7 +4,7 @@ import json, os
 # Compatibilidad: las partidas existentes pueden conservar "fullscreen": False.
 DEFAULT = {
     "version": 5,
-    "settings": {"effects_volume": 0.6, "music_volume": 0.6, "fullscreen": True, "keys": {"up":"w","down":"s","left":"a","right":"d","dash":"space","reload":"r","pause":"escape","ability":"q","map":"m"}},
+    "settings": {"effects_volume": 0.6, "music_volume": 0.6, "fullscreen": True, "mouse_sensitivity": 1.0, "keys": {"up":"w","down":"s","left":"a","right":"d","dash":"space","reload":"r","pause":"escape","ability":"q","map":"m"}},
     "unlocked_characters": ["soldier","medic","vanguard","pyromancer","striker","engineer"],
     "unlocked_weapons": ["plasma_pistol"],
     "meta_currency": 0,
@@ -51,10 +51,10 @@ CHARACTER_UPGRADES = {
         "ability":{"name":"Sobremarcha extendida","description":"+0.5 s de Sobremarcha","base_cost":30,"max":8},
     },
     "engineer": {
-        "energy":{"name":"Bateria de campo","description":"+10 energia maxima","base_cost":20,"max":8},
-        "speed":{"name":"Servomotores","description":"+4 velocidad","base_cost":20,"max":8},
-        "damage":{"name":"Municion de dron","description":"+3% dano total","base_cost":24,"max":8},
-        "ability":{"name":"Dron adicional","description":"Aumenta el limite de drones","base_cost":32,"max":6},
+        "drone_count":{"name":"Enjambre ampliado","description":"+1 dron desplegado","base_cost":28,"max":6},
+        "drone_damage":{"name":"Municion mejorada","description":"+25% dano de los drones","base_cost":24,"max":8},
+        "drone_attack_speed":{"name":"Servomotores de combate","description":"+12% velocidad de ataque de los drones","base_cost":26,"max":8},
+        "drone_durability":{"name":"Blindaje de drones","description":"+5 resistencia de cada dron","base_cost":30,"max":8},
     },
 }
 
