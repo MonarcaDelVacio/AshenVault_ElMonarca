@@ -1007,7 +1007,7 @@ class Sim:
                       "duration":0.0,"tick":0.0,"color":tuple(getattr(d,"color",(120,220,255))),
                       "damage":float(getattr(d,"laser_damage",13.5))*self.player.damage_mult,
                       "width":float(getattr(d,"laser_width",2.0)),"base_width":float(getattr(d,"laser_width",2.0)),"max_width":float(getattr(d,"laser_max_width",14.0)),
-                      "range":float(getattr(d,"laser_range",760.0)),"explosion_radius":float(getattr(d,"laser_explosion_radius",26.0))}
+                      "range":float(getattr(d,"laser_range",760.0)),"explosion_radius":float(getattr(d,"laser_explosion_radius",26.0)),"travel":0.0,"travel_speed":2600.0}
             self.lasers.append(existing)
             self.emit("laser_start",self.player.x,self.player.y,self.player.aim,existing["color"])
         existing["angle"]=self.player.aim; existing["charge"]=min(3.0,float(charge_time)); existing["duration"]=0.0
@@ -1016,7 +1016,7 @@ class Sim:
         self.lasers.append({"owner":owner,"team":1,"angle":angle,"charge":1.0,"duration":float(duration),"tick":0.0,
                             "color":tuple(color or getattr(owner.d,"color",(255,100,100))),"damage":float(damage),
                             "width":float(width),"max_width":float(max_width),"range":float(range_),
-                            "explosion_radius":float(explosion_radius)})
+                            "explosion_radius":float(explosion_radius),"travel":0.0,"travel_speed":2600.0})
         self.emit("laser_start",owner.x,owner.y,angle,tuple(color or getattr(owner.d,"color",(255,100,100))))
 
     def _laser_hit_target(self, laser, dt):
@@ -1050,7 +1050,9 @@ class Sim:
                 if self.player.take_damage(laser["damage"]): self.on_player_hit(owner.x,owner.y,laser["damage"])
             self.emit("laser_impact",hit_point[0],hit_point[1],laser["color"],laser["explosion_radius"])
             laser["tick"]=0.12
-        return length,hit_point,hit_enemy
+        visible_length=min(length,float(laser.get("travel",length)))
+        visible_point=(owner.x+ux*visible_length,owner.y+uy*visible_length)
+        return visible_length,visible_point,hit_enemy
 
     def _update_lasers(self,dt):
         active=[]
@@ -1066,6 +1068,7 @@ class Sim:
                 laser["angle"]=getattr(owner,"facing",laser.get("angle",0.0))
                 if laser["duration"]<=0: continue
             laser["tick"]=max(0.0,laser.get("tick",0.0)-dt)
+            laser["travel"]=min(float(laser.get("range",760.0)),float(laser.get("travel",0.0))+float(laser.get("travel_speed",2600.0))*dt)
             charge=max(1.0,min(3.0,float(laser.get("charge",1.0))))
             base_width=laser.get("base_width",laser.get("width",2.0))
             laser["width"]=base_width+(charge-1.0)/2.0*max(0.0,laser.get("max_width",12.0)-base_width)
