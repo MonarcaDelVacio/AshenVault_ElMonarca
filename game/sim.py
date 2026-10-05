@@ -415,9 +415,12 @@ class Sim:
             target=nearest_enemy
             if target is not None and d["shot_cd"]<=0:
                 ang=math.atan2(target.y-d["y"],target.x-d["x"])
+                # Los drones disparan balas convencionales, usando el mismo
+                # proyectil físico del arsenal en lugar de una esfera de energía.
                 self.spawn_projectile(
                     0,d["x"],d["y"],ang,620.0,damage,3.0,1.1,
-                    (90,220,235),"energy",0,0,False,None,False,0,False,0,
+                    (205,220,235),"physical",0,0,False,
+                    "assets/projectiles/projectile_06.png",False,0,False,0,
                     0.85,0.0
                 )
                 d["shot_cd"]=attack_interval
