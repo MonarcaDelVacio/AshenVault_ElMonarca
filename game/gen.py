@@ -3,7 +3,7 @@ import random
 from collections import deque
 
 DIRS = ((1,0),(-1,0),(0,1),(0,-1))
-ROOM_W, ROOM_H = 25, 17
+ROOM_W, ROOM_H = 29, 21
 DOOR_TILES = {(ROOM_W//2,0),(ROOM_W//2,ROOM_H-1),(0,ROOM_H//2),(ROOM_W-1,ROOM_H//2)}
 
 
@@ -167,7 +167,9 @@ def _shape_floor_mask(rng, room_type, door_sides):
     # Las salas normales conservan el rectángulo clásico con pequeñas variaciones.
     # Las formas más pronunciadas siguen dejando libres los cuatro puntos de puerta.
     choices = ["rectangle", "octagon", "chamfer", "cross", "diamond"]
-    if room_type in ("boss", "miniboss"):
+    if room_type == "boss":
+        choices = ["rectangle", "octagon"]
+    elif room_type == "miniboss":
         choices = ["rectangle", "octagon", "chamfer"]
     shape = rng.choice(choices)
 
@@ -183,7 +185,7 @@ def _shape_floor_mask(rng, room_type, door_sides):
             elif shape == "octagon":
                 inside = dx <= cx - 1 and dy <= cy - 1 and (dx + dy) <= max(cx, cy) + 1
             elif shape == "chamfer":
-                inside = dx <= cx - 1 and dy <= cy - 1 and not (dx >= cx - 3 and dy >= cy - 2)
+                inside = dx <= cx - 1 and dy <= cy - 1 and not (dx + dy >= max(cx, cy) + 2)
             elif shape == "cross":
                 inside = (abs(x - cx) <= 4) or (abs(y - cy) <= 3)
             elif shape == "diamond":
@@ -232,19 +234,30 @@ def generate_room(seed=None, room_type="combat", biome="ruins", door_sides=None)
     cx,cy=ROOM_W//2,ROOM_H//2
     reserved={(x,y) for y in range(cy-2,cy+3) for x in range(cx-2,cx+3)}
     reserved.update(doors)
+    # Zona de seguridad de puertas: ningún obstáculo indestructible puede aparecer a menos de 2 bloques de una entrada.
+    door_safe = set()
+    for dx, dy in doors:
+        for ty in range(max(0, dy-2), min(ROOM_H, dy+3)):
+            for tx in range(max(0, dx-2), min(ROOM_W, dx+3)):
+                if abs(tx-dx) + abs(ty-dy) <= 2:
+                    door_safe.add((tx, ty))
+    reserved.update(door_safe)
     reserved.update({(x,y) for x,y in [(ROOM_W//2,1),(ROOM_W//2,ROOM_H-2),(1,ROOM_H//2),(ROOM_W-2,ROOM_H//2)]})
     # Los pilares son soportes del techo, no obstáculos aleatorios. Se colocan
     # en patrones arquitectónicos simétricos y con una huella de una sola casilla.
     # Las salas de combate usan una retícula de seis soportes; las salas especiales
     # conservan cuatro soportes laterales para dejar espacio al objetivo central.
     if room_type in ("combat", "elite", "challenge", "miniboss", "boss"):
-        pillar_positions = [(5, 4), (12, 4), (19, 4), (5, 12), (12, 12), (19, 12)]
+        pillar_positions = [
+            (cx-8, cy-5), (cx, cy-5), (cx+8, cy-5),
+            (cx-8, cy+5), (cx, cy+5), (cx+8, cy+5)
+        ]
     else:
-        pillar_positions = [(6, 5), (18, 5), (6, 11), (18, 11)]
+        pillar_positions = [(cx-7, cy-5), (cx+7, cy-5), (cx-7, cy+5), (cx+7, cy+5)]
 
     # Una fila completa de antorchas alterna entre la fila superior e inferior
     # según la semilla de la sala; así se ve planificado, pero no idéntico en todas.
-    torch_row = 4 if (seed or 0) % 2 == 0 else 12
+    torch_row = cy-5 if (seed or 0) % 2 == 0 else cy+5
     for x, y in pillar_positions:
         if (x, y) in reserved:
             continue
@@ -252,7 +265,7 @@ def generate_room(seed=None, room_type="combat", biome="ruins", door_sides=None)
 
     # En salas especiales, dos soportes opuestos llevan antorchas.
     if room_type not in ("combat", "elite", "challenge", "miniboss", "boss"):
-        torch_positions = {(6, 5), (18, 11)} if (seed or 0) % 2 == 0 else {(18, 5), (6, 11)}
+        torch_positions = {(cx-7, cy-5), (cx+7, cy+5)} if (seed or 0) % 2 == 0 else {(cx+7, cy-5), (cx-7, cy+5)}
         for x, y in torch_positions:
             if g[y][x] == 2:
                 g[y][x] = 4
