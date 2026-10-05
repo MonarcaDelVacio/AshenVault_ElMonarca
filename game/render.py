@@ -611,26 +611,40 @@ class Renderer:
         if not anim: return False
         idx=int(max(0.0,elapsed)*len(anim)/duration)%len(anim)
         frame=anim[idx]
-        # Supplied enemy/boss art is intentionally much larger than the old
-        # placeholder bodies. The smallest supplied actor is at least as tall
-        # as the 48x52 player sprite, while larger radius values naturally grow.
         base_target=max(56.0, float(e.radius)*4.2)
         target=base_target*float(getattr(e.d,"sprite_scale",1.0)) / 4.0
-        if getattr(e,"is_boss",False):
-            target=max(128.0, target)
-        elif getattr(e,"is_miniboss",False):
-            target=max(82.0, target)
-        w,h=frame.get_size(); scale=target/max(1,w,h)
-        frame=pygame.transform.smoothscale(frame,(max(1,int(w*scale)),max(1,int(h*scale))))
-        if math.cos(e.facing)<0:
-            frame=pygame.transform.flip(frame,True,False)
+        if getattr(e,"is_boss",False): target=max(128.0, target)
+        elif getattr(e,"is_miniboss",False): target=max(82.0, target)
+        target_key=max(1,int(round(target)))
+        flip=math.cos(e.facing)<0
+        cache_key=(key,variant_id,id(frame),target_key,flip)
+        cached=self._enemy_frame_cache.get(cache_key)
+        if cached is None:
+            w,h=frame.get_size(); scale=target/max(1,w,h)
+            cached=pygame.transform.smoothscale(frame,(max(1,int(w*scale)),max(1,int(h*scale))))
+            if flip: cached=pygame.transform.flip(cached,True,False)
+            self._enemy_frame_cache[cache_key]=cached
+        frame=cached
         if e.flash>0:
-            frame=frame.copy()
-            mask=pygame.mask.from_surface(frame,threshold=8)
-            flash=mask.to_surface(setcolor=(255,255,255,175),unsetcolor=(0,0,0,0))
-            frame.blit(flash,(0,0),special_flags=pygame.BLEND_RGBA_ADD)
+            flash_key=(cache_key,"flash")
+            flash=self._enemy_flash_cache.get(flash_key)
+            if flash is None:
+                mask=pygame.mask.from_surface(frame,threshold=8)
+                flash=frame.copy()
+                clipped=mask.to_surface(setcolor=(255,255,255,175),unsetcolor=(0,0,0,0))
+                flash.blit(clipped,(0,0),special_flags=pygame.BLEND_RGBA_ADD)
+                self._enemy_flash_cache[flash_key]=flash
+            frame=flash
         elif light_level < 0.98:
-            frame=frame.copy(); frame.fill((max(1,int(255*light_level)),)*3+(255,),special_flags=pygame.BLEND_RGBA_MULT)
+            bucket=max(3,min(15,int(light_level*15)))
+            light_key=(cache_key,"light",bucket)
+            lit=self._enemy_frame_cache.get(light_key)
+            if lit is None:
+                lit=frame.copy()
+                value=max(1,int(255*bucket/15.0))
+                lit.fill((value,value,value,255),special_flags=pygame.BLEND_RGBA_MULT)
+                self._enemy_frame_cache[light_key]=lit
+            frame=lit
         screen.blit(frame,frame.get_rect(center=(x,y)))
         return True
 
@@ -1192,10 +1206,11 @@ class Renderer:
             frame_index = int(p.walk_time * 9) % len(character_frames) if moving else 0
             sprite = character_frames[frame_index]
             if p.facing_x < 0:
-                sprite = pygame.transform.flip(sprite, True, False)
-            bbox=sprite.get_bounding_rect(min_alpha=8)
-            if bbox.width and bbox.height:
-                sprite=sprite.subsurface(bbox).copy()
+                key=(getattr(p.c,"id","player"),frame_index)
+                sprite=self._player_flip_cache.get(key)
+                if sprite is None:
+                    sprite=pygame.transform.flip(character_frames[frame_index],True,False)
+                    self._player_flip_cache[key]=sprite
             flash_kind=None
             flash_alpha=0
             if getattr(p,"hurt_flash",0.0)>0:
