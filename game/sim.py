@@ -1667,6 +1667,8 @@ class Sim:
                 for e in self.enemies:
                     if e.alive and math.hypot(e.x-h["x"],e.y-h["y"])<=h["radius"]:
                         e.hurt(h["damage"],math.atan2(e.y-h["y"],e.x-h["x"]))
+                        if h["dtype"] in ("fire","poison"):
+                            self._apply_dot(e,h["dtype"],4.0,h["damage"])
                 if h["dtype"]=="electric":
                     for drone in list(self.drones):
                         if math.hypot(drone["x"]-h["x"],drone["y"]-h["y"])<=h["radius"]:
