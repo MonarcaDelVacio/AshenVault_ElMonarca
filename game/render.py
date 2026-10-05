@@ -373,8 +373,6 @@ class Renderer:
         npc_dir = self.asset_root / "npcs"
         for name, filename in {
             "merchant_idle":"merchant_idle.png", "merchant_near":"merchant_near.png",
-            "pet_tiger":"pet_tiger.png", "pet_demon1":"pet_demon1.png", "pet_demon2":"pet_demon2.png",
-            "pet_demon3":"pet_demon3.png", "pet_dragon":"pet_dragon.png", "pet_ghost":"pet_ghost.png",
         }.items():
             path = npc_dir / filename
             if path.is_file():
@@ -442,6 +440,7 @@ class Renderer:
             "small_demon_ranged": {"walk":"small_demon_ranged/walk.png","attack":"small_demon_ranged/attack.png","death":"small_demon_ranged/death.png","projectile":"small_demon_ranged/projectile.png"},
             "small_demon_melee": {"walk":"small_demon_melee/walk.png","attack":"small_demon_melee/attack.png","death":"small_demon_melee/death.png"},
             "mage2": {"idle":"mage2/idle.png","walk":"mage2/idle.png","attack":"mage2/idle.png"},
+            "ogro": {"idle":"Ogro/ogro_ataquedesendente.png","walk":"Ogro/ogro_ataquedesendente.png","attack":"Ogro/ogro_ataquedesendente.png","attack_heavy":"Ogro/ogro_ataquedesendentepesado.png"},
         }
         for key, spec in enemy_specs.items():
             loaded = {}
@@ -486,8 +485,12 @@ class Renderer:
             if image_path.is_file():
                 try:
                     image = pygame.image.load(str(image_path)).convert_alpha()
-                    bbox = image.get_bounding_rect(min_alpha=1)
-                    self.misc_images[key] = image.subsurface(bbox).copy() if bbox.width and bbox.height else image
+                    bbox=image.get_bounding_rect(min_alpha=8)
+                    image=image.subsurface(bbox).copy() if bbox.width and bbox.height else image
+                    if key=="energy":
+                        image=image.copy(); image.fill((255,218,55,255),special_flags=pygame.BLEND_RGBA_MULT)
+                        glow=pygame.Surface(image.get_size(),pygame.SRCALPHA); glow.fill((255,220,50,28),special_flags=pygame.BLEND_RGBA_ADD); image.blit(glow,(0,0))
+                    self.misc_images[key]=image
                 except (pygame.error, OSError):
                     pass
 
@@ -583,6 +586,8 @@ class Renderer:
         base_target=max(56.0, float(e.radius)*4.2)
         target=base_target*float(getattr(e.d,"sprite_scale",1.0)) / 4.0
         if getattr(e,"is_boss",False):
+            target=max(128.0, target)
+        elif getattr(e,"is_miniboss",False):
             target=max(82.0, target)
         w,h=frame.get_size(); scale=target/max(1,w,h)
         frame=pygame.transform.smoothscale(frame,(max(1,int(w*scale)),max(1,int(h*scale))))
@@ -680,10 +685,35 @@ class Renderer:
     def _fit_image(image, max_dimension):
         if image is None:
             return None
-        w, h = image.get_size()
-        scale = min(max_dimension / max(w, h), 1.0)
-        size = (max(1, int(w * scale)), max(1, int(h * scale)))
-        return pygame.transform.scale(image, size)
+        bbox=image.get_bounding_rect(min_alpha=8)
+        if bbox.width and bbox.height:
+            image=image.subsurface(bbox).copy()
+        w,h=image.get_size()
+        scale=min(max_dimension/max(w,h),1.0)
+        size=(max(1,int(w*scale)),max(1,int(h*scale)))
+        return pygame.transform.smoothscale(image,size)
+
+    @staticmethod
+    def _melee_grip_anchor(weapon_def):
+        path=str(getattr(weapon_def,"weapon_sprite","")).lower()
+        if "guadana" in path: return (0.20,0.82)
+        if "martillo" in path: return (0.19,0.78)
+        if "hacha" in path: return (0.18,0.78)
+        if "lanza" in path: return (0.17,0.78)
+        if "espada" in path: return (0.18,0.79)
+        return (0.18,0.78)
+
+    def _rotate_weapon_from_grip(self, image, weapon_def, rotation):
+        image=self._fit_image(image,self._weapon_max_dimension(getattr(weapon_def,"class","pistol")))
+        if image is None: return None
+        gx,gy=self._melee_grip_anchor(weapon_def)
+        grip=(image.get_width()*gx,image.get_height()*gy)
+        pad=max(image.get_width(),image.get_height())+12
+        canvas=pygame.Surface((image.get_width()+pad*2,image.get_height()+pad*2),pygame.SRCALPHA)
+        canvas.blit(image,(pad+image.get_width()/2-grip[0],pad+image.get_height()/2-grip[1]))
+        rotated=pygame.transform.rotozoom(canvas,rotation,1.0)
+        bbox=rotated.get_bounding_rect(min_alpha=8)
+        return rotated.subsurface(bbox).copy() if bbox.width and bbox.height else rotated
 
     @staticmethod
     def _weapon_max_dimension(weapon_class):
@@ -1107,7 +1137,20 @@ class Renderer:
             sprite = character_frames[frame_index]
             if p.facing_x < 0:
                 sprite = pygame.transform.flip(sprite, True, False)
-            screen.blit(sprite, sprite.get_rect(center=(x, y + 1)))
+            bbox=sprite.get_bounding_rect(min_alpha=8)
+            if bbox.width and bbox.height:
+                sprite=sprite.subsurface(bbox).copy()
+            flash_kind=None
+            flash_alpha=0
+            if getattr(p,"hurt_flash",0.0)>0:
+                flash_kind=(255,55,55); flash_alpha=int(185*min(1.0,p.hurt_flash/.25))
+            elif getattr(p,"heal_flash",0.0)>0:
+                flash_kind=(80,255,105); flash_alpha=int(175*min(1.0,p.heal_flash/.26))
+            elif getattr(p,"energy_flash",0.0)>0:
+                flash_kind=(255,225,55); flash_alpha=int(175*min(1.0,p.energy_flash/.26))
+            if flash_kind:
+                tint=sprite.copy(); tint.fill((*flash_kind,flash_alpha),special_flags=pygame.BLEND_RGBA_ADD); sprite=tint
+            screen.blit(sprite, sprite.get_rect(midbottom=(x,y+27)))
         else:
             pygame.draw.circle(screen, p.c.color, (x, y), p.radius)
             pygame.draw.circle(screen, (20, 20, 30), (x, y), p.radius, 2)
@@ -1128,17 +1171,16 @@ class Renderer:
         weapon_image = self.weapon_scaled_images.get(weapon_id)
         if weapon_image is not None:
             weapon_class = getattr(weapon_def, "class", "")
-            # Las espadas, varitas y lanzas se dibujaron en diagonal hacia arriba/derecha.
-            base_angle = 45 if "lanza" in getattr(weapon_def, "weapon_sprite", "").lower() else {"melee": -35, "magic": -32, "special": -25}.get(weapon_class, 0)
-            # Los sprites base miran a la derecha. Al apuntar a la izquierda se espejan
-            # horizontalmente y se ajusta la rotación para conservar la orientación vertical.
+            sprite_path = str(getattr(weapon_def, "weapon_sprite", "")).lower()
+            is_melee_asset = weapon_class == "melee" or "/melee/" in sprite_path
+            base_angle = 35.0 if is_melee_asset and "lanza" in sprite_path else (-35.0 if is_melee_asset else {"magic": -32, "special": -25}.get(weapon_class, 0))
             if math.cos(p.aim) < 0:
                 weapon_image = pygame.transform.flip(weapon_image, True, False)
                 rotation = base_angle + 180 - math.degrees(p.aim)
             else:
                 rotation = base_angle - math.degrees(p.aim)
-            hand_offset = (p.radius + 3 - kick) if weapon_class == "melee" else (p.radius - 1 - kick)
-            rotated = pygame.transform.rotate(weapon_image, rotation)
+            hand_offset = (p.radius + 1 - kick) if is_melee_asset else (p.radius - 1 - kick)
+            rotated = self._rotate_weapon_from_grip(weapon_image, weapon_def, rotation) if is_melee_asset else pygame.transform.rotate(weapon_image, rotation)
             center = (int(x + ax * hand_offset), int(y + ay * hand_offset))
             screen.blit(rotated, rotated.get_rect(center=center))
         else:
@@ -1261,10 +1303,7 @@ class Renderer:
         merchant=self.npc_frames.get("merchant_near" if math.hypot(sim.player.x-arena.width/2,sim.player.y-arena.height/2)<155 else "merchant_idle")
         if merchant:
             entries.append((arena.height/2-48, "merchant", merchant))
-        pet_names=("pet_tiger","pet_demon1","pet_demon2","pet_demon3","pet_dragon","pet_ghost")
-        pet=self.npc_frames.get(pet_names[(getattr(arena,"room_id",(0,0))[0]+getattr(arena,"room_id",(0,0))[1])%len(pet_names)])
-        if pet:
-            entries.append((arena.height/2+10, "pet", pet))
+        # Las mascotas del comerciante se retiran de la escena.
         for y,kind,frames in entries:
             frame=frames[int(t*(7.0 if kind=="merchant" else 8.0))%len(frames)]
             size=70 if kind=="merchant" else 34
@@ -1590,17 +1629,17 @@ class Renderer:
                 pygame.draw.circle(screen, (20, 20, 25), (px, py), 12)
                 pygame.draw.circle(screen, (255, 210, 70), (px, py), 7)
 
-        for pickup_index, c in enumerate(()):
-            px, py = int(c[0] + ox), int(c[1] + oy)
+        for pickup_index, pickup in enumerate(getattr(sim,"pickups",[])):
+            if pickup.get("kind") != "coin": continue
+            px,py=int(pickup["x"]+ox),int(pickup["y"]+oy)
             if self.coin_frames:
-                # Cinco fotogramas a 8 FPS, sincronizados con el tiempo de juego.
-                frame = self.coin_frames[int(max(0.0, t) * 8) % len(self.coin_frames)]
-                bob = int(math.sin(t * 5 + pickup_index * 0.7) * 2)
-                screen.blit(frame, frame.get_rect(center=(px, py + bob)))
+                frame=self.coin_frames[int(max(0.0,t)*8)%len(self.coin_frames)]
+                bob=int(math.sin(t*5+pickup_index*.7)*2)
+                screen.blit(frame,frame.get_rect(center=(px,py+bob)))
             else:
-                pygame.draw.circle(screen, (255, 215, 60), (px, py), 5)
-                pygame.draw.circle(screen, (255, 245, 170), (px - 1, py - 1), 2)
-                pygame.draw.line(screen, (180, 120, 25), (px, py - 3), (px, py + 3), 1)
+                pygame.draw.circle(screen,(255,215,60),(px,py),5)
+                pygame.draw.circle(screen,(255,245,170),(px-1,py-1),2)
+                pygame.draw.line(screen,(180,120,25),(px,py-3),(px,py+3),1)
 
 
         # The old melee arc/trail is intentionally removed; melee attacks now use
