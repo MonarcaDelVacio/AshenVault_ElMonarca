@@ -771,6 +771,8 @@ class Sim:
             roll=self.rng.random()
             if roll<0.12: self.items.append(type("Loot",(),{"kind":"heal","x":x,"y":y})())
             elif roll<0.20: self.items.append(type("Loot",(),{"kind":"energy","x":x,"y":y})())
+            elif roll<0.40:
+                self.items.append(type("AmmoLoot",(),{"kind":"ammo","x":x,"y":y,"magazines":self.rng.choice((1,1,2))})())
             # Las esferas amarillas fueron retiradas.
         else:
             dtype={"fire":"fire","poison":"poison","electric":"electric"}[kind]
@@ -1168,6 +1170,12 @@ class Sim:
                     old_energy=p.energy; p.energy=min(p.max_energy,p.energy+30)
                     if p.energy>old_energy: p.feedback_flash("energy",.26); self.emit('energy_pickup',p.x,p.y,p.energy-old_energy)
                     self.items.remove(item); self.emit('item_pickup',p.x,p.y,'energy'); return
+                if getattr(item,'kind',None)=='ammo':
+                    magazines=max(1,int(getattr(item,'magazines',1)))
+                    target=p.weapon if p.weapon is not None and getattr(p.weapon.d,"class","")!="melee" else next((w for w in p.inventory if getattr(w.d,"class","")!="melee"),None)
+                    if target is not None:
+                        target.reserve_magazines=min(target.max_reserve_magazines,target.reserve_magazines+magazines)
+                        self.items.remove(item); self.emit('ammo_pickup',p.x,p.y,magazines); return
                 apply_item_bonuses(p,item); self.items.remove(item); self.emit('item_pickup',p.x,p.y,item.id); return
     def _enter_next_dungeon(self):
         """Usa el portal de la sala final y encadena otra dungeon mas dificil."""
