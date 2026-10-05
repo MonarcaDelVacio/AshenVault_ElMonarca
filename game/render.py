@@ -2073,8 +2073,16 @@ class Renderer:
 
         acd = max(0.0, min(1.0, p.ability_cd / max(0.01, p.c.ability["cooldown"])))
         cd = max(0.0, min(1.0, p.dash_cd / max(0.01, p.c.dash["cooldown"])))
-        icon_panel(ability_x, self.ability_shield_image, (105, 205, 170), acd)
-        icon_panel(dash_x, self.dash_icon, (95, 195, 125), cd)
+        ability_kind=getattr(p.c,"ability",{}).get("kind","none")
+        ability_icons={"shield":"shield","heal":"heal","burst":"target","haste":"energy","freeze":"freeze","drone":"target"}
+        ability_kind_icon=ability_icons.get(ability_kind,"buff")
+        ability_sprite=self.ability_shield_image if ability_kind=="shield" else None
+        if ability_sprite is None and self.ui_atlas.available:
+            icon_panel(ability_x, None, (105,205,170), acd)
+            self.ui_atlas.draw_icon(screen, (ability_x+panel_size//2, panel_y+panel_size//2), size=icon_size, kind=ability_kind_icon)
+        else:
+            icon_panel(ability_x, ability_sprite, (105,205,170), acd)
+        icon_panel(dash_x, self.dash_icon, (95,195,125), cd)
 
         # Interacciones contextuales: se muestran pequeñas y ancladas al objeto
         # real con el que el jugador puede interactuar, en lugar de un botón fijo
