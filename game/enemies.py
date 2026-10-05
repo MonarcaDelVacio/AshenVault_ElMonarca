@@ -90,6 +90,7 @@ class Enemy:
         self.miniboss_pulse_cd = max(0.0, self.miniboss_pulse_cd - dt)
         self.dodge_cd = max(0.0, self.dodge_cd - dt)
         self.target_lock_timer = max(0.0, self.target_lock_timer - dt)
+        self.target_lock_timer = max(0.0, self.target_lock_timer - dt)
         if self.shield_active:
             self.shield_timer = max(0.0, self.shield_timer - dt)
             if self.shield_timer <= 0:
