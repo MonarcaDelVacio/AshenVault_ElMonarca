@@ -261,7 +261,9 @@
     "charge_damage_mult": 2.2,
     "stick_on_hit": true,
     "pellets": 1,
-    "bounces": 0
+    "bounces": 0,
+    "projectile_rotation_offset": 45,
+    "projectile_visual_scale": 1.65
   },
   "ricochet_disc": {
     "name": "Disco Rebote",
@@ -339,7 +341,9 @@
     "projectile_sprite": "assets/weapons/melee/lanza1.png",
     "stick_on_hit": true,
     "pellets": 1,
-    "bounces": 0
+    "bounces": 0,
+    "projectile_rotation_offset": 45,
+    "projectile_visual_scale": 1.65
   },
   "ember_greatsword": {
     "name": "Mandoble Incandescente",
@@ -1244,7 +1248,9 @@
     "charge_speed_mult": 1.8,
     "charge_range_mult": 2,
     "charge_damage_mult": 2.2,
-    "stick_on_hit": true
+    "stick_on_hit": true,
+    "projectile_rotation_offset": 45,
+    "projectile_visual_scale": 1.65
   },
   "prism_beam": {
     "name": "Rayo Prisma",
@@ -1253,8 +1259,8 @@
     "damage": 18.04,
     "fire_interval": 0.12,
     "auto": true,
-    "magazine": 40,
-    "reload_time": 2.6,
+    "magazine": 999,
+    "reload_time": 0,
     "projectile_speed": 900,
     "spread": 0,
     "recoil": 25,
@@ -1271,7 +1277,22 @@
       255
     ],
     "weapon_sprite": "assets/weapons/special/vara7.png",
-    "projectile_sprite": "assets/projectiles/projectile_02.png"
+    "projectile_sprite": "assets/projectiles/projectile_02.png",
+    "laser_weapon": true,
+    "laser_start_charge": 1,
+    "laser_max_charge": 3,
+    "laser_width": 2,
+    "laser_max_width": 14,
+    "laser_range": 760,
+    "laser_damage": 13.5,
+    "laser_tick": 0.12,
+    "laser_energy_per_second": 18,
+    "laser_explosion_radius": 26,
+    "laser_explosion_color": [
+      160,
+      210,
+      255
+    ]
   },
   "pulse_cannon": {
     "name": "Cañón de Pulso",
@@ -1442,7 +1463,9 @@
     "charge_range_mult": 2,
     "charge_damage_mult": 2.2,
     "projectile_sprite": "assets/weapons/melee/lanza2.png",
-    "stick_on_hit": true
+    "stick_on_hit": true,
+    "projectile_rotation_offset": 45,
+    "projectile_visual_scale": 1.65
   },
   "void_hammer": {
     "name": "Martillo del Vacío",
