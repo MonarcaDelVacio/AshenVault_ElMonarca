@@ -1140,7 +1140,7 @@ class Renderer:
             enemy_pos = (int(x + math.cos(e.facing) * (e.radius + 3)), int(y + math.sin(e.facing) * (e.radius + 3)))
             screen.blit(enemy_rotated, enemy_rotated.get_rect(center=enemy_pos))
         shield_ratio = getattr(e, "shield_integrity", 0.0) / max(1.0, getattr(e.d, "shield_durability", 48.0))
-        if (getattr(e.d, "shielded", False) and shield_ratio > 0) or getattr(e, "shield_active", False):
+        if getattr(e, "shield_active", False) and shield_ratio > 0:
             shield_color = (int(70 + 65 * shield_ratio), int(125 + 70 * shield_ratio), 255)
             pygame.draw.arc(screen, shield_color, (x-e.radius-6, y-e.radius-6, 2*(e.radius+6), 2*(e.radius+6)), -e.facing-1.1, -e.facing+1.1, 4)
         if not getattr(e.d, "sprite_set", None):
@@ -1739,7 +1739,7 @@ class Renderer:
             color=wave.get("color",(255,120,50))
             radius=float(wave["radius"])
             max_radius=float(wave.get("max_radius",radius))
-            points=[]
+            segments=[]; current=[]
             samples=96
             for n in range(samples+1):
                 ang=math.tau*n/samples
@@ -1754,11 +1754,18 @@ class Renderer:
                             limit=d-step
                             break
                         d+=step
+                blocked = limit < radius - 0.5
                 px=wave["x"]+math.cos(ang)*max(0.0,limit)+ox
                 py=wave["y"]+math.sin(ang)*max(0.0,limit)+oy
-                points.append((int(px),int(py)))
-            if len(points)>1:
-                pygame.draw.lines(screen,color,False,points,4)
+                point=(int(px),int(py))
+                if blocked:
+                    if len(current)>1: segments.append(current)
+                    current=[]
+                else:
+                    current.append(point)
+            if len(current)>1: segments.append(current)
+            for segment in segments:
+                pygame.draw.lines(screen,color,False,segment,4)
 
         # Tienda: objetos físicos flotando, sin tarjetas/botones. Acercarse e
         # interactuar compra la oferta; precio y nombre quedan debajo del objeto.
