@@ -517,7 +517,9 @@ class Renderer:
             # Las fuentes son tiras de 3 frames muy próximos entre sí.
             # La detección por alpha puede unirlos en un solo componente, por lo
             # que aquí usamos las tres celdas horizontales explícitas.
-            if path.name in ("fountain_active.png", "fountain_inactive.png") and image.get_width() % 3 == 0:
+            if path.name in ("fountain_active.png", "fountain_inactive.png"):
+                if image.get_width() % 3 != 0:
+                    return []
                 frame_w = image.get_width() // 3
                 return [
                     image.subsurface(pygame.Rect(i * frame_w, 0, frame_w, image.get_height())).copy()
