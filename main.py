@@ -588,13 +588,13 @@ class App:
             if k == pygame.K_ESCAPE:
                 self.go(MENU); return
             from game.save import CHARACTER_UPGRADES
-            dynamic=["Personajes"]+["UPGRADE:"+kind for kind in CHARACTER_UPGRADES.get(self.char_id,{})]+["Volver al menu"]
+            dynamic=["Iniciar run","Personajes"]+["UPGRADE:"+kind for kind in CHARACTER_UPGRADES.get(self.char_id,{})]+["Volver al menu"]
             if k in (pygame.K_UP, pygame.K_w):
                 self.hub_sel=(self.hub_sel-1)%len(dynamic); return
             if k in (pygame.K_DOWN, pygame.K_s):
                 self.hub_sel=(self.hub_sel+1)%len(dynamic); return
             if k in (pygame.K_RETURN, pygame.K_SPACE):
-                if self.hub_sel==0:
+                if self.hub_sel==1:
                     self.hub_dropdown_open=True; self.hub_dropdown_sel=self.char_ids.index(self.char_id)
                 else:
                     self.activate_hub(dynamic[self.hub_sel])
