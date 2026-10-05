@@ -21,7 +21,7 @@ def test_asset_backed_enemy_types_are_in_biome_pools_and_do_not_need_weapon_ids(
     assert all(any(e in pool for pool in pools) for e in asset_ids)
 
 
-def test_boss_phase_two_launches_homing_fire_projectile():
+def test_boss_phase_two_mixes_guided_and_unguided_fire_patterns():
     data = GameData()
     sim = Sim(data, "soldier", seed=44)
     sim.wave_delay = 99
@@ -31,9 +31,12 @@ def test_boss_phase_two_launches_homing_fire_projectile():
     boss.state = "windup"
     boss.timer = 0
     sim.enemies = [boss]
-    boss._attack(sim, 180)
-    projectiles = [p for p in sim.pool.items if p.active and p.homing > 0]
+    for _ in range(16):
+        boss._attack(sim, 180)
+    projectiles = [p for p in sim.pool.items if p.active]
     assert projectiles
+    assert any(p.homing > 0 for p in projectiles)
+    assert any(p.homing == 0 for p in projectiles)
     assert all(p.team == 1 and p.dtype == "fire" for p in projectiles)
     assert all(p.visual_scale > 1.0 for p in projectiles)
 
