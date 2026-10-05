@@ -1655,7 +1655,10 @@ class Sim:
                 h["tick"]=0.65
                 if math.hypot(self.player.x-h["x"],self.player.y-h["y"])<=h["radius"]:
                     if self.player.take_damage(h["damage"], math.atan2(self.player.y-h["y"],self.player.x-h["x"])):
-                        self.player.set_status({"fire":"burn","poison":"poison","electric":"electric"}.get(h["dtype"], h["dtype"]), 1.3)
+                        if h["dtype"] in ("fire","poison"):
+                            self._apply_dot(self.player,h["dtype"],4.0,h["damage"])
+                        else:
+                            self.player.set_status("electric",1.3)
                         self.on_player_hit(h["x"],h["y"],h["damage"])
                 for e in self.enemies:
                     if e.alive and math.hypot(e.x-h["x"],e.y-h["y"])<=h["radius"]:
