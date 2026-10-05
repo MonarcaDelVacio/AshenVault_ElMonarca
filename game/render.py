@@ -1157,12 +1157,9 @@ class Renderer:
                 # BLEND_RGBA_ADD sobre una superficie completa puede levantar el
                 # alpha de píxeles transparentes. La máscara de alpha garantiza que
                 # el parpadeo quede estrictamente dentro del contorno del PNG.
-                tint=pygame.Surface(sprite.get_size(),pygame.SRCALPHA)
-                tint.fill((*flash_kind,flash_alpha))
                 mask=pygame.mask.from_surface(sprite,threshold=8)
                 clipped=mask.to_surface(setcolor=(*flash_kind,flash_alpha),unsetcolor=(0,0,0,0))
-                tint.blit(clipped,(0,0),special_flags=pygame.BLEND_RGBA_MULT)
-                sprite.blit(tint,(0,0),special_flags=pygame.BLEND_RGBA_ADD)
+                sprite.blit(clipped,(0,0))
             screen.blit(sprite, sprite.get_rect(midbottom=(x,y+27)))
         else:
             pygame.draw.circle(screen, p.c.color, (x, y), p.radius)
