@@ -98,6 +98,7 @@ def _fire_projectiles(sim, p, w, charge_ratio=0.0):
             0.0,
             float(getattr(d, "projectile_visual_scale", 1.0)),
             float(getattr(d, "status_chance", 0.24 if getattr(d, "damage_type", "") in ("ice", "fire", "poison", "electric") else 0.0)),
+            float(getattr(d, "ally_heal", 0.0)),
         )
     p.rvx -= math.cos(p.aim) * d.recoil
     p.rvy -= math.sin(p.aim) * d.recoil
