@@ -44,7 +44,8 @@ def use_ability(sim):
         sim.emit("ability_freeze", p.x, p.y)
     elif kind == "drone":
         count = max(1, int(a.get("max_drones", 2)))
-        p.drones = []
+        sim.drones = []
+        p.drones = sim.drones
         for idx in range(count):
             angle = (math.tau * idx / count) + sim.rng.random() * 0.45
             sim.spawn_drone(angle)
