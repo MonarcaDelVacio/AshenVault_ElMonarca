@@ -28,6 +28,7 @@ class Enemy:
         self.strafe = r.choice((-1, 1))
         self.spawn_delay = 0.6
         self.frozen = 0.0
+        self.stunned = 0.0
         self.summon_timer = 0.0
         self.boss_pulse_cd = 2.2
         self.miniboss_pulse_cd = 3.0
@@ -55,7 +56,7 @@ class Enemy:
         self.cooldown=r.uniform(0.3,1.0); self.alive=True; self.flash=0.0
         self.attack_anim_time=99.0
         self.kx=self.ky=0.0; self.facing=0.0; self.strafe=r.choice((-1,1))
-        self.spawn_delay=0.6; self.frozen=0.0; self.summon_timer=0.0; self.boss_pulse_cd=2.2; self.miniboss_pulse_cd=3.0
+        self.spawn_delay=0.6; self.frozen=0.0; self.stunned=0.0; self.summon_timer=0.0; self.boss_pulse_cd=2.2; self.miniboss_pulse_cd=3.0
         self.is_boss=False; self.is_miniboss=False; self.is_summoned=False; self.is_boss_guard=False
         self.weapon_id=getattr(edef, "weapon_id", None)
         self.shield_integrity=0.0
@@ -86,6 +87,7 @@ class Enemy:
         self.spawn_delay = max(0.0, self.spawn_delay - dt)
         self.cooldown = max(0.0, self.cooldown - dt)
         self.frozen = max(0.0, self.frozen - dt)
+        self.stunned = max(0.0, getattr(self, "stunned", 0.0) - dt)
         self.summon_timer = max(0.0, self.summon_timer - dt)
         self.boss_pulse_cd = max(0.0, self.boss_pulse_cd - dt)
         self.miniboss_pulse_cd = max(0.0, self.miniboss_pulse_cd - dt)
@@ -99,7 +101,7 @@ class Enemy:
                 self.shield_active = False
                 self.shield_integrity = 0.0
         self.attack_anim_time = min(8.0, self.attack_anim_time + dt)
-        if self.frozen > 0:
+        if self.frozen > 0 or getattr(self, "stunned", 0.0) > 0:
             return
         if abs(self.kx) + abs(self.ky) > 1:
             self.x, self.y = sim.move_actor(self.x, self.y, self.kx * dt, self.ky * dt, self.radius)
