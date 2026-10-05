@@ -426,6 +426,21 @@ class Sim:
             sprite_set=getattr(edef, "sprite_set", None)
             candidates=families.get(sprite_set) or families.get("*") or []
             if candidates:
+                theme_ids={
+                    "volcanic":{"crimson","ember","golem_ember","golem_bomb","ash"},
+                    "forest":{"venom","frost"},
+                    "laboratory":{"void"},
+                    "final":{"void","ash","crimson","ember"},
+                    "dungeon":{"ash","void"},
+                    "ruins":{"ash","venom","frost"},
+                }.get(self.arena.biome,set())
+                if theme_ids:
+                    themed=[v for v in candidates if v.get("id") in theme_ids or
+                            (self.arena.biome=="volcanic" and v.get("damage_type") in ("fire","explosive")) or
+                            (self.arena.biome=="forest" and v.get("damage_type") in ("poison","ice")) or
+                            (self.arena.biome=="laboratory" and v.get("damage_type") in ("electric","energy"))]
+                    if themed and self.rng.random()<0.72:
+                        candidates=themed
                 variant=self.rng.choice(candidates)
                 for key,value in variant.items():
                     if key in ("id","name_suffix","tint","projectile_color","hue_shift","saturation","lightness"):
