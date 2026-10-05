@@ -1657,7 +1657,7 @@ class Renderer:
         cols=max(1,max_x-min_x+1); rows=max(1,max_y-min_y+1)
         if large:
             margin_x,margin_y=92,68; cell=max(38,min(72,int(min((VIEW_W-2*margin_x)/cols,(VIEW_H-2*margin_y)/rows))))
-            width,height=cols*cell+44,rows*cell+74; x,y=(VIEW_W-width)//2,(VIEW_H-height)//2; origin_y=42
+            width,height=cols*cell+44,rows*cell+74; x,y=(VIEW_W-width)//2,(VIEW_H-height)//2; content_x=22; origin_y=42
             panel=pygame.Surface((width,height),pygame.SRCALPHA);
             if not self.ui_atlas.draw_panel(panel, pygame.Rect(0,0,width,height), border=12):
                 pygame.draw.rect(panel,(7,10,18,245),panel.get_rect(),border_radius=14); pygame.draw.rect(panel,(88,108,132,235),panel.get_rect(),2,border_radius=14)
