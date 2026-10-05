@@ -18,7 +18,10 @@
         ],
         "damage_type": "fire",
         "damage_mult": 1.1,
-        "hp_mult": 1.05
+        "hp_mult": 1.05,
+        "hue_shift": -120,
+        "saturation": 0.28,
+        "lightness": 0.02
       },
       {
         "id": "ember",
@@ -35,7 +38,10 @@
         ],
         "damage_type": "fire",
         "damage_mult": 1.05,
-        "speed_mult": 1.1
+        "speed_mult": 1.1,
+        "hue_shift": -90,
+        "saturation": 0.32,
+        "lightness": 0.03
       },
       {
         "id": "void",
@@ -52,7 +58,10 @@
         ],
         "damage_type": "electric",
         "damage_mult": 1.08,
-        "projectile_speed_mult": 1.1
+        "projectile_speed_mult": 1.1,
+        "hue_shift": 100,
+        "saturation": 0.3,
+        "lightness": 0.01
       },
       {
         "id": "frost",
@@ -69,7 +78,10 @@
         ],
         "damage_type": "ice",
         "speed_mult": 0.9,
-        "hp_mult": 1.12
+        "hp_mult": 1.12,
+        "hue_shift": 25,
+        "saturation": 0.28,
+        "lightness": 0.02
       },
       {
         "id": "ash",
@@ -85,7 +97,10 @@
           200
         ],
         "hp_mult": 1.32,
-        "speed_mult": 0.88
+        "speed_mult": 0.88,
+        "hue_shift": 0,
+        "saturation": -1,
+        "lightness": 0.02
       },
       {
         "id": "venom",
@@ -101,7 +116,10 @@
           100
         ],
         "damage_type": "poison",
-        "damage_mult": 1.06
+        "damage_mult": 1.06,
+        "hue_shift": 20,
+        "saturation": 0.35,
+        "lightness": 0.02
       }
     ],
     "goblin": [
@@ -119,7 +137,10 @@
           255
         ],
         "damage_type": "electric",
-        "damage_mult": 1.1
+        "damage_mult": 1.1,
+        "hue_shift": 160,
+        "saturation": 0.35,
+        "lightness": 0.02
       },
       {
         "id": "goblin_gray",
@@ -135,7 +156,10 @@
           205
         ],
         "hp_mult": 1.35,
-        "speed_mult": 0.86
+        "speed_mult": 0.86,
+        "hue_shift": 0,
+        "saturation": -1,
+        "lightness": 0.02
       },
       {
         "id": "goblin_red",
@@ -152,7 +176,10 @@
         ],
         "damage_type": "fire",
         "damage_mult": 1.12,
-        "hp_mult": 1.05
+        "hp_mult": 1.05,
+        "hue_shift": -120,
+        "saturation": 0.35,
+        "lightness": 0.02
       },
       {
         "id": "goblin_orange",
@@ -168,7 +195,10 @@
           55
         ],
         "speed_mult": 1.16,
-        "damage_mult": 1.05
+        "damage_mult": 1.05,
+        "hue_shift": -90,
+        "saturation": 0.35,
+        "lightness": 0.03
       },
       {
         "id": "goblin_blue",
@@ -185,7 +215,10 @@
         ],
         "damage_type": "ice",
         "speed_mult": 0.92,
-        "hp_mult": 1.12
+        "hp_mult": 1.12,
+        "hue_shift": 120,
+        "saturation": 0.35,
+        "lightness": 0.02
       }
     ],
     "gargola": [
@@ -203,7 +236,10 @@
           45
         ],
         "damage_type": "fire",
-        "damage_mult": 1.12
+        "damage_mult": 1.12,
+        "hue_shift": -20,
+        "saturation": 0.45,
+        "lightness": 0.02
       },
       {
         "id": "gargoyle_poison",
@@ -219,7 +255,10 @@
           95
         ],
         "damage_type": "poison",
-        "damage_mult": 1.08
+        "damage_mult": 1.08,
+        "hue_shift": 100,
+        "saturation": 0.4,
+        "lightness": 0.02
       },
       {
         "id": "gargoyle_electric",
@@ -235,7 +274,10 @@
           255
         ],
         "damage_type": "electric",
-        "projectile_speed_mult": 1.12
+        "projectile_speed_mult": 1.12,
+        "hue_shift": 55,
+        "saturation": 0.45,
+        "lightness": 0.02
       },
       {
         "id": "gargoyle_ash",
@@ -251,7 +293,10 @@
           200
         ],
         "hp_mult": 1.3,
-        "speed_mult": 0.9
+        "speed_mult": 0.9,
+        "hue_shift": 0,
+        "saturation": -1,
+        "lightness": 0.03
       }
     ],
     "minigolem": [
@@ -269,7 +314,10 @@
           190
         ],
         "hp_mult": 1.35,
-        "speed_mult": 0.86
+        "speed_mult": 0.86,
+        "hue_shift": 0,
+        "saturation": -0.75,
+        "lightness": 0
       },
       {
         "id": "golem_ember",
@@ -285,7 +333,10 @@
           45
         ],
         "damage_type": "fire",
-        "damage_mult": 1.12
+        "damage_mult": 1.12,
+        "hue_shift": -25,
+        "saturation": 0.45,
+        "lightness": 0.02
       },
       {
         "id": "golem_void",
@@ -301,7 +352,10 @@
           255
         ],
         "damage_type": "electric",
-        "damage_mult": 1.1
+        "damage_mult": 1.1,
+        "hue_shift": 65,
+        "saturation": 0.45,
+        "lightness": 0.02
       },
       {
         "id": "golem_bomb",
@@ -321,7 +375,10 @@
         "explosive": true,
         "explosion_radius": 82,
         "projectile_asset_sheet": "assets/projectiles/projectile_04.png",
-        "projectile_visual_scale": 1.2
+        "projectile_visual_scale": 1.2,
+        "hue_shift": -45,
+        "saturation": 0.4,
+        "lightness": 0.03
       }
     ]
   }
