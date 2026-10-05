@@ -225,6 +225,8 @@ class Sim:
             d.setdefault("idle_phase",self.rng.random()*math.tau)
             d.setdefault("stuck_time",0.0)
             d.setdefault("repath_time",0.0)
+            d.setdefault("avoid_x",0.0)
+            d.setdefault("avoid_y",0.0)
 
             enemies=[e for e in self.enemies if e.alive and e.spawn_delay<=0.2]
             nearest_enemy=min(
