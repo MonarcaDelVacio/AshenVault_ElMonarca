@@ -1808,13 +1808,13 @@ class Renderer:
                 cache_key = (sprite_path, max_dim)
                 scaled = self.projectile_scaled_images.get(cache_key)
                 if scaled is None:
-                    scaled = self._fit_image(image, max_dim)
+                    scaled = self._fit_image(image, max_dim * getattr(pr, "visual_scale", 1.0))
                     self.projectile_scaled_images[cache_key] = scaled
                 directional_sprite = ("assets/weapons/melee/lanza" in sprite_path or
                                       "assets/weapons/snipers/sniper5" in sprite_path)
                 if scaled.get_width() > scaled.get_height() * 1.35 or directional_sprite:
                     angle = math.degrees(math.atan2(pr.vy, pr.vx)) if not pr.stuck else math.degrees(pr.stuck_angle)
-                    correction = float(getattr(self.data.weapons.get(getattr(pr, "weapon_id", ""), None), "projectile_rotation_offset", 0.0)) if False else (45.0 if "assets/weapons/melee/lanza" in sprite_path else 0.0)
+                    correction = 45.0 if "assets/weapons/melee/lanza" in sprite_path else 0.0
                     scaled = pygame.transform.rotate(scaled, correction - angle)
                 if pr.stuck and pr.stuck_timer < 1.0:
                     scaled = scaled.copy()
