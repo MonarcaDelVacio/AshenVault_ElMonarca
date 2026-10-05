@@ -1996,10 +1996,11 @@ class Renderer:
             pos = (int(pr.x + ox), int(pr.y + oy))
             # Los proyectiles de fuego usan la animacion ignea generica y siempre
             # se orientan siguiendo su trayectoria, tanto para jugador como enemigos.
-            if pr.dtype == "fire" and self.ignite_projectile_frames:
+            fire_projectile_frames = self.special_effect_frames.get("new_fireball") or self.ignite_projectile_frames
+            if pr.dtype == "fire" and fire_projectile_frames:
                 angle = math.atan2(pr.vy, pr.vx) if not pr.stuck else pr.stuck_angle
                 self._draw_combat_sprite_animation(
-                    screen, self.ignite_projectile_frames, pr.age,
+                    screen, fire_projectile_frames, pr.age,
                     pr.x + ox, pr.y + oy, max(18.0, pr.radius * 5.5 * getattr(pr, "visual_scale", 1.0)),
                     angle=angle,
                     alpha=max(0, int(255 * min(1.0, pr.life / 0.08))) if pr.stuck else 255,
