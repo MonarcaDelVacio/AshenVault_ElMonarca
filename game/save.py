@@ -35,8 +35,10 @@ CHARACTER_UPGRADES = {
     "vanguard": {
         "max_hp":{"name":"Coraza","description":"+1 vida maxima","base_cost":18,"max":8},
         "shield":{"name":"Escudo pesado","description":"+1 escudo maximo","base_cost":20,"max":8},
-        "damage":{"name":"Fuerza bruta","description":"+5% dano total","base_cost":24,"max":8},
-        "ability":{"name":"Impacto devastador","description":"+4 dano y +8 radio a Impacto","base_cost":30,"max":8},
+        "ability_damage":{"name":"Onda brutal","description":"+4 dano al estallido de Impacto","base_cost":26,"max":8},
+        "ability_range":{"name":"Onda expansiva","description":"+12 alcance maximo de Impacto","base_cost":28,"max":8},
+        "ability_stun":{"name":"Pulso aturdidor","description":"+0.12 s de aturdimiento con Impacto","base_cost":30,"max":8},
+        "ability_speed":{"name":"Carga de choque","description":"+35 velocidad de expansion de Impacto","base_cost":30,"max":8},
     },
     "pyromancer": {
         "energy":{"name":"Nucleo igneo","description":"+10 energia maxima","base_cost":20,"max":8},
