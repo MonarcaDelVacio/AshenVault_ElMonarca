@@ -1454,11 +1454,6 @@ class Renderer:
                 "intro_start": self._merchant_intro_start,
             }))
             # La animación de entrada (capa -> se la quita) solo ocurre una vez por sala.
-            pet_names=("pet_tiger","pet_demon1","pet_demon2","pet_demon3","pet_dragon","pet_ghost")
-            pet=self.npc_frames.get(pet_names[(getattr(arena,"room_id",(0,0))[0]+getattr(arena,"room_id",(0,0))[1])%len(pet_names)])
-            if pet:
-                actors.append((arena.height/2+10, "pet", pet))
-                # "pet",pet
         actors.sort(key=lambda item:item[0])
         for actor_y,kind,obj in actors:
             if kind=="player": self._draw_player_actor(screen,obj,ox,oy,t)
@@ -1491,8 +1486,7 @@ class Renderer:
                     rr=max(5,int(7*pulse))
                     pygame.draw.circle(screen,(238,190,55),(int(obj["x"]+ox),int(obj["y"]+oy)),rr)
                     pygame.draw.circle(screen,(255,232,120),(int(obj["x"]+ox),int(obj["y"]+oy)),rr,1)
-            elif kind=="pet":
-                frame=obj[int(t*8.0)%len(obj)]; frame=self._fit_image(frame,34); screen.blit(frame,frame.get_rect(midbottom=(int(arena.width/2+55+ox),int(arena.height/2+10+oy))))
+            # Las mascotas del comerciante no se renderizan.
             elif kind=="prop": self._draw_world_prop(screen,obj,ox,oy)
             elif kind=="chest": self._draw_world_chest(screen,obj,ox,oy)
             elif kind=="portal": self._draw_world_portal(screen,sim,ox,oy,t)
