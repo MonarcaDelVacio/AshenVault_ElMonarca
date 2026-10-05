@@ -143,7 +143,7 @@ class Sim:
         # Loot y monedas pertenecen a la sala actual; nunca se comparten entre habitaciones.
         self.items=room.items
         self.pickups=room.pickups
-        self.hazards=[]; self.wave_attacks=[]
+        self.hazards=[]; self.wave_attacks=[]; self.lasers=[]
         if not getattr(room, "props_spawned", False):
             self._spawn_room_props(room); room.props_spawned=True
         self.props=getattr(room, "props", [])
@@ -282,7 +282,26 @@ class Sim:
         return False
 
     def _decoration_collision(self, x, y, radius):
-        """Devuelve la decoración física que ocupa una posición, si existe."""
+        """Colisión basada en la silueta visible cuando el renderer la conoce.
+
+        El proveedor visual usa el alpha real del PNG; la simulación conserva el
+        radio clásico como fallback para tests/headless.
+        """
+        provider=getattr(self, "decoration_collider_provider", None)
+        if provider is not None:
+            for deco in getattr(self.arena, "decorations", []):
+                shape=provider(deco)
+                if not shape: continue
+                cx,cy,rx,ry=shape
+                dx=(x-cx)/max(1.0,rx+radius)
+                dy=(y-cy)/max(1.0,ry+radius)
+                if dx*dx+dy*dy < 1.0:
+                    return (cx,cy,max(rx,ry))
+            # Las hogueras siguen usando la colisión física del mapa.
+            for bx,by,br,kind in getattr(self.arena, "decoration_colliders", []):
+                if kind=="bonfire" and math.hypot(x-bx,y-by) < br+radius:
+                    return (bx,by,br)
+            return None
         return self.arena.decoration_hits(x, y, radius)
 
     def _chest_collision(self, x, y, radius):
@@ -699,6 +718,7 @@ class Sim:
             self._flow_tile=tile; self._flow_refresh=0.12; self.flow=self.arena.flow_field(*tile)
         p.update(self,inp,dt)
         for e in self.enemies:e.update(self,dt)
+        self._update_lasers(dt)
         self._update_drones(dt)
         self._update_projectiles(dt); self._update_pickups(dt); self._update_hazards(dt)
         dead=[e for e in self.enemies if not e.alive]
@@ -950,6 +970,91 @@ class Sim:
                 if pr.pierce>0:pr.pierce-=1;return False
                 pr.active=False;return True
         return False
+    def stop_player_laser(self):
+        self.lasers=[l for l in self.lasers if l.get("owner") is not self.player]
+        self.player.weapon.laser_active=False
+
+    def update_player_laser(self, charge_time, dt):
+        w=self.player.weapon
+        d=w.d
+        # Energy is drained only while the visible beam is active.
+        drain=float(getattr(d,"laser_energy_per_second",18.0))*dt
+        self.player.energy=max(0.0,self.player.energy-drain)
+        self.player.since_shot=0.0
+        if self.player.energy <= 0.0:
+            w.laser_active=False
+            self.stop_player_laser()
+            return
+        existing=next((l for l in self.lasers if l.get("owner") is self.player),None)
+        if existing is None:
+            existing={"owner":self.player,"team":0,"angle":self.player.aim,"charge":charge_time,
+                      "duration":0.0,"tick":0.0,"color":tuple(getattr(d,"color",(120,220,255))),
+                      "damage":float(getattr(d,"laser_damage",13.5))*self.player.damage_mult,
+                      "width":float(getattr(d,"laser_width",2.0)),"max_width":float(getattr(d,"laser_max_width",14.0)),
+                      "range":float(getattr(d,"laser_range",760.0)),"explosion_radius":float(getattr(d,"laser_explosion_radius",26.0))}
+            self.lasers.append(existing)
+        existing["angle"]=self.player.aim; existing["charge"]=min(3.0,float(charge_time)); existing["duration"]=0.0
+
+    def start_enemy_laser(self, owner, angle, duration=2.2, color=None, damage=14.0, width=2.0, max_width=12.0, range_=760.0, explosion_radius=24.0):
+        self.lasers.append({"owner":owner,"team":1,"angle":angle,"charge":1.0,"duration":float(duration),"tick":0.0,
+                            "color":tuple(color or getattr(owner.d,"color",(255,100,100))),"damage":float(damage),
+                            "width":float(width),"max_width":float(max_width),"range":float(range_),
+                            "explosion_radius":float(explosion_radius)})
+        self.emit("laser_start",owner.x,owner.y,angle,tuple(color or getattr(owner.d,"color",(255,100,100))))
+
+    def _laser_hit_target(self, laser, dt):
+        owner=laser["owner"]; angle=laser["angle"]; ux,uy=math.cos(angle),math.sin(angle)
+        max_range=laser["range"]; width=laser["width"]
+        # The beam stops at the first solid/prop/decoration or actor in its path.
+        length=max_range; hit_enemy=None; hit_point=None
+        steps=max(1,int(max_range/6))
+        for i in range(1,steps+1):
+            d=i*max_range/steps; x=owner.x+ux*d; y=owner.y+uy*d
+            if self.arena.point_solid(x,y) or self._crate_collision(x,y,width) or self._decoration_collision(x,y,width):
+                length=d; hit_point=(x,y); break
+            if laser["team"]==0:
+                candidates=[e for e in self.enemies if e.alive and e.spawn_delay<=0]
+            else:
+                candidates=[self.player] if self.player.alive else []
+            for target in candidates:
+                if target is owner: continue
+                if math.hypot(target.x-x,target.y-y) <= target.radius+width*0.75:
+                    length=d; hit_enemy=target; hit_point=(x,y); break
+            if hit_enemy is not None: break
+        if hit_point is None:
+            hit_point=(owner.x+ux*length,owner.y+uy*length)
+        if hit_enemy is not None and laser["tick"]<=0:
+            if laser["team"]==0:
+                damage=min(laser["damage"],hit_enemy.max_hp*(0.24 if getattr(hit_enemy,"is_boss",False) else 0.55))
+                if not self._damage_shield(hit_enemy,damage,math.atan2(owner.y-hit_enemy.y,owner.x-hit_enemy.x),"laser"):
+                    hit_enemy.hurt(damage,angle)
+                    self.emit("enemy_hit",hit_enemy.x,hit_enemy.y,laser["color"],damage,False)
+            else:
+                if self.player.take_damage(laser["damage"]): self.on_player_hit(owner.x,owner.y,laser["damage"])
+            self.emit("laser_impact",hit_point[0],hit_point[1],laser["color"],laser["explosion_radius"])
+            laser["tick"]=0.12
+        return length,hit_point,hit_enemy
+
+    def _update_lasers(self,dt):
+        active=[]
+        for laser in self.lasers:
+            owner=laser.get("owner")
+            if owner is None or not getattr(owner,"alive",False): continue
+            if laser.get("team")==0:
+                if not getattr(owner.weapon,"laser_active",False): continue
+                laser["angle"]=owner.aim
+                laser["charge"]=min(3.0,float(owner.weapon.charge_time))
+            else:
+                laser["duration"]-=dt
+                laser["angle"]=getattr(owner,"facing",laser.get("angle",0.0))
+                if laser["duration"]<=0: continue
+            laser["tick"]=max(0.0,laser.get("tick",0.0)-dt)
+            charge=max(1.0,min(3.0,float(laser.get("charge",1.0))))
+            laser["width"]=laser.get("width",2.0)+(charge-1.0)/(2.0)*max(0.0,laser.get("max_width",12.0)-laser.get("width",2.0))
+            self._laser_hit_target(laser,dt)
+            active.append(laser)
+        self.lasers=active
+
     def _update_hazards(self,dt):
         for prop in self.props:
             if prop.get("broken") and prop.get("fade",0)>0: prop["fade"]-=dt
@@ -1000,8 +1105,18 @@ class Sim:
                 continue
             dx,dy=pickup["x"]-p.x,pickup["y"]-p.y
             dist=math.hypot(dx,dy)
-            magnet=28.0+float(getattr(p,"coin_radius",0))
+            magnet=64.0+float(getattr(p,"coin_radius",0))  # 2 bloques (TILE=32)
             if dist <= magnet:
+                # Atracción física suave: la moneda vuela hacia el jugador antes
+                # de ser recogida, en lugar de teletransportarse desde el radio.
+                if dist > 13.0:
+                    pull=420.0*dt
+                    step=min(dist-13.0,max(0.0,pull))
+                    if dist > 0.001:
+                        pickup["x"] += dx/dist*step
+                        pickup["y"] += dy/dist*step
+                    kept.append(pickup)
+                    continue
                 amount=max(1,int(pickup.get("amount",1)))
                 p.coins += amount
                 self.stats["coins"] += amount
