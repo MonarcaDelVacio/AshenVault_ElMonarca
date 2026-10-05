@@ -251,13 +251,42 @@ class Enemy:
 
     def _step(self, sim, ux, uy, speed, dt):
         ox, oy = self.x, self.y
-        # Flying enemies can cross interior walls; they still remain inside arena bounds.
+        n = math.hypot(ux, uy) or 1.0
+        ux, uy = ux / n, uy / n
+        distance = max(0.0, float(speed) * float(dt))
         if self.d.ai == "flying":
-            self.x = max(self.radius + 2, min(sim.arena.width - self.radius - 2, self.x + ux * speed * dt))
-            self.y = max(self.radius + 2, min(sim.arena.height - self.radius - 2, self.y + uy * speed * dt))
-        else:
-            self.x, self.y = sim.move_actor(self.x, self.y, ux * speed * dt, uy * speed * dt, self.radius)
-        if abs(self.x - ox) + abs(self.y - oy) < speed * dt * 0.2:
+            self.x = max(self.radius + 2, min(sim.arena.width - self.radius - 2, self.x + ux * distance))
+            self.y = max(self.radius + 2, min(sim.arena.height - self.radius - 2, self.y + uy * distance))
+            return
+
+        # Primer intento: movimiento normal con deslizamiento por la superficie.
+        nx, ny = sim.move_actor(self.x, self.y, ux * distance, uy * distance, self.radius)
+        moved = math.hypot(nx - ox, ny - oy)
+        if moved >= distance * 0.42 or distance <= 0.01:
+            self.x, self.y = nx, ny
+            return
+
+        # Si quedó atrapado contra una esquina/objeto, no insiste en la misma
+        # dirección. Prueba desvíos angulares y elige el que más conserva el
+        # rumbo original. Esto permite rodear cajas, columnas y esquinas.
+        candidates = []
+        for deg in (22, -22, 45, -45, 68, -68, 90, -90, 115, -115, 145, -145):
+            a = math.atan2(uy, ux) + math.radians(deg)
+            cx, cy = math.cos(a), math.sin(a)
+            tx, ty = sim.move_actor(self.x, self.y, cx * distance, cy * distance, self.radius)
+            progress = math.hypot(tx - ox, ty - oy)
+            alignment = cx * ux + cy * uy
+            # Penaliza desvíos extremos, pero prioriza salir del atasco.
+            score = progress * (0.72 + 0.28 * max(0.0, alignment))
+            candidates.append((score, progress, tx, ty))
+        if candidates:
+            _, best_progress, bx, by = max(candidates, key=lambda q: q[0])
+            if best_progress > moved + 0.5:
+                self.x, self.y = bx, by
+                return
+
+        self.x, self.y = nx, ny
+        if moved < distance * 0.18:
             self.strafe *= -1
 
     def _chase(self, sim, dt, speed):
