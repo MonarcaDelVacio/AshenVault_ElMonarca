@@ -1263,6 +1263,16 @@ class Renderer:
             pygame.draw.circle(screen,mark_color,(x,y-23),6)
             txt=self.small.render(mark,True,(30,22,32)); screen.blit(txt,txt.get_rect(center=(x,y-23)))
 
+    def chest_collider(self, chest):
+        state="open" if chest.is_open else "closed"
+        img=self.chest_type_images.get((getattr(chest,"chest_type","common"),state)) or self.chest_images.get(state)
+        if img is None: return None
+        bbox=img.get_bounding_rect(min_alpha=8)
+        if not bbox.width or not bbox.height: return None
+        scale=min(44.0/max(1,img.get_width(),img.get_height()),1.0)
+        rx=max(5.0,bbox.width*scale*0.5)
+        ry=max(4.0,bbox.height*scale*0.34)
+        return float(chest.x),float(chest.y),rx,ry
     def _draw_world_chest(self, screen, chest, ox, oy):
         state = "open" if chest.is_open else "closed"
         img = self.chest_type_images.get((getattr(chest, "chest_type", "common"), state)) or self.chest_images.get(state)
@@ -1309,10 +1319,10 @@ class Renderer:
                 "fountain_active":104,"fountain_inactive":104,"fountain_small":68,"well_empty":104,
                 "bench_large":92,"bench_small":66,"barrel_large":62,"signpost":70,"crate_stack":76,
                 "crate_pair":68,"table":72,"counter":84,"wood_chest_decor":68,
-                "statue_goddess":510,"statue_archer":510,"statue_assassin":510,"statue_knight":510,"statue_mage":510,
+                "statue_goddess":640,"statue_archer":640,"statue_assassin":640,"statue_knight":640,"statue_mage":640,
                 "bush":56,"rock":58,
             }.get(kind,56)
-            scale=min(max_size/max(1,image.get_width(),image.get_height()),1.0)
+            scale=max_size/max(1,image.get_width(),image.get_height())
             visible_w=bbox.width*scale; visible_h=bbox.height*scale
             # Collider is the lower footprint, not the whole visual height.
             rx=max(7.0,visible_w*0.36)
