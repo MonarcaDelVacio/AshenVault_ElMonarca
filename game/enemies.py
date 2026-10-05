@@ -34,7 +34,8 @@ class Enemy:
         self.is_boss = False
         self.is_miniboss = False
         self.weapon_id = getattr(edef, "weapon_id", None)
-        self.shield_integrity = float(getattr(edef, "shield_durability", 48.0)) if getattr(edef, "shielded", False) else 0.0
+        self.shield_integrity = 0.0
+        self.shield_timer = 0.0
         self.brain_state = "observe"
         self.brain_timer = r.uniform(0.45, 1.15)
         self.dodge_cd = 0.0
@@ -54,7 +55,8 @@ class Enemy:
         self.spawn_delay=0.6; self.frozen=0.0; self.summon_timer=0.0; self.boss_pulse_cd=2.2; self.miniboss_pulse_cd=3.0
         self.is_boss=False; self.is_miniboss=False; self.is_summoned=False; self.is_boss_guard=False
         self.weapon_id=getattr(edef, "weapon_id", None)
-        self.shield_integrity=float(getattr(edef, "shield_durability", 48.0)) if getattr(edef, "shielded", False) else 0.0
+        self.shield_integrity=0.0
+        self.shield_timer=0.0
         self.brain_state="observe"; self.brain_timer=r.uniform(0.45,1.15); self.dodge_cd=0.0
         self.target=None; self.shield_active=False; self.shield_timer=0.0
         self.stomp_timer=r.uniform(2.8,5.2) if float(getattr(edef,"radius",0))>=22 else 999.0
@@ -84,6 +86,12 @@ class Enemy:
         self.summon_timer = max(0.0, self.summon_timer - dt)
         self.boss_pulse_cd = max(0.0, self.boss_pulse_cd - dt)
         self.miniboss_pulse_cd = max(0.0, self.miniboss_pulse_cd - dt)
+        self.dodge_cd = max(0.0, self.dodge_cd - dt)
+        if self.shield_active:
+            self.shield_timer = max(0.0, self.shield_timer - dt)
+            if self.shield_timer <= 0:
+                self.shield_active = False
+                self.shield_integrity = 0.0
         self.attack_anim_time = min(8.0, self.attack_anim_time + dt)
         if self.frozen > 0:
             return
@@ -215,6 +223,7 @@ class Enemy:
         lethal=float(pr.damage)>=max(1.0,self.hp+self.shield_integrity)
         if lethal and self.rng.random()<float(getattr(self.d,"emergency_shield_chance",0.12)):
             self.shield_active=True
+            self.shield_integrity=float(getattr(self.d,"shield_durability",48.0))
             self.shield_timer=float(getattr(self.d,"emergency_shield_duration",1.2))
             sim.emit("enemy_emergency_shield",self.x,self.y,self.shield_timer)
             return True
