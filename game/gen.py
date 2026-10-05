@@ -186,21 +186,26 @@ def _shape_floor_mask(rng, room_type, door_sides):
             if inside:
                 mask.add((x, y))
 
-    # Los accesos activos siempre forman un pequeño pasillo recto hacia la sala.
-    # Esto permite usar cualquier silueta sin romper la conectividad del dungeon.
+    # Los accesos activos forman un corredor de 3 bloques de ancho hasta
+    # el centro. No basta con que exista una ruta de una sola casilla: el
+    # personaje tiene radio físico y necesita margen para atravesar la puerta.
     for side in door_sides:
         if side == "N":
             for y in range(0, cy + 1):
-                mask.add((cx, y))
+                for x in range(cx - 1, cx + 2):
+                    if 0 <= x < ROOM_W: mask.add((x, y))
         elif side == "S":
             for y in range(cy, ROOM_H):
-                mask.add((cx, y))
+                for x in range(cx - 1, cx + 2):
+                    if 0 <= x < ROOM_W: mask.add((x, y))
         elif side == "W":
             for x in range(0, cx + 1):
-                mask.add((x, cy))
+                for y in range(cy - 1, cy + 2):
+                    if 0 <= y < ROOM_H: mask.add((x, y))
         elif side == "E":
             for x in range(cx, ROOM_W):
-                mask.add((x, cy))
+                for y in range(cy - 1, cy + 2):
+                    if 0 <= y < ROOM_H: mask.add((x, y))
 
     # La zona central siempre existe para que spawn, enemigos y objetivos tengan
     # un área continua aun en las formas más estrechas.
