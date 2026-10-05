@@ -1843,7 +1843,7 @@ class Renderer:
                 pygame.draw.circle(screen, (18, 24, 35), (px, py), 16)
                 pygame.draw.rect(screen, (224, 174, 64), (px-8, py-10, 16, 20), border_radius=3)
                 pygame.draw.rect(screen, (245, 218, 118), (px-5, py-7, 10, 14), border_radius=2)
-                self.r.text(screen, str(getattr(it, "magazines", 1)), (px, py+22), (245, 225, 150), self.small, True)
+                self.text(screen, str(getattr(it, "magazines", 1)), (px, py+22), (245, 225, 150), self.small, True)
             else:
                 pygame.draw.circle(screen, (20, 20, 25), (px, py), 12)
                 pygame.draw.circle(screen, (255, 210, 70), (px, py), 7)
