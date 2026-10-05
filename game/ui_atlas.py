@@ -427,6 +427,36 @@ class UIAtlas:
         screen.blit(out, target.topleft)
         return True
 
+    def draw_icon_cooldown(self, screen, center, size=24, kind="health", ratio=0.0):
+        """Dibuja el icono y limita el sombreado de cooldown a su propia silueta."""
+        if not self.available:
+            return False
+        key = {
+            "health": "icon_health", "shield": "icon_shield", "energy": "icon_energy",
+            "lightning": "icon_energy", "poison": "icon_poison", "fire": "icon_fire",
+            "freeze": "icon_freeze", "skull": "icon_skull", "heal": "icon_medkit",
+            "medkit": "icon_medkit", "key": "icon_key", "shop": "icon_key",
+            "chest": "icon_chest", "refresh": "icon_refresh", "purple_shield": "icon_purple_shield",
+            "target": "icon_target", "buff": "icon_buff",
+        }.get(str(kind).lower())
+        image = self._crop(key) if key else None
+        if image is None:
+            return False
+        sprite = self._fit(image, (size, size))
+        dst = sprite.get_rect(center=center)
+        screen.blit(sprite, dst)
+        ratio = max(0.0, min(1.0, float(ratio)))
+        if ratio > 0.0:
+            mask = pygame.mask.from_surface(sprite, 8)
+            cover_h = int(sprite.get_height() * ratio)
+            overlay = pygame.Surface(sprite.get_size(), pygame.SRCALPHA)
+            pygame.draw.rect(overlay, (8, 10, 18, 150),
+                             (0, 0, sprite.get_width(), cover_h))
+            alpha = mask.to_surface(setcolor=(255,255,255,255), unsetcolor=(0,0,0,0))
+            overlay.blit(alpha, (0,0), special_flags=pygame.BLEND_RGBA_MULT)
+            screen.blit(overlay, dst.topleft)
+        return True
+
     def draw_icon(self, screen, center, size=24, kind="health"):
         if not self.available:
             return False
