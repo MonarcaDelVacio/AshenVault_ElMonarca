@@ -1085,6 +1085,11 @@ class Renderer:
         if frames:
             frame=frames[int(t*8.0)%len(frames)]
             frame=self._fit_image(frame,42)
+            if float(drone.get("flash",0.0)) > 0:
+                frame=frame.copy()
+                mask=pygame.mask.from_surface(frame,threshold=8)
+                flash=mask.to_surface(setcolor=(255,255,255,190),unsetcolor=(0,0,0,0))
+                frame.blit(flash,(0,0),special_flags=pygame.BLEND_RGBA_ADD)
             screen.blit(frame,frame.get_rect(center=(x,int(y+bob))))
         else:
             pygame.draw.circle(screen,(80,190,205),(x,int(y+bob)),10)
