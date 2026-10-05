@@ -421,7 +421,7 @@ class Renderer:
         for index in range(1, 4):
             path = merchant_dir / f"merchant{index}.png"
             if path.is_file():
-                frames = self._load_sheet_frames(path)
+                frames = self._load_component_frames(path, minimum=30, merge_gap=5, exclude_large=(index == 1))
                 if frames:
                     self.merchant_variants.append(frames)
         if not self.merchant_variants:
@@ -434,10 +434,11 @@ class Renderer:
                     if frames: self.npc_frames[name] = frames
         drone_path = npc_dir / "mira_drone.png"
         if drone_path.is_file():
-            self.drone_frames = self._load_sheet_frames(drone_path)
+            drone = self._load_component_frames(drone_path, minimum=20, merge_gap=4)
+            self.drone_frames = drone[:1] if drone else []
 
-        self.door_front_frames = self._load_sheet_frames(self.asset_root / "doors" / "front_open_closed.png")
-        self.door_side_frames = self._load_sheet_frames(self.asset_root / "doors" / "side_open_closed.png")
+        self.door_front_frames = self._load_grid_frames(self.asset_root / "doors" / "front_open_closed.png", 2, 1)
+        self.door_side_frames = self._load_grid_frames(self.asset_root / "doors" / "side_open_closed.png", 2, 1)
 
         # Decoraciones nuevas por bioma. Se cargan como spritesheets para
         # aprovechar todas las variantes transparentes que contenga cada PNG.
@@ -451,7 +452,7 @@ class Renderer:
         for kind, filename in biome_decor_files.items():
             path = biome_decor_dir / filename
             if path.is_file():
-                frames = self._load_sheet_frames(path)
+                frames = self._load_component_frames(path, minimum=35, merge_gap=8)
                 if frames:
                     self.decoration_frames[kind] = frames
                     self.decoration_images[kind] = frames[0]
@@ -489,11 +490,16 @@ class Renderer:
                 frames = self._load_sheet_frames(path)
                 if frames: self.special_effect_frames[key] = frames
         new_effect_dir = self.asset_root / "effects" / "new"
-        for key, filename in (("new_fireball","boladefuego_spritesheet.png"),("new_ability_atlas","spritesheesdeeffectosparahabilidades.png")):
-            path = new_effect_dir / filename
-            if path.is_file():
-                frames = self._load_sheet_frames(path)
-                if frames: self.special_effect_frames[key] = frames
+        fireball_path = new_effect_dir / "boladefuego_spritesheet.png"
+        if fireball_path.is_file():
+            frames = self._load_grid_frames(fireball_path, 4, 2)
+            if frames:
+                self.special_effect_frames["new_fireball"] = frames
+        ability_atlas_path = new_effect_dir / "spritesheesdeeffectosparahabilidades.png"
+        if ability_atlas_path.is_file():
+            frames = self._load_component_frames(ability_atlas_path, minimum=30, merge_gap=10)
+            if frames:
+                self.special_effect_frames["new_ability_atlas"] = frames
 
         # Enemy sprites supplied as transparent spritesheets. Frames are detected
         # from transparent gaps, so sheets may contain different frame sizes and
@@ -536,6 +542,17 @@ class Renderer:
                         loaded[anim] = frames
             if loaded:
                 self.enemy_sprites[key] = loaded
+        flyer_path = enemy_dir / "flying" / "enemigovolador_spritesheet.png"
+        if flyer_path.is_file():
+            flyer_frames = self._load_grid_frames(flyer_path, 4, 4)
+            if flyer_frames:
+                self.enemy_sprites.setdefault("new_flyer", {})
+                self.enemy_sprites["new_flyer"] = {
+                    "walk": flyer_frames,
+                    "attack": flyer_frames,
+                    "death": flyer_frames,
+                }
+
         self.misc_images = {}
         for wid, wdef in self.data.weapons.items():
             sprite_path = getattr(wdef, "weapon_sprite", None)
@@ -554,8 +571,9 @@ class Renderer:
         for key, filename in (("ranged","modelosarmas.png"),("melee","modelosarmasmelee.png")):
             path = new_weapon_dir / filename
             if path.is_file():
-                frames = self._load_sheet_frames(path)
-                if frames: self.weapon_variant_frames[key] = frames
+                frames = self._load_component_frames(path, minimum=18, merge_gap=5)
+                if frames:
+                    self.weapon_variant_frames[key] = frames
 
         self.default_projectiles = {
             "physical": "assets/projectiles/projectile_06.png",
@@ -598,12 +616,70 @@ class Renderer:
         if start is not None: runs.append((start,len(values)-1))
         return runs
 
+    def _load_grid_frames(self, path, cols, rows):
+        """Recorta una cuadrícula conocida y elimina el espacio transparente de cada celda."""
+        try:
+            image = pygame.image.load(str(path)).convert_alpha()
+            if cols <= 0 or rows <= 0 or image.get_width() % cols or image.get_height() % rows:
+                return []
+            cell_w = image.get_width() // cols
+            cell_h = image.get_height() // rows
+            frames = []
+            for row in range(rows):
+                for col in range(cols):
+                    cell = image.subsurface(pygame.Rect(col * cell_w, row * cell_h, cell_w, cell_h)).copy()
+                    bbox = cell.get_bounding_rect(min_alpha=8)
+                    if bbox.width and bbox.height:
+                        frames.append(cell.subsurface(bbox).copy())
+            return frames
+        except (pygame.error, OSError, ValueError):
+            return []
+
+    def _load_component_frames(self, path, minimum=18, merge_gap=5, exclude_large=False):
+        """Extrae cada modelo opaco de un atlas, en vez de cruzar filas/columnas."""
+        try:
+            image = pygame.image.load(str(path)).convert_alpha()
+            mask = pygame.mask.from_surface(image, threshold=8)
+            components = mask.connected_components(minimum=max(1, int(minimum)))
+            rects = [component.get_bounding_rect() for component in components]
+            rects = [r for r in rects if r.width >= 2 and r.height >= 2]
+            if not rects:
+                return []
+
+            changed = True
+            while changed and merge_gap > 0:
+                changed = False
+                for i in range(len(rects)):
+                    if i >= len(rects):
+                        break
+                    a = rects[i]
+                    for j in range(i + 1, len(rects)):
+                        b = rects[j]
+                        gap_x = max(b.left - a.right, a.left - b.right, 0)
+                        gap_y = max(b.top - a.bottom, a.top - b.bottom, 0)
+                        gap = max(gap_x, gap_y)
+                        small, large = (a, b) if a.width * a.height <= b.width * b.height else (b, a)
+                        if gap <= merge_gap and small.width * small.height <= large.width * large.height * 0.28:
+                            rects[i] = a.union(b)
+                            rects.pop(j)
+                            changed = True
+                            break
+                    if changed:
+                        break
+
+            if exclude_large and len(rects) >= 4:
+                areas = sorted(r.width * r.height for r in rects)
+                median = areas[len(areas) // 2]
+                if median > 0:
+                    rects = [r for r in rects if r.width * r.height <= median * 4.5]
+            rects.sort(key=lambda r: (r.top, r.left))
+            return [image.subsurface(r).copy() for r in rects]
+        except (pygame.error, OSError, ValueError):
+            return []
+
     def _load_sheet_frames(self, path):
         try:
             image = pygame.image.load(str(path)).convert_alpha()
-            # Las fuentes son tiras de 3 frames muy próximos entre sí.
-            # La detección por alpha puede unirlos en un solo componente, por lo
-            # que aquí usamos las tres celdas horizontales explícitas.
             if path.name in ("fountain_active.png", "fountain_inactive.png"):
                 if image.get_width() % 3 != 0:
                     return []
@@ -612,11 +688,6 @@ class Renderer:
                     image.subsurface(pygame.Rect(i * frame_w, 0, frame_w, image.get_height())).copy()
                     for i in range(3)
                 ]
-
-            # El ataque del Minotauro Gigante es una cuadrícula 3x3 real.
-            # Sus celdas tienen fondo/transparencia suficiente para que la detección
-            # automática pueda confundir las 9 poses con una sola imagen o recortarlas
-            # de forma irregular. Para este asset usamos siempre las nueve celdas.
             if path.name == "MinotauroGigante_ataque.png" and image.get_width() % 3 == 0 and image.get_height() % 3 == 0:
                 cell_w = image.get_width() // 3
                 cell_h = image.get_height() // 3
@@ -1343,13 +1414,14 @@ class Renderer:
             kick = max(0.0, 1 - p.since_shot * 12) * 3
             ax, ay = math.cos(p.aim), math.sin(p.aim)
             weapon_id = getattr(weapon_def, "id", "")
-            weapon_image = self.weapon_scaled_images.get(weapon_id)
-            if weapon_image is None:
-                sheet_key = getattr(weapon_def, "weapon_sprite_sheet", None)
-                frames = self.weapon_variant_frames.get(sheet_key, [])
-                if frames:
-                    index = int(getattr(weapon_def, "weapon_sprite_index", 0)) % len(frames)
-                    weapon_image = self._fit_image(frames[index], self._weapon_max_dimension(getattr(weapon_def, "class", "pistol")))
+            sheet_key = getattr(weapon_def, "weapon_sprite_sheet", None)
+            frames = self.weapon_variant_frames.get(sheet_key, [])
+            if frames:
+                seed = float(getattr(equipped_weapon, "sprite_variant_seed", 0.0))
+                index = int(seed * len(frames)) % len(frames) if seed else int(getattr(weapon_def, "weapon_sprite_index", 0)) % len(frames)
+                weapon_image = self._fit_image(frames[index], self._weapon_max_dimension(getattr(weapon_def, "class", "pistol")))
+            else:
+                weapon_image = self.weapon_scaled_images.get(weapon_id)
             if weapon_image is not None:
                 weapon_class = getattr(weapon_def, "class", "")
                 sprite_path = str(getattr(weapon_def, "weapon_sprite", "")).lower()
@@ -1476,8 +1548,14 @@ class Renderer:
         if cached is None:
             image=self.decoration_images.get(kind)
             frames=self.decoration_frames.get(kind)
-            if frames:
-                image=frames[0]
+            if frames and kind.startswith("biome_"):
+                raw_variant = deco.get("variant", 0)
+                try:
+                    variant_seed = float(raw_variant)
+                except (TypeError, ValueError):
+                    variant_seed = 0.0
+                index = int(variant_seed * len(frames)) % len(frames) if 0.0 <= variant_seed <= 1.0 else int(raw_variant) % len(frames)
+                image = frames[index]
             if image is None and kind in ("bush","rock"):
                 image=self.decoration_images.get(f"{kind}_{variant%6+1}")
             if image is None:
@@ -1575,7 +1653,16 @@ class Renderer:
         }.get(kind,56)
         frames = self.decoration_frames.get(kind)
         if frames:
-            image = frames[int(t * 8.0) % len(frames)]
+            if kind.startswith("biome_"):
+                raw_variant = deco.get("variant", 0)
+                try:
+                    variant_seed = float(raw_variant)
+                except (TypeError, ValueError):
+                    variant_seed = 0.0
+                index = int(variant_seed * len(frames)) % len(frames) if 0.0 <= variant_seed <= 1.0 else int(raw_variant) % len(frames)
+                image = frames[index]
+            else:
+                image = frames[int(t * 8.0) % len(frames)]
         draw=self._fit_image(image,max_size)
         if kind=="fountain_active":
             pulse=0.97+0.03*math.sin(t*3.2)
@@ -1757,7 +1844,7 @@ class Renderer:
                 self._merchant_intro_room = room_key
                 self._merchant_intro_start = t
             if self.merchant_variants:
-                variant_index = abs(hash(room_key)) % len(self.merchant_variants)
+                variant_index = int(getattr(sim, "merchant_variant_by_room", {}).get(room_key, 0)) % len(self.merchant_variants)
                 merchant_idle = self.merchant_variants[variant_index]
                 merchant_near = merchant_idle
             else:
@@ -1778,18 +1865,8 @@ class Renderer:
             elif kind=="drone": self._draw_drone_actor(screen,obj,ox,oy,t)
             elif kind=="merchant":
                 intro=obj["idle"]; elapsed=max(0.0,t-float(obj.get("intro_start",t)))
-                if intro and elapsed < 0.72:
-                    # Los cuatro primeros frames contienen la capa; los siguientes
-                    # muestran cómo el comerciante queda listo para atender.
-                    idx=min(len(intro)-1,int(elapsed*7.0))
-                    frame=intro[idx]
-                else:
-                    frames=obj["near"] if obj.get("near_active") and obj.get("near") else obj["idle"]
-                    if frames:
-                        start=4 if len(frames)>4 else 0
-                        frame=frames[start + (int(t*7.0) % max(1,len(frames)-start))]
-                    else:
-                        frame=None
+                frames=obj["near"] if obj.get("near_active") and obj.get("near") else obj["idle"]
+                frame=frames[int(t*7.0) % len(frames)] if frames else None
                 if frame is not None:
                     frame=self._fit_image(frame,70)
                     screen.blit(frame,frame.get_rect(midbottom=(int(arena.width/2+ox),int(arena.height/2-48+oy))))
@@ -1956,14 +2033,15 @@ class Renderer:
                 pygame.draw.circle(screen, (18, 24, 35), (px, py), 18)
                 pygame.draw.circle(screen, (100, 220, 255), (px, py), 18, 1)
                 weapon_id = getattr(it, "weapon_id", "")
-                icon = self.weapon_scaled_images.get(weapon_id)
-                if icon is None:
-                    weapon_def = self.data.weapons.get(weapon_id)
-                    sheet_key = getattr(weapon_def, "weapon_sprite_sheet", None) if weapon_def is not None else None
-                    frames = self.weapon_variant_frames.get(sheet_key, [])
-                    if frames:
-                        index = int(getattr(weapon_def, "weapon_sprite_index", 0)) % len(frames)
-                        icon = self._fit_image(frames[index], 30)
+                weapon_def = self.data.weapons.get(weapon_id)
+                sheet_key = getattr(weapon_def, "weapon_sprite_sheet", None) if weapon_def is not None else None
+                frames = self.weapon_variant_frames.get(sheet_key, [])
+                if frames:
+                    seed = (abs(hash((weapon_id, round(float(ix), 1), round(float(iy), 1)))) % 100000) / 100000.0
+                    index = int(seed * len(frames)) % len(frames)
+                    icon = self._fit_image(frames[index], 30)
+                else:
+                    icon = self.weapon_scaled_images.get(weapon_id)
                 if icon is not None:
                     icon = self._fit_image(icon, 30)
                     screen.blit(icon, icon.get_rect(center=(px, py)))
