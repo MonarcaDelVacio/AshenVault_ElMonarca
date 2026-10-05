@@ -18,7 +18,7 @@ MENU_ITEMS = ["Jugar", "Configuracion", "Salir"]
 PAUSE_ITEMS = ["Continuar", "Configuracion", "Reiniciar run", "Salir al menu"]
 SETTINGS_ITEMS = ["Volumen efectos", "Volumen musica", "Sensibilidad mouse", "Mover arriba", "Mover abajo", "Mover izquierda", "Mover derecha", "Dash", "Habilidad", "Recargar", "Pausa", "Minimapa", "Pantalla completa", "Restablecer", "Volver"]
 SETTING_KEYS = {"Mover arriba":"up", "Mover abajo":"down", "Mover izquierda":"left", "Mover derecha":"right", "Dash":"dash", "Habilidad":"ability", "Recargar":"reload", "Pausa":"pause", "Minimapa":"map"}
-HUB_ITEMS = ["Iniciar run", "Personajes", "Mejoras", "Arsenal", "Volver al menu"]
+HUB_ITEMS = ["Iniciar run", "Personajes", "Mejoras", "Volver al menu"]
 
 
 class App:
@@ -94,6 +94,10 @@ class App:
         self._intro_transition_surface = None
         self._intro_transition_t = 0.0
         self._intro_transition_duration = 0.85
+        self._fade_surface = None
+        self._fade_t = 0.0
+        self._fade_half = 0.22
+        self._last_room_key = None
         self.running = True
         self.large_minimap = False
         if self.state == MENU:
@@ -369,33 +373,20 @@ class App:
                         self.confirm_character_selection()
                     return
             back_rect = pygame.Rect(16, 488, 150, 34)
+            weapons_rect = pygame.Rect(VIEW_W//2-75, 488, 150, 34)
             upgrades_rect = pygame.Rect(VIEW_W - 166, 488, 150, 34)
             if click and back_rect.collidepoint(pos):
                 self.go(HUB if self.back_state == HUB else MENU)
                 return
-            if click and upgrades_rect.collidepoint(pos):
-                self.hub_sel = 0
+            if click and weapons_rect.collidepoint(pos):
+                self.weapon_info_id=None
+                self.info="Armas"
                 self.go(HUB)
                 return
-            return
-        if self.state == HUB and self.info == "Arsenal":
-            scores=self.save.data.get("weapon_scores",{})
-            used=[wid for wid,count in scores.items() if count>0 and wid in self.data.weapons]
-            used.sort(key=lambda wid:(-int(scores.get(wid,0)), self.data.weapons[wid].name))
-            cols=5; card_w,card_h=166,112; gap_x,gap_y=12,10
-            start_x=(VIEW_W-(cols*card_w+(cols-1)*gap_x))//2; start_y=86
-            if self.weapon_info_id:
-                if click: self.weapon_info_id=None
+            if click and upgrades_rect.collidepoint(pos):
+                self.hub_sel = 2
+                self.go(HUB)
                 return
-            for n,wid in enumerate(used[:25]):
-                row,col=divmod(n,cols)
-                rect=pygame.Rect(start_x+col*(card_w+gap_x),start_y+row*(card_h+gap_y),card_w,card_h)
-                if rect.collidepoint(pos):
-                    if click: self.weapon_info_id=wid
-                    return
-            back=pygame.Rect(VIEW_W//2-100,488,200,30)
-            if click and back.collidepoint(pos):
-                self.info=None
             return
         if self.state == HUB and not self.info:
             from game.save import CHARACTER_UPGRADES
@@ -424,9 +415,9 @@ class App:
                     self.hub_sel=n+3
                     if click: self.activate_hub("UPGRADE:"+kind)
                     return
-            actions=["Personajes","Arsenal","Volver al menu"]
+            actions=["Personajes","Volver al menu"]
             for n,item in enumerate(actions):
-                rect=pygame.Rect(145+n*235,438,210,44)
+                rect=pygame.Rect(250+n*240,438,220,44)
                 if rect.collidepoint(pos):
                     self.hub_sel=HUB_ITEMS.index(item)
                     if click: self.activate_hub(item)
@@ -519,7 +510,14 @@ class App:
         self.statue_message = ""
         pygame.event.set_grab(True)
 
+    def _begin_fade(self, duration=0.22):
+        self._fade_surface = self.screen.copy()
+        self._fade_half = max(0.12, float(duration))
+        self._fade_t = self._fade_half * 2.0
+
     def go(self, state):
+        if state != self.state and self.state != INTRO:
+            self._begin_fade()
         self.state = state
         self.sel = 0
         pygame.event.set_grab(state == PLAY)
@@ -666,7 +664,7 @@ class App:
             if k == pygame.K_ESCAPE:
                 self.go(MENU); return
             from game.save import CHARACTER_UPGRADES
-            dynamic=["Iniciar run","Personajes","Arsenal"]+["UPGRADE:"+kind for kind in CHARACTER_UPGRADES.get(self.char_id,{})]+["Volver al menu"]
+            dynamic=["Iniciar run","Personajes"]+["UPGRADE:"+kind for kind in CHARACTER_UPGRADES.get(self.char_id,{})]+["Volver al menu"]
             if k in (pygame.K_UP, pygame.K_w):
                 self.hub_sel=(self.hub_sel-1)%len(dynamic); return
             if k in (pygame.K_DOWN, pygame.K_s):
@@ -803,6 +801,10 @@ class App:
             self._intro_transition_t = max(0.0, self._intro_transition_t - max(0.0, float(dt)))
             if self._intro_transition_t <= 0.0:
                 self._intro_transition_surface = None
+        if self._fade_t > 0.0:
+            self._fade_t = max(0.0, self._fade_t - max(0.0, float(dt)))
+            if self._fade_t <= 0.0:
+                self._fade_surface = None
 
         # El video pertenece al sistema de menús y debe continuar animándose
         # en MENU, HUB, selección de personaje, información y configuración.
@@ -814,9 +816,14 @@ class App:
         if self.state != PLAY:
             return
         s = self.sim
+        old_room_key = self._last_room_key
         # Actualizar el apuntado antes de simular evita un frame de latencia en el disparo.
         self.inp.aim_x, self.inp.aim_y = self.world_mouse()
         s.update(self.inp, dt)       # la pausa simplemente no llama a update: todo se congela
+        new_room_key = tuple(getattr(s.room, "id", ())) if getattr(s, "room", None) is not None else None
+        if old_room_key is not None and new_room_key != old_room_key:
+            self._begin_fade(0.20)
+        self._last_room_key = new_room_key
         if s.statue_menu is not None:
             self.statue_message = ""
             self.go(STATUE)
@@ -913,7 +920,7 @@ class App:
                 tag = "DESBLOQUEADO" if c.id in s["unlocked_characters"] else "BLOQUEADO"
                 lines += ["%s [%s]" % (c.name, tag), "  " + c.description,
                           "  HP %d  Escudo %d  Energia %d  Vel %d" % (c.max_hp, c.max_shield, c.max_energy, c.speed)]
-        elif self.info == "Arsenal":
+        elif self.info == "Armas":
             for w in self.data.weapons.values():
                 lines += ["%s (%s)" % (w.name, w.rarity),
                           "  Dano %s  Cadencia %.2fs  Cargador %d  Recarga %.1fs  Energia %d  Tipo %s" % (
@@ -1174,7 +1181,7 @@ class App:
         if self.state == SCORE:
             self.draw_score()
         elif self.state == HUB:
-            if self.info == "Arsenal":
+            if self.info == "Armas":
                 self.draw_weapon_collection()
             else:
                 self.draw_hub()
@@ -1296,6 +1303,7 @@ class App:
                 scr.set_clip(old_clip)
             c = self.data.characters[self.char_ids[self.char_sel]]
             self.ui_atlas.draw_button(scr, pygame.Rect(16, 488, 150, 34), "Volver", selected=False)
+            self.ui_atlas.draw_button(scr, pygame.Rect(VIEW_W//2-75, 488, 150, 34), "Armas", selected=False)
             self.ui_atlas.draw_button(scr, pygame.Rect(VIEW_W - 166, 488, 150, 34), "Mejoras", selected=False)
         elif self.state == SETTINGS:
             self.draw_menu_bg()
