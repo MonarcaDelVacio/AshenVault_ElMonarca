@@ -1213,38 +1213,41 @@ class Renderer:
             shield_overlay.set_alpha(int(95 + 85 * pulse))
             screen.blit(shield_overlay, shield_overlay.get_rect(center=(x, y)))
         # Arma equipada: sprite individual rotado hacia el cursor, siempre sobre el personaje.
-        kick = max(0.0, 1 - p.since_shot * 12) * 3
-        ax, ay = math.cos(p.aim), math.sin(p.aim)
-        weapon_def = p.weapon.d
-        weapon_id = getattr(weapon_def, "id", "")
-        weapon_image = self.weapon_scaled_images.get(weapon_id)
-        if weapon_image is not None:
-            weapon_class = getattr(weapon_def, "class", "")
-            sprite_path = str(getattr(weapon_def, "weapon_sprite", "")).lower()
-            is_melee_asset = weapon_class == "melee" or "/melee/" in sprite_path
-            base_angle = 35.0 if is_melee_asset and "lanza" in sprite_path else (-35.0 if is_melee_asset else {"magic": -32, "special": -25}.get(weapon_class, 0))
-            if math.cos(p.aim) < 0:
-                weapon_image = pygame.transform.flip(weapon_image, True, False)
-                rotation = base_angle + 180 - math.degrees(p.aim)
+        # Un slot vacío representa puños y no tiene WeaponState.
+        equipped_weapon=getattr(p,"weapon",None)
+        weapon_def=getattr(equipped_weapon,"d",None)
+        if weapon_def is not None:
+            kick = max(0.0, 1 - p.since_shot * 12) * 3
+            ax, ay = math.cos(p.aim), math.sin(p.aim)
+            weapon_id = getattr(weapon_def, "id", "")
+            weapon_image = self.weapon_scaled_images.get(weapon_id)
+            if weapon_image is not None:
+                weapon_class = getattr(weapon_def, "class", "")
+                sprite_path = str(getattr(weapon_def, "weapon_sprite", "")).lower()
+                is_melee_asset = weapon_class == "melee" or "/melee/" in sprite_path
+                base_angle = 35.0 if is_melee_asset and "lanza" in sprite_path else (-35.0 if is_melee_asset else {"magic": -32, "special": -25}.get(weapon_class, 0))
+                if math.cos(p.aim) < 0:
+                    weapon_image = pygame.transform.flip(weapon_image, True, False)
+                    rotation = base_angle + 180 - math.degrees(p.aim)
+                else:
+                    rotation = base_angle - math.degrees(p.aim)
+                hand_offset = (p.radius + 1 - kick) if is_melee_asset else (p.radius - 1 - kick)
+                rotated = self._rotate_weapon_from_grip(weapon_image, weapon_def, rotation) if is_melee_asset else pygame.transform.rotate(weapon_image, rotation)
+                center = (int(x + ax * hand_offset), int(y + ay * hand_offset))
+                screen.blit(rotated, rotated.get_rect(center=center))
             else:
-                rotation = base_angle - math.degrees(p.aim)
-            hand_offset = (p.radius + 1 - kick) if is_melee_asset else (p.radius - 1 - kick)
-            rotated = self._rotate_weapon_from_grip(weapon_image, weapon_def, rotation) if is_melee_asset else pygame.transform.rotate(weapon_image, rotation)
-            center = (int(x + ax * hand_offset), int(y + ay * hand_offset))
-            screen.blit(rotated, rotated.get_rect(center=center))
-        else:
-            x0, y0 = x + ax * (p.radius - 2 - kick), y + ay * (p.radius - 2 - kick)
-            x1, y1 = x + ax * (p.radius + 12 - kick), y + ay * (p.radius + 12 - kick)
-            pygame.draw.line(screen, (30, 30, 36), (x0, y0), (x1, y1), 6)
-            pygame.draw.line(screen, weapon_def.color, (x0, y0), (x1, y1), 3)
-        charge_max = float(getattr(weapon_def, "charge_max", 0) or 0)
-        charge_time = float(getattr(p.weapon, "charge_time", 0) or 0)
-        if charge_max > 0 and charge_time > 0:
-            bw, bh = 38, 5
-            bx, by = x - bw // 2, y - p.radius - 13
-            pygame.draw.rect(screen, (15, 20, 31), (bx, by, bw, bh), border_radius=2)
-            pygame.draw.rect(screen, (65, 225, 220), (bx + 1, by + 1, int((bw - 2) * min(1.0, charge_time / charge_max)), bh - 2), border_radius=2)
-            pygame.draw.rect(screen, (125, 190, 205), (bx, by, bw, bh), 1, border_radius=2)
+                x0, y0 = x + ax * (p.radius - 2 - kick), y + ay * (p.radius - 2 - kick)
+                x1, y1 = x + ax * (p.radius + 12 - kick), y + ay * (p.radius + 12 - kick)
+                pygame.draw.line(screen, (30, 30, 36), (x0, y0), (x1, y1), 6)
+                pygame.draw.line(screen, weapon_def.color, (x0, y0), (x1, y1), 3)
+            charge_max = float(getattr(weapon_def, "charge_max", 0) or 0)
+            charge_time = float(getattr(equipped_weapon, "charge_time", 0) or 0)
+            if charge_max > 0 and charge_time > 0:
+                bw, bh = 38, 5
+                bx, by = x - bw // 2, y - p.radius - 13
+                pygame.draw.rect(screen, (15, 20, 31), (bx, by, bw, bh), border_radius=2)
+                pygame.draw.rect(screen, (65, 225, 220), (bx + 1, by + 1, int((bw - 2) * min(1.0, charge_time / charge_max)), bh - 2), border_radius=2)
+                pygame.draw.rect(screen, (125, 190, 205), (bx, by, bw, bh), 1, border_radius=2)
 
     def prop_collider(self, prop):
         """Huella física derivada del alpha visible del PNG del prop."""
@@ -2111,35 +2114,43 @@ class Renderer:
                 pygame.draw.line(screen, (29, 22, 29), (mx, track.y + 1), (mx, track.bottom - 1), 2)
 
         # Panel inferior: arma y munición a la izquierda; habilidades a la derecha.
-        w = p.weapon
+        w = getattr(p, "weapon", None)
         weapon_rect = pygame.Rect(22, VIEW_H - 74, 218, 64)
         panel(weapon_rect, fill=(15, 17, 25, 218), border=(64, 70, 86))
-        hud_weapon = self._fit_image(self.weapon_scaled_images.get(getattr(w.d, "id", "")), 28)
-        if hud_weapon is not None:
-            screen.blit(hud_weapon, hud_weapon.get_rect(topleft=(62, VIEW_H - 61)))
-            self.text(screen, w.d.name, (102, VIEW_H - 61), (240, 241, 246), self.small)
-        else:
-            self.text(screen, w.d.name, (62, VIEW_H - 61), (240, 241, 246), self.small)
-        is_melee = getattr(w.d, "class", "") == "melee"
-        if getattr(w.d, "id", "") == "fists":
-            ammo_text, ammo_color = "PUÑOS", (210, 218, 230)
-        elif is_melee:
-            ammo_text = "USOS  %d/%d" % (w.durability, w.max_durability)
-            ammo_color = (255, 120, 120) if w.durability <= 3 else (210, 218, 230)
-        elif w.reloading:
-            ammo_text, ammo_color = "RECARGANDO", (240, 200, 90)
-        else:
-            ammo_text = "MUNICIÓN  %d/%d" % (w.ammo, w.reserve_magazines)
-            ammo_color = (255, 120, 120) if w.ammo <= 2 and w.reserve_magazines <= 0 else (210, 218, 230)
 
-        # Munición y estado de recarga quedan en una sola línea limpia. La barra
-        # de progreso fue eliminada para evitar ruido visual en el panel.
+        if w is None:
+            self.text(screen, "PUÑOS", (62, VIEW_H - 61), (240, 241, 246), self.small)
+            ammo_text, ammo_color = "SIN ARMA", (180, 190, 205)
+            is_melee = True
+            weapon_id = "fists"
+            wdef = None
+        else:
+            wdef = getattr(w, "d", None)
+            weapon_id = getattr(wdef, "id", "")
+            hud_weapon = self._fit_image(self.weapon_scaled_images.get(weapon_id), 28)
+            if hud_weapon is not None:
+                screen.blit(hud_weapon, hud_weapon.get_rect(topleft=(62, VIEW_H - 61)))
+                self.text(screen, getattr(wdef, "name", "ARMA"), (102, VIEW_H - 61), (240, 241, 246), self.small)
+            else:
+                self.text(screen, getattr(wdef, "name", "ARMA"), (62, VIEW_H - 61), (240, 241, 246), self.small)
+            is_melee = getattr(wdef, "class", "") == "melee"
+            if weapon_id == "fists":
+                ammo_text, ammo_color = "PUÑOS", (210, 218, 230)
+            elif is_melee:
+                ammo_text = "USOS  %d/%d" % (w.durability, w.max_durability)
+                ammo_color = (255, 120, 120) if w.durability <= 3 else (210, 218, 230)
+            elif w.reloading:
+                ammo_text, ammo_color = "RECARGANDO", (240, 200, 90)
+            else:
+                ammo_text = "MUNICIÓN  %d/%d" % (w.ammo, w.reserve_magazines)
+                ammo_color = (255, 120, 120) if w.ammo <= 2 and w.reserve_magazines <= 0 else (210, 218, 230)
+
+        # Munición y estado de recarga quedan en una sola línea limpia.
         ammo_pos = (62, VIEW_H - 34)
         self.text(screen, ammo_text, ammo_pos, ammo_color, self.small)
 
-        # Solo cuando el cargador está completamente vacío mostramos el icono de
-        # recarga, pegado a la munición y dentro del mismo panel.
-        if not is_melee and getattr(w.d, "id", "") != "fists" and not w.reloading and w.ammo <= 0 and w.reserve_magazines > 0:
+        # Solo cuando el cargador está completamente vacío mostramos el icono de recarga.
+        if w is not None and not is_melee and weapon_id != "fists" and not w.reloading and w.ammo <= 0 and w.reserve_magazines > 0:
             reload_center = (177, VIEW_H - 31)
             if not self.ui_atlas.draw_icon(screen, reload_center, size=22, kind="refresh"):
                 pygame.draw.circle(screen, (240, 200, 90), reload_center, 9, 2)
