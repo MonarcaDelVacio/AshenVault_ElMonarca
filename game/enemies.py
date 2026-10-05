@@ -225,18 +225,14 @@ class Enemy:
         weapon_def=sim.data.weapons.get(getattr(self.d,"weapon_id",None))
         magic_capable=(getattr(self.d,"magic_user",False)
                         or getattr(weapon_def,"class","")=="magic")
-        shield_chance=float(getattr(self.d,"shield_chance",0.015 if getattr(self.d,"min_wave",99)<=2 else 0.16))
-        if magic_capable and getattr(self.d,"shielded",False) and self.shield_timer <= 0 and self.rng.random() < shield_chance:
+        # Los escudos son una defensa mágica, no una habilidad genérica de cualquier NPC.
+        # Especialmente los enemigos de melee (esqueletos, goblins, etc.) nunca los generan.
+        shield_chance=float(getattr(self.d,"shield_chance",0.04))
+        if magic_capable and getattr(self.d,"shielded",False) and self.shield_timer <= 0 and self.rng.random() < min(0.08,shield_chance):
             self.shield_active=True
             self.shield_integrity=float(getattr(self.d,"shield_durability",48.0))
             self.shield_timer=float(getattr(self.d,"emergency_shield_duration",1.2))
             sim.emit("enemy_shield_up",self.x,self.y,self.shield_timer)
-            return True
-        if lethal and self.rng.random()<float(getattr(self.d,"emergency_shield_chance",0.12)):
-            self.shield_active=True
-            self.shield_integrity=float(getattr(self.d,"shield_durability",48.0))
-            self.shield_timer=float(getattr(self.d,"emergency_shield_duration",1.2))
-            sim.emit("enemy_emergency_shield",self.x,self.y,self.shield_timer)
             return True
         if self.dodge_cd<=0 and self.rng.random()<float(getattr(self.d,"dodge_chance",0.10)):
             self.dodge_cd=float(getattr(self.d,"dodge_cooldown",0.9))
