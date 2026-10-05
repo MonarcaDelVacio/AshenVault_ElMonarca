@@ -25,7 +25,8 @@ class Sim:
         self.player=Player(c,data.weapons[c.start_weapon],self.arena.player_spawn,self.meta_upgrades,character_progress)
         self.player.inventory=[self.player.weapon]; self.player.items=[]; self.player.bonus_pierce=0; self.player.bonus_projectiles=0; self.player.attack_speed_mult=1.0; self.player.coin_radius=0
         self.pool=ProjectilePool(); self.enemies=[]; self.enemy_pool=[]; self.items=[]; self.pickups=[]; self.keys=0; self.events=[]; self.chest=None
-        self.props=[]; self.hazards=[]; self.wave_attacks=[]
+        self.props=[]; self.hazards=[]; self.wave_attacks=[]; self.lasers=[]
+        self.decoration_collider_provider=None
         self.time=0.; self.wave=0; self.wave_delay=0.5; self.over=False; self.victory=False; self.portal=False; self.portal_position=(self.arena.width/2,self.arena.height/2)
         self.stats={"kills":0,"shots":0,"damage_taken":0,"waves":0,"coins":0,"rooms":1,"items":0,"purchases":0,"abilities":0,"bosses_defeated":0,"xp":0}
         self._flow_tile=self.arena.tile_of(self.player.x,self.player.y); self._flow_refresh=0.; self.flow=self.arena.flow_field(*self._flow_tile)
@@ -675,7 +676,7 @@ class Sim:
         seed=self.rng.randrange(1,2**31)
         self.dungeon=Dungeon(seed,"ruins",self.difficulty)
         self.portal=False; self.portal_position=(0,0)
-        self.enemies=[]; self.items=[]; self.pickups=[]; self.hazards=[]; self.wave_attacks=[]
+        self.enemies=[]; self.items=[]; self.pickups=[]; self.hazards=[]; self.wave_attacks=[]; self.lasers=[]
         self.chest=None; self.shop_offers=[]
         self.player.x,self.player.y=self.dungeon.room.arena.player_spawn
         # Los buffs de estatua pertenecen a la partida completa, no a una dungeon individual.
