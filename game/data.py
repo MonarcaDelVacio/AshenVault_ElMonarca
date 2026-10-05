@@ -60,15 +60,36 @@ class GameData:
         # Valida referencias a assets declaradas en los datos antes de iniciar una run.
         # Así un archivo renombrado/eliminado no queda como un fallo silencioso del renderer.
         root = os.path.dirname(data_dir())
+        weapon_sheet_assets = {
+            "ranged": "assets/weapons/new/modelosarmas.png",
+            "melee": "assets/weapons/new/modelosarmasmelee.png",
+        }
         for wid, weapon in self.weapons.items():
-            for field in ("weapon_sprite", "projectile_sprite"):
-                asset = getattr(weapon, field, None)
-                if not asset:
-                    if field == "projectile_sprite" and getattr(weapon, "class", "") == "melee":
-                        continue
-                    raise ValueError(f"Arma {wid}: falta {field}")
-                if not os.path.isfile(os.path.join(root, asset.replace("/", os.sep))):
-                    raise ValueError(f"Arma {wid}: asset inexistente {asset}")
+            # Las armas nuevas pueden obtener su modelo desde una hoja compartida
+            # mediante weapon_sprite_sheet + weapon_sprite_index. En ese caso no
+            # necesitan un weapon_sprite individual.
+            sprite = getattr(weapon, "weapon_sprite", None)
+            sheet_key = getattr(weapon, "weapon_sprite_sheet", None)
+            sheet_index = getattr(weapon, "weapon_sprite_index", None)
+            if sprite:
+                if not os.path.isfile(os.path.join(root, sprite.replace("/", os.sep))):
+                    raise ValueError(f"Arma {wid}: asset inexistente {sprite}")
+            elif sheet_key in weapon_sheet_assets:
+                if not isinstance(sheet_index, int) or sheet_index < 0:
+                    raise ValueError(f"Arma {wid}: weapon_sprite_index inválido")
+                sheet_asset = weapon_sheet_assets[sheet_key]
+                if not os.path.isfile(os.path.join(root, sheet_asset.replace("/", os.sep))):
+                    raise ValueError(f"Arma {wid}: hoja de sprites inexistente {sheet_asset}")
+            else:
+                raise ValueError(f"Arma {wid}: falta weapon_sprite o una hoja de sprites válida")
+
+            projectile = getattr(weapon, "projectile_sprite", None)
+            if not projectile:
+                if getattr(weapon, "class", "") == "melee":
+                    continue
+                raise ValueError(f"Arma {wid}: falta projectile_sprite")
+            if not os.path.isfile(os.path.join(root, projectile.replace("/", os.sep))):
+                raise ValueError(f"Arma {wid}: asset inexistente {projectile}")
         for eid, enemy in self.enemies.items():
             sprite_set = getattr(enemy, "sprite_set", None)
             if sprite_set and not isinstance(sprite_set, str):
