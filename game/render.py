@@ -669,21 +669,27 @@ class Renderer:
         if not frames: return
         idx=min(len(frames)-1,int(elapsed*len(frames)/max(0.001,max_life)))
         frame=frames[idx]
-        w,h=frame.get_size(); scale=float(size)/max(1,w,h)
-        frame=pygame.transform.smoothscale(frame,(max(1,int(w*scale)),max(1,int(h*scale))))
-        if math.cos(facing)<0: frame=pygame.transform.flip(frame,True,False)
+        base=self._fit_effect_frame(frame,size)
+        rot_key=("death",id(base),bool(math.cos(facing)<0))
+        frame=self._rotation_cache.get(rot_key)
+        if frame is None:
+            frame=pygame.transform.flip(base,True,False) if math.cos(facing)<0 else base
+            self._rotation_cache[rot_key]=frame
         frame=frame.copy(); frame.set_alpha(max(0,int(255*(1-elapsed/max_life))))
         screen.blit(frame,frame.get_rect(center=(int(x+ox),int(y+oy))))
 
     def _draw_projectile_sheet(self, screen, frames, pr, ox, oy, size):
         if not frames: return
         idx=int(pr.age*len(frames)/0.42)%len(frames)
-        frame=frames[idx]
-        w,h=frame.get_size(); scale=float(size)/max(1,w,h)
-        frame=pygame.transform.smoothscale(frame,(max(1,int(w*scale)),max(1,int(h*scale))))
+        frame=self._fit_effect_frame(frames[idx],size)
         angle=math.degrees(math.atan2(pr.vy,pr.vx))
-        frame=pygame.transform.rotate(frame,-angle)
-        screen.blit(frame,frame.get_rect(center=(int(pr.x+ox),int(pr.y+oy))))
+        angle_key=int(round((-angle)/8.0))*8
+        rot_key=("sheet_rot",id(frame),angle_key)
+        rotated=self._rotation_cache.get(rot_key)
+        if rotated is None:
+            rotated=pygame.transform.rotate(frame,angle_key)
+            self._rotation_cache[rot_key]=rotated
+        screen.blit(rotated,rotated.get_rect(center=(int(pr.x+ox),int(pr.y+oy))))
 
     def _load_animation_frames(self, prefix, count):
         frames = []
@@ -701,15 +707,18 @@ class Renderer:
                 continue
         return frames
 
-    @staticmethod
-    def _fit_effect_frame(image, size):
+    def _fit_effect_frame(self, image, size):
         if image is None:
             return None
-        w, h = image.get_size()
-        scale = min(float(size) / max(1, w, h), 1.0 if size <= max(w, h) else float(size) / max(1, w, h))
-        # Los efectos pueden necesitar crecer respecto al PNG original; nunca deformamos.
-        scale = float(size) / max(1, w, h)
-        return pygame.transform.smoothscale(image, (max(1, int(w * scale)), max(1, int(h * scale))))
+        key=("effect",id(image),int(round(float(size))))
+        cached=self._fit_cache.get(key)
+        if cached is not None:
+            return cached
+        w,h=image.get_size()
+        scale=float(size)/max(1,w,h)
+        out=pygame.transform.smoothscale(image,(max(1,int(w*scale)),max(1,int(h*scale))))
+        self._fit_cache[key]=out
+        return out
 
     def _draw_combat_sprite_animation(self, screen, frames, elapsed, x, y, size, angle=None, alpha=255, loop=False, duration=0.24):
         if not frames:
@@ -724,7 +733,13 @@ class Renderer:
         if frame is None:
             return
         if angle is not None:
-            frame = pygame.transform.rotate(frame, -math.degrees(angle))
+            angle_key=int(round((-math.degrees(angle))/8.0))*8
+            rot_key=("effect_rot",id(frame),angle_key)
+            rotated=self._rotation_cache.get(rot_key)
+            if rotated is None:
+                rotated=pygame.transform.rotate(frame,angle_key)
+                self._rotation_cache[rot_key]=rotated
+            frame=rotated
         if alpha < 255:
             frame = frame.copy()
             frame.set_alpha(max(0, min(255, int(alpha))))
