@@ -1290,7 +1290,7 @@ class Sim:
                         hit_enemy.hurt(damage,angle)
                         self.emit("enemy_hit",hit_enemy.x,hit_enemy.y,laser["color"],damage,False)
                 else:
-                    if self.player.take_damage(laser["damage"], laser["angle"]): self.on_player_hit(owner.x,owner.y,laser["damage"])
+                    if self.player.take_damage(laser["damage"], laser["angle"]+math.pi): self.on_player_hit(owner.x,owner.y,laser["damage"])
             self.emit("laser_impact",hit_point[0],hit_point[1],laser["color"],laser["explosion_radius"])
             laser["tick"]=0.12
         visible_length=min(length,float(laser.get("travel",length)))
@@ -1381,7 +1381,7 @@ class Sim:
                 if not wave.get("hit") and abs(math.hypot(self.player.x-wave["x"],self.player.y-wave["y"])-wave["radius"])<16:
                     if self._wave_clear_to(wave["x"],wave["y"],self.player.x,self.player.y):
                         wave["hit"]=True
-                        if self.player.take_damage(wave["damage"], math.atan2(self.player.y-wave["y"],self.player.x-wave["x"])): self.on_player_hit(wave["x"],wave["y"],wave["damage"])
+                        if self.player.take_damage(wave["damage"], math.atan2(wave["y"]-self.player.y,wave["x"]-self.player.x)): self.on_player_hit(wave["x"],wave["y"],wave["damage"])
         self.wave_attacks=[w for w in self.wave_attacks if w["life"]>0]
 
     def _update_pickups(self,dt):
