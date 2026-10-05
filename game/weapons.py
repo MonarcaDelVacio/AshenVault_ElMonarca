@@ -58,6 +58,7 @@ def _fire_projectiles(sim, p, w, charge_ratio=0.0):
     range_mult = 1.0 + (getattr(d, "charge_range_mult", 2.0) - 1.0) * charge_ratio
     damage_mult = 1.0 + (getattr(d, "charge_damage_mult", 2.2) - 1.0) * charge_ratio
     w.ammo -= 1
+    sim.stats.setdefault("weapon_usage", {})[d.id] = sim.stats.get("weapon_usage", {}).get(d.id, 0) + 1
     w.cooldown = d.fire_interval / max(0.1, getattr(p, "attack_speed_mult", 1.0))
     p.energy -= d.energy_cost
     p.since_shot = 0.0
@@ -142,6 +143,7 @@ def try_fire(sim, p, inp, dt):
         w.charge_time = min(float(getattr(d, "laser_max_charge", 3.0)), w.charge_time + dt)
         if w.charge_time >= float(getattr(d, "laser_start_charge", 1.0)):
             w.laser_active = True
+            sim.stats.setdefault("weapon_usage", {})[d.id] = 1
             sim.update_player_laser(w.charge_time, dt)
         return False
     finished = w.update(dt)
@@ -188,6 +190,7 @@ def try_fire(sim, p, inp, dt):
         w.durability = max(0, w.durability - 1)
         w.ammo = w.durability
         sim.stats["shots"] += 1
+        sim.stats.setdefault("weapon_usage", {})[d.id] = sim.stats.get("weapon_usage", {}).get(d.id, 0) + 1
         sim.perform_melee_attack(p, d)
         if w.durability <= 0:
             sim.break_weapon(p, w)
