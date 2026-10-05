@@ -29,6 +29,7 @@ class Enemy:
         self.spawn_delay = 0.6
         self.frozen = 0.0
         self.summon_timer = 0.0
+        self.boss_pulse_cd = 2.2
         self.is_boss = False
         self.is_miniboss = False
         self.weapon_id = getattr(edef, "weapon_id", None)
@@ -70,6 +71,7 @@ class Enemy:
         self.cooldown = max(0.0, self.cooldown - dt)
         self.frozen = max(0.0, self.frozen - dt)
         self.summon_timer = max(0.0, self.summon_timer - dt)
+        self.boss_pulse_cd = max(0.0, self.boss_pulse_cd - dt)
         self.attack_anim_time = min(8.0, self.attack_anim_time + dt)
         if self.frozen > 0:
             return
@@ -96,6 +98,15 @@ class Enemy:
         dist = math.hypot(dx, dy) or 0.001
         self.facing = math.atan2(dy, dx)
         sees = dist < d.detect_range and sim.arena.line_of_sight(self.x, self.y, p.x, p.y)
+
+        # Los jefes expulsan al jugador si logra pegarse demasiado. Es un pulso de
+        # control de espacio, sin daño, con telegráfico visual y enfriamiento propio.
+        if self.is_boss and dist <= 118 and self.boss_pulse_cd <= 0:
+            push = 420.0
+            p.rvx += math.cos(self.facing) * push
+            p.rvy += math.sin(self.facing) * push
+            self.boss_pulse_cd = 2.8
+            sim.emit("boss_shockwave", self.x, self.y, 118.0, getattr(d, "color", (220, 100, 100)))
 
         if self.state == WINDUP:
             self.timer -= dt
