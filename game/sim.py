@@ -546,6 +546,8 @@ class Sim:
                 if math.hypot(sx-self.player.x,sy-self.player.y)<120: continue
                 if self.arena.point_solid(sx,sy): continue
                 if self._decoration_collision(sx,sy,float(e.radius)): continue
+                if any(not q.get("broken") and math.hypot(sx-q["x"],sy-q["y"])<e.radius+q.get("radius",24)
+                       for q in self.props): continue
                 if any(math.hypot(sx-ux,sy-uy)<e.radius+ur+10 for ux,uy,ur in used): continue
                 chosen=(sx,sy); break
             if chosen is None:
@@ -553,6 +555,7 @@ class Sim:
                     sx=self.rng.uniform(e.radius+16,self.arena.width-e.radius-16)
                     sy=self.rng.uniform(e.radius+16,self.arena.height-e.radius-16)
                     if self.arena.point_solid(sx,sy) or self._decoration_collision(sx,sy,float(e.radius)): continue
+                    if any(not q.get("broken") and math.hypot(sx-q["x"],sy-q["y"])<e.radius+q.get("radius",24) for q in self.props): continue
                     if math.hypot(sx-self.player.x,sy-self.player.y)<120: continue
                     chosen=(sx,sy); break
             if chosen is not None:
