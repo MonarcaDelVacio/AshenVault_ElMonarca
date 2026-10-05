@@ -41,8 +41,10 @@ class Player:
         if cid == "soldier": self.ability["amount"] = self.ability.get("amount",4) + lv("ability")
         elif cid == "medic": self.ability["amount"] = self.ability.get("amount",3) + lv("ability")
         elif cid == "vanguard":
-            self.ability["damage"] = self.ability.get("damage",24) + lv("ability")*4
-            self.ability["radius"] = self.ability.get("radius",125) + lv("ability")*8
+            self.ability["damage"] = self.ability.get("damage",24) + lv("ability_damage")*4
+            self.ability["radius"] = self.ability.get("radius",125) + lv("ability_range")*12
+            self.ability["stun"] = self.ability.get("stun",0.45) + lv("ability_stun")*0.12
+            self.ability["wave_speed"] = self.ability.get("wave_speed",520) + lv("ability_speed")*35
         elif cid == "pyromancer": self.ability["duration"] = self.ability.get("duration",3.0) + lv("ability")*.35
         elif cid == "striker": self.ability["duration"] = self.ability.get("duration",5.0) + lv("ability")*.5
         elif cid == "engineer":
