@@ -418,6 +418,7 @@ class Renderer:
         self.enemy_sprites = {}
         self.enemy_variant_sprites = {}
         self.enemy_variant_tints = {}
+        self.enemy_variant_params = {}
         self.enemy_projectile_frames = {}
         enemy_dir = self.asset_root / "enemies"
         enemy_specs = {
@@ -549,12 +550,13 @@ class Renderer:
         variant_id=getattr(e.d,"variant_id",None)
         if variant_id:
             self.enemy_variant_tints[variant_id]=tuple(getattr(e.d,"variant_tint",getattr(e.d,"color",(200,80,80))))
-        anims=self._variant_enemy_anims(
-            key, variant_id,
-            float(getattr(e.d,"variant_hue_shift",0.0)),
-            float(getattr(e.d,"variant_saturation",0.0)),
-            float(getattr(e.d,"variant_lightness",0.0))
-        )
+            self.enemy_variant_params[variant_id]=(
+                float(getattr(e.d,"variant_hue_shift",0.0)),
+                float(getattr(e.d,"variant_saturation",0.0)),
+                float(getattr(e.d,"variant_lightness",0.0))
+            )
+        params=self.enemy_variant_params.get(variant_id,(0.0,0.0,0.0))
+        anims=self._variant_enemy_anims(key, variant_id, *params)
         if e.state in ("windup","recover"):
             anim=anims.get("attack_heavy" if getattr(e.d,"melee_explosion",False) and "attack_heavy" in anims else "attack")
             elapsed=getattr(e,"attack_anim_time",0.0)
@@ -594,10 +596,8 @@ class Renderer:
     def _draw_enemy_death(self, screen, effect, ox, oy):
         x,y,elapsed,max_life,key,size,facing=effect[:7]
         variant_id=effect[7] if len(effect) > 7 else None
-        anims=self._variant_enemy_anims(
-            key, variant_id,
-            0.0, 0.0, 0.0
-        ) if variant_id else self.enemy_sprites.get(key,{})
+        params=self.enemy_variant_params.get(variant_id,(0.0,0.0,0.0))
+        anims=self._variant_enemy_anims(key, variant_id, *params) if variant_id else self.enemy_sprites.get(key,{})
         frames=anims.get("death")
         if not frames: return
         idx=min(len(frames)-1,int(elapsed*len(frames)/max(0.001,max_life)))
