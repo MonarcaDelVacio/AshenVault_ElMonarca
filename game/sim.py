@@ -37,6 +37,28 @@ class Sim:
         self._enter_room(self.room,initial=True)
     def emit(self,kind,*args):
         if len(self.events)<250:self.events.append((kind,)+args)
+    def enemy_target(self, enemy):
+        """Selecciona jugador o dron como objetivo; los drones pueden atraer fuego enemigo."""
+        p=self.player
+        candidates=[{"x":p.x,"y":p.y,"kind":"player","obj":p}]
+        for d in self.drones:
+            if d.get("hp",0)>0:
+                candidates.append({"x":d["x"],"y":d["y"],"kind":"drone","obj":d})
+        visible=[]
+        for target in candidates:
+            dist=math.hypot(target["x"]-enemy.x,target["y"]-enemy.y)
+            if dist <= float(getattr(enemy.d,"detect_range",700)) and self.arena.line_of_sight(enemy.x,enemy.y,target["x"],target["y"]):
+                visible.append((dist,target))
+        if not visible:
+            return candidates[0]
+        visible.sort(key=lambda q:q[0])
+        if len(visible)>1 and visible[0][1]["kind"]=="drone":
+            return visible[0][1] if self.rng.random()<0.55 else visible[1][1]
+        drones=[q for q in visible if q[1]["kind"]=="drone"]
+        if drones and self.rng.random()<0.28:
+            return min(drones,key=lambda q:q[0])[1]
+        return visible[0][1]
+
     def spawn_drone(self, angle=0.0):
         a=self.player.ability
         drone={"x":self.player.x+math.cos(angle)*34.0,"y":self.player.y+math.sin(angle)*34.0,
@@ -52,16 +74,28 @@ class Sim:
             return
         p=self.player
         kept=[]
-        attack_interval=float(p.ability.get("drone_attack_interval",0.62))
+        attack_interval=float(p.ability.get("drone_attack_interval",1.0))
         damage=float(p.ability.get("drone_damage_mult",1.0))*4.0*p.damage_mult
         for i,d in enumerate(self.drones):
-            d["orbit"] += dt*(0.65 + i*0.07)
-            target_x=p.x+math.cos(d["orbit"])*42.0
-            target_y=p.y+math.sin(d["orbit"])*30.0
+            # Drones are autonomous ranged allies, not orbiting satellites.
+            nearest_enemy=min((e for e in self.enemies if e.alive and e.spawn_delay<=0.2),
+                               key=lambda e:math.hypot(e.x-d["x"],e.y-d["y"]),default=None)
+            target_x,target_y=p.x,p.y
+            if nearest_enemy is not None and math.hypot(nearest_enemy.x-p.x,nearest_enemy.y-p.y)<420:
+                ex,ey=nearest_enemy.x-d["x"],nearest_enemy.y-d["y"]
+                edist=math.hypot(ex,ey) or 1
+                if edist<180:
+                    target_x=d["x"]-ex/edist*170
+                    target_y=d["y"]-ey/edist*170
+                else:
+                    target_x=nearest_enemy.x-ex/edist*80
+                    target_y=nearest_enemy.y-ey/edist*80
+            if math.hypot(d["x"]-p.x,d["y"]-p.y)>128.0:
+                target_x,target_y=p.x,p.y
             dx,dy=target_x-d["x"],target_y-d["y"]
             dist=math.hypot(dx,dy)
             if dist>1:
-                step=min(dist,230.0*dt)
+                step=min(dist,190.0*dt)
                 d["x"] += dx/dist*step
                 d["y"] += dy/dist*step
             d["phase"] += dt*3.5
@@ -69,6 +103,14 @@ class Sim:
             d["burst_cd"]=max(0.0,d["burst_cd"]-dt)
             target=min((e for e in self.enemies if e.alive and e.spawn_delay<=0.2),
                        key=lambda e:math.hypot(e.x-d["x"],e.y-d["y"]),default=None)
+            # 50% de probabilidad de una evasión lateral frente a proyectiles enemigos.
+            threats=[pr for pr in self.pool.items if pr.active and pr.team==1 and
+                     math.hypot(pr.x-d["x"],pr.y-d["y"])<72]
+            if threats and self.rng.random()<0.50:
+                pr=min(threats,key=lambda q:math.hypot(q.x-d["x"],q.y-d["y"]))
+                pv=math.hypot(pr.vx,pr.vy) or 1
+                d["x"] += (-pr.vy/pv)*(1 if i%2 else -1)*120.0*dt
+                d["y"] += (pr.vx/pv)*(1 if i%2 else -1)*120.0*dt
             if target is not None and math.hypot(target.x-d["x"],target.y-d["y"])<520 and d["shot_cd"]<=0:
                 ang=math.atan2(target.y-d["y"],target.x-d["x"])
                 self.spawn_projectile(0,d["x"],d["y"],ang,620.0,damage,3.0,1.1,(90,220,235),"energy",0,0,False,None,False,0,False,0,0.85,0.0)
