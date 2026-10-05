@@ -221,6 +221,12 @@ class Enemy:
         if not threats: return False
         pr,_=min(threats,key=lambda q:q[1])
         lethal=float(pr.damage)>=max(1.0,self.hp+self.shield_integrity)
+        if getattr(self.d,"shielded",False) and self.shield_timer <= 0 and self.rng.random() < 0.45:
+            self.shield_active=True
+            self.shield_integrity=float(getattr(self.d,"shield_durability",48.0))
+            self.shield_timer=float(getattr(self.d,"emergency_shield_duration",1.2))
+            sim.emit("enemy_shield_up",self.x,self.y,self.shield_timer)
+            return True
         if lethal and self.rng.random()<float(getattr(self.d,"emergency_shield_chance",0.12)):
             self.shield_active=True
             self.shield_integrity=float(getattr(self.d,"shield_durability",48.0))
