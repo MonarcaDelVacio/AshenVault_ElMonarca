@@ -359,6 +359,10 @@ class Sim:
         provider=getattr(self, "decoration_collider_provider", None)
         if provider is not None:
             for deco in getattr(self.arena, "decorations", []):
+                if hasattr(provider, "decoration_overlap"):
+                    if provider.decoration_overlap(deco, x, y, radius):
+                        return (x, y, radius)
+                    continue
                 shape=provider.decoration_collider(deco) if hasattr(provider,"decoration_collider") else provider(deco)
                 if not shape: continue
                 cx,cy,rx,ry=shape
