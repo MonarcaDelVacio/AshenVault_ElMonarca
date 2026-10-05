@@ -369,7 +369,9 @@ class Sim:
                 if shape:
                     cx,cy,rx,ry=shape
                     dx=(x-cx)/max(1.0,rx+5); dy=(y-cy)/max(1.0,ry+5); hit=dx*dx+dy*dy<=1.0
-            if not hit and math.hypot(x-prop["x"],y-prop["y"]) <= prop.get("radius",24)+5:
+                    if not hit:
+                        continue
+            if hit or math.hypot(x-prop["x"],y-prop["y"]) <= prop.get("radius",24)+5:
                 if explosive:
                     self._break_prop(prop,color)
                 else:
