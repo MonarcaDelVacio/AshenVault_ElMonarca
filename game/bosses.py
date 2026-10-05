@@ -52,7 +52,10 @@ class Boss(Enemy):
         # su identidad melee cuando el jugador se acerca.
         if melee_profile and dist <= melee_threshold:
             hit_radius = float(getattr(self.d, "hit_radius", 58.0))
-            if dist <= hit_radius + p.radius and p.take_damage(self.d.damage):
+            target=self.target or {"kind":"player","obj":p,"x":p.x,"y":p.y}
+            if target.get("kind")=="drone":
+                sim.damage_drone(target["obj"],self.d.damage,self.x,self.y)
+            elif dist <= hit_radius + p.radius and p.take_damage(self.d.damage):
                 sim.on_player_hit(self.x, self.y, self.d.damage)
             rank_scale = 1.65 + 0.12 * max(0, self.phase - 1)
             sim.emit("melee_swing", self.x, self.y, self.facing, self.d.color, max(48.0, hit_radius), rank_scale)
