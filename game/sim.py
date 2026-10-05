@@ -544,7 +544,9 @@ class Sim:
             e.spawn_delay=0.8
             self.enemies.append(e)
             spawned+=1
-        return spawned>0    def break_secret(self, tx, ty):
+        return spawned > 0
+
+    def break_secret(self, tx, ty):
         """Las paredes especiales ya no son destructibles ni entregan loot; usa cajas para eso."""
         return False
 
