@@ -6,7 +6,7 @@ class Projectile:
     __slots__ = ("active", "team", "x", "y", "vx", "vy", "damage", "radius", "life", "color",
                  "dtype", "pierce", "bounces", "crit", "hit_ids", "sprite_key", "explosive", "explosion_radius",
                  "stick_on_hit", "stuck", "stuck_timer", "stuck_angle", "stuck_enemy_id", "stuck_offset_x", "stuck_offset_y", "age",
-                 "homing", "visual_scale", "status_chance"
+                 "homing", "visual_scale", "status_chance")
 
     def __init__(self):
         self.active = False
