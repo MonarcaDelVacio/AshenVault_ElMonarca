@@ -79,6 +79,10 @@ class Fx:
                 size = max(28.0, float(radius) * 2.0)
                 self.explosions.append([x, y, 0.0, 0.40, size])
             self.add_shake(3.0)
+        elif k == "boss_shockwave":
+            _, x, y, radius, color = ev
+            self.burst(x, y, color, 26, 150, 0.35, 2.5)
+            self.add_shake(2.0)
         elif k == "melee_swing":
             _, x, y, angle, color, weapon_range, *extra = ev
             # The six-frame slash is now the only melee visual. Size follows weapon
