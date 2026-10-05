@@ -16,6 +16,8 @@ class WeaponState:
         return self.reload_left > 0
 
     def start_reload(self):
+        if getattr(self.d, "class", "") == "melee":
+            return False
         if not self.reloading and self.ammo < self.d.magazine:
             self.reload_left = self.d.reload_time
             return True
