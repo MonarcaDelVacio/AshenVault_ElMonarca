@@ -85,7 +85,7 @@ class App:
         self.score_xp_display = 0.0
         self.score_xp_total = 0
         self.score_dungeon_name = "Dungeon"
-        self.score_continue_ready = false
+        self.score_continue_ready = False
         self.back_state = MENU
         self.settings_sel = 0
         self.rebind_action = None
@@ -930,6 +930,92 @@ class App:
                 y += 22 if not is_heading else 25
         self.screen.set_clip(old_clip)
         self.draw_option_card((VIEW_W // 2 - 100, 488, 200, 30), "Volver", False)
+
+    def update_score(self, dt):
+        dt=max(0.0,min(0.1,float(dt)))
+        kills=int(self.sim.stats.get("kills",0)) if self.sim else 0
+        if self.score_phase=="kills":
+            if kills <= 0:
+                self.score_phase="hold"; self.score_timer=0.0
+            else:
+                self.score_kills_display=min(kills, self.score_kills_display + max(1, int(kills*dt*2.4)))
+                if self.score_kills_display>=kills:
+                    self.score_kills_display=kills; self.score_phase="hold"; self.score_timer=0.0
+        elif self.score_phase=="hold":
+            self.score_timer+=dt
+            if self.score_timer>=2.2:
+                self.score_phase="fade"; self.score_timer=0.0
+        elif self.score_phase=="fade":
+            self.score_timer+=dt
+            if self.score_timer>=0.7:
+                self.score_phase="xp"; self.score_timer=0.0; self.score_xp_display=0.0
+        elif self.score_phase=="xp":
+            self.score_xp_display=min(float(self.score_xp_total), self.score_xp_display + max(1.0, self.score_xp_total*dt/3.2))
+            if self.score_xp_display>=self.score_xp_total:
+                self.score_xp_display=float(self.score_xp_total); self.score_phase="done"; self.score_continue_ready=True
+        elif self.score_phase=="done":
+            self.score_continue_ready=True
+
+    def skip_score(self):
+        self.score_kills_display=int(self.sim.stats.get("kills",0)) if self.sim else self.score_kills_display
+        self.score_xp_display=float(self.score_xp_total)
+        self.score_phase="done"
+        self.score_continue_ready=True
+
+    def draw_score(self):
+        scr=self.screen
+        scr.fill((5,7,13))
+        overlay=pygame.Surface((VIEW_W,VIEW_H),pygame.SRCALPHA)
+        overlay.fill((4,7,14,245)); scr.blit(overlay,(0,0))
+        c=self.data.characters.get(self.char_id)
+        cname=c.name.split(",")[0] if c else self.char_id
+        self.r.text(scr,"SCORE",(VIEW_W//2,58),(240,195,105),self.r.menu_title,True)
+        self.r.text(scr,cname.upper(),(VIEW_W//2,96),(105,230,218),self.r.menu_font,True)
+        if self.score_phase in ("kills","hold","fade"):
+            panel=pygame.Surface((620,300),pygame.SRCALPHA)
+            alpha=255 if self.score_phase!="fade" else max(0,int(255*(1.0-self.score_timer/0.7)))
+            panel.fill((10,14,25,max(0,int(235*alpha/255))))
+            pygame.draw.rect(panel,(76,95,122,max(0,int(220*alpha/255))),panel.get_rect(),2,border_radius=14)
+            scr.blit(panel,panel.get_rect(center=(VIEW_W//2,285)))
+            self.r.text(scr,"DUNGEON",(VIEW_W//2,190),(150,170,190),self.r.menu_small,True)
+            self.r.text(scr,self.score_dungeon_name.upper(),(VIEW_W//2,226),(238,224,190),self.r.menu_title,True)
+            self.r.text(scr,"BAJAS",(VIEW_W//2,282),(150,170,190),self.r.menu_small,True)
+            self.r.text(scr,str(self.score_kills_display),(VIEW_W//2,350),(245,235,210),self.r.big,True)
+            self.r.text(scr,"ESC / ENTER / ESPACIO / CLICK · SKIP",(VIEW_W//2,416),(145,160,180),self.r.menu_small,True)
+        else:
+            panel=pygame.Rect(145,116,670,350)
+            pygame.draw.rect(scr,(9,13,23,242),panel,border_radius=14)
+            pygame.draw.rect(scr,(76,95,122,220),panel,2,border_radius=14)
+            self.r.text(scr,"EXPERIENCIA",(VIEW_W//2,142),(240,195,105),self.r.menu_font,True)
+            frames=getattr(self.r,"player_walk_frames",{}).get(self.char_id,[])
+            if frames:
+                frame=frames[int(self.t*7.5)%len(frames)]
+                scr.blit(frame,frame.get_rect(center=(VIEW_W//2,235)))
+            else:
+                self.r.text(scr,cname.upper(),(VIEW_W//2,235),(220,225,235),self.r.menu_font,True)
+            from game.save import xp_to_next
+            remaining=self.score_xp_start
+            gained=self.score_xp_display
+            lvl=self.score_level_start
+            while gained>0:
+                need=max(1,xp_to_next(lvl)-remaining)
+                if gained>=need:
+                    gained-=need; lvl+=1; remaining=0
+                else:
+                    remaining+=gained; gained=0
+            need=xp_to_next(lvl)
+            ratio=max(0.0,min(1.0,remaining/max(1,need)))
+            self.r.text(scr,"NIVEL %d"%lvl,(VIEW_W//2,282),(105,230,218),self.r.menu_font,True)
+            bar=pygame.Rect(240,310,480,24)
+            pygame.draw.rect(scr,(18,24,36),bar,border_radius=8)
+            pygame.draw.rect(scr,(88,222,205),(bar.x,bar.y,int(bar.w*ratio),bar.h),border_radius=8)
+            pygame.draw.rect(scr,(105,125,145),bar,1,border_radius=8)
+            self.r.text(scr,"%d / %d XP"%(int(remaining),need),(VIEW_W//2,350),(220,226,236),self.r.menu_small,True)
+            self.r.text(scr,"+%d XP"%self.score_xp_total,(VIEW_W//2,380),(245,220,145),self.r.menu_small,True)
+            if self.score_continue_ready:
+                self.draw_option_card((VIEW_W-180,VIEW_H-58,150,40),"Continuar",True)
+            else:
+                self.r.text(scr,"ESC / ENTER / ESPACIO / CLICK · SKIP",(VIEW_W//2,VIEW_H-32),(145,160,180),self.r.menu_small,True)
 
     def draw_hub(self):
         if self.info: self.draw_info(); return
