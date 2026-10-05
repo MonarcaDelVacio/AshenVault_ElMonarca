@@ -35,6 +35,13 @@ class Enemy:
         self.is_miniboss = False
         self.weapon_id = getattr(edef, "weapon_id", None)
         self.shield_integrity = float(getattr(edef, "shield_durability", 48.0)) if getattr(edef, "shielded", False) else 0.0
+        self.brain_state = "observe"
+        self.brain_timer = r.uniform(0.45, 1.15)
+        self.dodge_cd = 0.0
+        self.target = None
+        self.shield_active = False
+        self.shield_timer = 0.0
+        self.stomp_timer = r.uniform(2.8, 5.2) if float(getattr(edef, "radius", 0)) >= 22 else 999.0
 
     def reset(self, edef, x, y, rng=None):
         self.d=edef; self.rng=rng; self.x,self.y=x,y
@@ -50,7 +57,7 @@ class Enemy:
         self.shield_integrity=float(getattr(edef, "shield_durability", 48.0)) if getattr(edef, "shielded", False) else 0.0
         self.brain_state="observe"; self.brain_timer=r.uniform(0.45,1.15); self.dodge_cd=0.0
         self.target=None; self.shield_active=False; self.shield_timer=0.0
-; self.stomp_timer=r.uniform(2.8,5.2) if float(getattr(edef,"radius",0))>=22 else 999.0
+        self.stomp_timer=r.uniform(2.8,5.2) if float(getattr(edef,"radius",0))>=22 else 999.0
         return self
 
     @property
