@@ -261,9 +261,11 @@ class Sim:
         return abs(x-float(chest.x)) < half+radius and abs(y-float(chest.y)) < half+radius
 
     def _world_collision(self, x, y, radius):
+        # El cofre no es un obstáculo físico: la interacción se controla por distancia.
+        # Así, si el jugador queda encima del cofre justo cuando muere el último
+        # enemigo, nunca puede quedar atrapado dentro de su hitbox.
         return (self._decoration_collision(x,y,radius) or
-                self._crate_collision(x,y,radius) or
-                self._chest_collision(x,y,radius))
+                self._crate_collision(x,y,radius))
 
     def move_actor(self, x, y, dx, dy, radius):
         """Movimiento contra paredes y objetos físicos de una casilla, permitiendo deslizarse por sus lados."""
