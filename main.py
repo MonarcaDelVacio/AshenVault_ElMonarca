@@ -1059,6 +1059,20 @@ class App:
         self.r.text(scr,"SCORE",(VIEW_W//2,48),(240,195,105),self.r.menu_title,True)
         self.r.text(scr,cname.upper(),(VIEW_W//2,84),(105,230,218),self.r.menu_font,True)
 
+        # El personaje se muestra en todas las fases del Score, usando el mismo
+        # spritesheet de movimiento que se utiliza durante la partida.
+        score_frames = self.r.player_walk_frames.get(self.char_id, [])
+        if score_frames:
+            score_frame = score_frames[int(self.t * 6.0) % len(score_frames)]
+            bbox = score_frame.get_bounding_rect(min_alpha=8)
+            if bbox.width and bbox.height:
+                score_frame = score_frame.subsurface(bbox).copy()
+            max_size = 86
+            scale = min(max_size / max(1, score_frame.get_width()), max_size / max(1, score_frame.get_height()))
+            score_size = (max(1, int(score_frame.get_width() * scale)), max(1, int(score_frame.get_height() * scale)))
+            score_frame = pygame.transform.scale(score_frame, score_size)
+            scr.blit(score_frame, score_frame.get_rect(center=(170, 280)))
+
         if self.score_phase in ("stats","fade"):
             st=self.sim.stats if self.sim else {}
             panel=pygame.Surface((720,330),pygame.SRCALPHA)
@@ -1068,20 +1082,6 @@ class App:
             scr.blit(panel,panel.get_rect(center=(VIEW_W//2,280)))
 
             self.r.text(scr,"ESTADÍSTICAS DE LA PARTIDA",(VIEW_W//2,145),(240,195,105),self.r.menu_font,True)
-            # El Score reutiliza el mismo spritesheet de 8 frames del personaje jugable.
-            # Se muestra solo en estadísticas; la pantalla de EXP permanece limpia.
-            score_frames = self.r.player_walk_frames.get(self.char_id, [])
-            if score_frames:
-                score_frame = score_frames[int(self.t * 6.0) % len(score_frames)]
-                bbox = score_frame.get_bounding_rect(min_alpha=8)
-                if bbox.width and bbox.height:
-                    score_frame = score_frame.subsurface(bbox).copy()
-                max_size = 76
-                scale = min(max_size / max(1, score_frame.get_width()), max_size / max(1, score_frame.get_height()))
-                score_size = (max(1, int(score_frame.get_width() * scale)), max(1, int(score_frame.get_height() * scale)))
-                score_frame = pygame.transform.scale(score_frame, score_size)
-                scr.blit(score_frame, score_frame.get_rect(center=(170, 280)))
-
             rows=[
                 ("Salas", st.get("rooms",0)),
                 ("Oleadas", st.get("waves",0)),
