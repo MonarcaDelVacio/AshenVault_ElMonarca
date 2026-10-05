@@ -87,6 +87,9 @@ def _fire_projectiles(sim, p, w, charge_ratio=0.0):
             d.pierce + getattr(p, "bonus_pierce", 0), d.bounces, crit, sprite,
             explosive, TILE * (getattr(d, "explosion_tiles", 3) / 2) if explosive else 0,
             bool(getattr(d, "stick_on_hit", False)),
+            0.0,
+            1.0,
+            float(getattr(d, "status_chance", 0.24 if getattr(d, "damage_type", "") in ("ice", "fire", "poison", "electric") else 0.0)),
         )
     p.rvx -= math.cos(p.aim) * d.recoil
     p.rvy -= math.sin(p.aim) * d.recoil
@@ -130,6 +133,8 @@ def try_fire(sim, p, inp, dt):
     if not want or w.cooldown > 0 or w.reloading:
         return False
     if getattr(d, "class", "") == "melee":
+        if w.ammo <= 0:
+            return False
         p.fire_buffer = 0.0
         w.cooldown = d.fire_interval / max(0.1, getattr(p, "attack_speed_mult", 1.0))
         if d.energy_cost > 0:
@@ -140,6 +145,7 @@ def try_fire(sim, p, inp, dt):
                 return False
             p.energy -= d.energy_cost
         p.since_shot = 0.0
+        w.ammo -= 1
         sim.stats["shots"] += 1
         sim.perform_melee_attack(p, d)
         # La defensa contra proyectiles existe únicamente durante el golpe real.
