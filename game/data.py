@@ -43,7 +43,7 @@ class GameData:
         self.enemies={k:Defn(k,v,ENEMY_DEFAULTS) for k,v in _load("enemies").items()}
         self.characters={k:Defn(k,v,CHARACTER_DEFAULTS) for k,v in _load("characters").items()}
         self.arenas=_load("arenas")
-        self.biomes=_load("biomes"); self.synergies=_load("synergies"); self.biome_bosses={"ruins":"warden","forest":"thorn_matron","dungeon":"iron_judge","laboratory":"null_archon","volcanic":"pyre_colossus","final":"ashen_regent"}; self.rooms=_load("rooms"); self.chests=_load("chests"); self.modifiers=_load("modifiers"); self.items=_load("items"); self.shops=_load("shops"); self.bosses={k:Defn(k,v,BOSS_DEFAULTS) for k,v in _load("bosses").items()}
+        self.biomes=_load("biomes"); self.enemy_variants=_load("enemy_variants"); self.synergies=_load("synergies"); self.biome_bosses={"ruins":"warden","forest":"thorn_matron","dungeon":"iron_judge","laboratory":"null_archon","volcanic":"pyre_colossus","final":"ashen_regent"}; self.rooms=_load("rooms"); self.chests=_load("chests"); self.modifiers=_load("modifiers"); self.items=_load("items"); self.shops=_load("shops"); self.bosses={k:Defn(k,v,BOSS_DEFAULTS) for k,v in _load("bosses").items()}
         self.validate()
     def validate(self):
         for c in self.characters.values():
