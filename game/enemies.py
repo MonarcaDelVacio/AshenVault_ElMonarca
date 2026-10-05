@@ -224,8 +224,7 @@ class Enemy:
         lethal=float(pr.damage)>=max(1.0,self.hp+self.shield_integrity)
         weapon_def=sim.data.weapons.get(getattr(self.d,"weapon_id",None))
         magic_capable=(getattr(self.d,"magic_user",False)
-                        or getattr(weapon_def,"class","")=="magic"
-                        or getattr(self.d,"damage_type","") in ("arcane","magic","void","ice","fire"))
+                        or getattr(weapon_def,"class","")=="magic")
         shield_chance=float(getattr(self.d,"shield_chance",0.015 if getattr(self.d,"min_wave",99)<=2 else 0.16))
         if magic_capable and getattr(self.d,"shielded",False) and self.shield_timer <= 0 and self.rng.random() < shield_chance:
             self.shield_active=True
