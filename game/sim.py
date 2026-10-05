@@ -52,19 +52,10 @@ class Sim:
         return True
 
     def _wave_clear_to(self, x0, y0, x1, y1):
-        """LOS para ondas: paredes del mapa y props sólidos bloquean la propagación."""
-        if not self._obstacle_clear_to(x0,y0,x1,y1):
-            return False
-        steps=max(1,int(math.hypot(x1-x0,y1-y0)//8))
-        for i in range(1,steps+1):
-            t=i/steps
-            x=x0+(x1-x0)*t; y=y0+(y1-y0)*t
-            for prop in self.props:
-                if prop.get("broken"): continue
-                r=float(prop.get("radius",0))
-                if r>0 and math.hypot(x-prop["x"],y-prop["y"])<=r:
-                    return False
-        return True
+        """LOS para ondas: paredes, props y decoraciones bloquean la propagación."""
+        # _obstacle_clear_to ya comprueba paredes, decoraciones y props a lo largo
+        # del segmento; no repetir esa misma pasada aquí.
+        return self._obstacle_clear_to(x0,y0,x1,y1)
 
     def emit(self,kind,*args):
         if len(self.events)<250:self.events.append((kind,)+args)
