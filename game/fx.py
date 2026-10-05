@@ -81,7 +81,9 @@ class Fx:
             self.add_shake(3.0)
         elif k == "boss_shockwave":
             _, x, y, radius, color = ev
-            self.burst(x, y, color, 26, 150, 0.35, 2.5)
+            if not isinstance(color, (tuple, list)):
+                color = (220, 105, 95)
+            self.burst(x, y, tuple(color), 26, 150, 0.35, 2.5)
             self.add_shake(2.0)
         elif k == "melee_swing":
             _, x, y, angle, color, weapon_range, *extra = ev
