@@ -1321,11 +1321,19 @@ class Sim:
             if wave.get("team",1)==0:
                 for e in self.enemies:
                     if not e.alive or e.id in wave.setdefault("hit_ids",set()): continue
-                    if abs(math.hypot(e.x-wave["x"],e.y-wave["y"])-wave["radius"])<max(12.0,e.radius+5):
-                        e.hurt(wave["damage"],math.atan2(e.y-wave["y"],e.x-wave["x"]))
-                        if wave.get("stun",0)>0: e.frozen=max(getattr(e,"frozen",0),wave["stun"])
+                    dist=math.hypot(e.x-wave["x"],e.y-wave["y"])
+                    if abs(dist-wave["radius"])<max(12.0,e.radius+5):
+                        # La onda solo puede afectar lo que sea visible desde su
+                        # origen. Un muro/obstáculo corta ese sector de la onda.
+                        if not self.arena.line_of_sight(wave["x"],wave["y"],e.x,e.y):
+                            continue
+                        if wave.get("effect")=="freeze":
+                            self._apply_freeze(e,wave.get("freeze_duration",2.5))
+                        else:
+                            e.hurt(wave["damage"],math.atan2(e.y-wave["y"],e.x-wave["x"]))
+                            if wave.get("stun",0)>0: e.frozen=max(getattr(e,"frozen",0),wave["stun"])
                         wave["hit_ids"].add(e.id)
-                        self.emit("enemy_hit",e.x,e.y,wave.get("color",(220,150,80)),wave["damage"],False)
+                        self.emit("enemy_hit",e.x,e.y,wave.get("color",(220,150,80)),wave.get("damage",0),False)
             else:
                 if not wave.get("hit") and abs(math.hypot(self.player.x-wave["x"],self.player.y-wave["y"])-wave["radius"])<16:
                     wave["hit"]=True
