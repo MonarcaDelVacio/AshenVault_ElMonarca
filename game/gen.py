@@ -268,8 +268,14 @@ def generate_room(seed=None, room_type="combat", biome="ruins", door_sides=None)
                 g[by][bx]=1
 
     cx,cy=ROOM_W//2,ROOM_H//2
+    door_tiles=set(doors)
+    for x,y in doors:
+        if x in (0,ROOM_W-1):
+            door_tiles.add((x,y-1))
+        else:
+            door_tiles.add((x-1,y))
     reserved={(x,y) for y in range(cy-2,cy+3) for x in range(cx-2,cx+3)}
-    reserved.update(doors)
+    reserved.update(door_tiles)
     # Zona de seguridad de puertas: ningún obstáculo indestructible puede aparecer a menos de 2 bloques de una entrada.
     door_safe = set()
     for dx, dy in doors:
@@ -334,7 +340,7 @@ def generate_room(seed=None, room_type="combat", biome="ruins", door_sides=None)
     rng.shuffle(spawns)
     items=[p for p in floor if abs(p[0]-cx)+abs(p[1]-cy)>3]
     rng.shuffle(items)
-    decoration_reserved=set(reserved) | set(doors) | {(cx,cy)} | set(spawns[:10]) | set(items[:8])
+    decoration_reserved=set(reserved) | set(door_tiles) | {(cx,cy)} | set(spawns[:10]) | set(items[:8])
     floor_surface=_choose_floor_surface(seed, room_type, biome)
     decorations=_generate_decorations(rng, room_type, biome, floor, decoration_reserved, seed)
     # Los puntos de interés centrales son físicos; nunca hacemos aparecer al
