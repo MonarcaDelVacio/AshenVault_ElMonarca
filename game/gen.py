@@ -101,7 +101,16 @@ def _generate_decorations(rng, room_type, biome, floor, reserved, seed_value=0):
     piezas especiales y, cuando aparecen, ocupan siempre el centro de la sala.
     """
     floor_set = set(floor)
-    candidates = [p for p in floor_set if p not in reserved and 2 <= p[0] < ROOM_W-2 and 2 <= p[1] < ROOM_H-2]
+    # El centro del sprite necesita suelo alrededor, no solo su casilla lógica.
+    # Esto evita que rocas/bushes altos atraviesen paredes o esquinas de salas.
+    candidates = []
+    for p in floor_set:
+        if p in reserved or not (3 <= p[0] < ROOM_W-3 and 3 <= p[1] < ROOM_H-3):
+            continue
+        px, py = p
+        footprint = {(x, y) for y in range(py-2, py+3) for x in range(px-2, px+3)}
+        if footprint <= floor_set:
+            candidates.append(p)
     rng.shuffle(candidates)
     result = []
 
@@ -152,9 +161,11 @@ def _generate_decorations(rng, room_type, biome, floor, reserved, seed_value=0):
             take("rock", rng.randint(1,2), 6)
             if rng.random()<0.20: take("signpost", 1, 8)
         elif biome == "volcanic":
-            take("rock", rng.randint(3,5), 6)
-            take("biome_lava_rock", rng.randint(1,2), 7)
-            if rng.random() < 0.55: take("biome_lava_rock_purple", 1, 8)
+            # El bioma volcánico usa exclusivamente sus formaciones de roca
+            # específicas; nunca mezcla las rocas genéricas del escenario.
+            take("biome_lava_rock", rng.randint(3,5), 6)
+            if rng.random() < 0.55:
+                take("biome_lava_rock_purple", 1, 8)
         elif biome == "desert":
             take("biome_shared_rock", rng.randint(2,4), 6)
         elif biome == "swamp":
