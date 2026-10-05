@@ -35,6 +35,21 @@ class Sim:
         self.statue_buffs=[]
         self.statue_used=set()
         self._enter_room(self.room,initial=True)
+    def _wave_clear_to(self, x0, y0, x1, y1):
+        """LOS para ondas: paredes del mapa y props sólidos bloquean la propagación."""
+        if not self.arena.line_of_sight(x0,y0,x1,y1):
+            return False
+        steps=max(1,int(math.hypot(x1-x0,y1-y0)//8))
+        for i in range(1,steps+1):
+            t=i/steps
+            x=x0+(x1-x0)*t; y=y0+(y1-y0)*t
+            for prop in self.props:
+                if prop.get("broken"): continue
+                r=float(prop.get("radius",0))
+                if r>0 and math.hypot(x-prop["x"],y-prop["y"])<=r:
+                    return False
+        return True
+
     def emit(self,kind,*args):
         if len(self.events)<250:self.events.append((kind,)+args)
     def enemy_target(self, enemy):
@@ -1325,7 +1340,7 @@ class Sim:
                     if abs(dist-wave["radius"])<max(12.0,e.radius+5):
                         # La onda solo puede afectar lo que sea visible desde su
                         # origen. Un muro/obstáculo corta ese sector de la onda.
-                        if not self.arena.line_of_sight(wave["x"],wave["y"],e.x,e.y):
+                        if not self._wave_clear_to(wave["x"],wave["y"],e.x,e.y):
                             continue
                         if wave.get("effect")=="freeze":
                             self._apply_freeze(e,wave.get("freeze_duration",2.5))
@@ -1336,8 +1351,9 @@ class Sim:
                         self.emit("enemy_hit",e.x,e.y,wave.get("color",(220,150,80)),wave.get("damage",0),False)
             else:
                 if not wave.get("hit") and abs(math.hypot(self.player.x-wave["x"],self.player.y-wave["y"])-wave["radius"])<16:
-                    wave["hit"]=True
-                    if self.player.take_damage(wave["damage"]): self.on_player_hit(wave["x"],wave["y"],wave["damage"])
+                    if self._wave_clear_to(wave["x"],wave["y"],self.player.x,self.player.y):
+                        wave["hit"]=True
+                        if self.player.take_damage(wave["damage"]): self.on_player_hit(wave["x"],wave["y"],wave["damage"])
         self.wave_attacks=[w for w in self.wave_attacks if w["life"]>0]
 
     def _update_pickups(self,dt):
