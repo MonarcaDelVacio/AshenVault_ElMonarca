@@ -617,7 +617,7 @@
     "weight": 2,
     "projectile_pattern": "single",
     "damage_type": "fire",
-    "sprite_set": "mage2",
+    "sprite_set": "esbirromago",
     "sprite_scale": 3.7,
     "visual_has_weapon": true,
     "boss_uses_supplied_model": true
@@ -649,7 +649,7 @@
     "weight": 3,
     "projectile_pattern": "single",
     "damage_type": "physical",
-    "sprite_set": "demon",
+    "sprite_set": "gargola",
     "sprite_scale": 3.9,
     "visual_has_weapon": true,
     "boss_uses_supplied_model": true,
