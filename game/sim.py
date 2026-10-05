@@ -801,7 +801,8 @@ class Sim:
             roll=self.rng.random()
             if roll<0.12: self.items.append(type("Loot",(),{"kind":"heal","x":x,"y":y})())
             elif roll<0.20: self.items.append(type("Loot",(),{"kind":"energy","x":x,"y":y})())
-            elif roll<0.42:
+            elif roll<0.55:
+                # 35% de probabilidad de que una caja entregue cargadores.
                 self.items.append(type("AmmoLoot",(),{"kind":"ammo","x":x,"y":y,"magazines":self.rng.choice((1,1,2))})())
             # Las esferas amarillas fueron retiradas.
         else:
@@ -1411,7 +1412,7 @@ class Sim:
                 da=math.atan2(dy,dx)-p.aim
                 da=(da+math.pi)%(2*math.pi)-math.pi
                 if abs(da) <= arc*0.5:
-                    raw_damage = d.damage * p.damage_mult * getattr(p, "statue_melee_mult", 1.0)
+                    raw_damage = d.damage * getattr(getattr(p, "weapon", None), "damage_mult", 1.0) * p.damage_mult * getattr(p, "statue_melee_mult", 1.0)
                     is_boss = getattr(e, "is_boss", False) or getattr(e, "is_miniboss", False)
                     damage_cap = e.max_hp * (0.55 if not is_boss else 0.18)
                     damage = min(raw_damage, max(1.0, damage_cap))
