@@ -65,41 +65,77 @@ class Boss(Enemy):
         # Custodio: cazador. Tres proyectiles teledirigidos que corrigen su rumbo.
         if style == "commander":
             base=math.atan2(p.y-self.y,p.x-self.x)
-            count=1 if self.phase==1 else 2 if self.phase==2 else 3
-            for i in range(count):
-                off=(i-(count-1)/2)*0.20
-                sim.spawn_projectile(1,self.x,self.y,base+off,225+28*self.phase,
-                    5+self.phase,7.0+0.8*self.phase,7.0,tuple(self.d.color),"fire",0,0,
-                    False,None,self.phase>=3,88+16*self.phase,False,4.0,1.75+0.18*self.phase)
-            sim.emit("boss_homing",self.x,self.y,self.phase,base)
-            sim.emit("enemy_shoot", self.x, self.y, f"homing_fire_phase{self.phase}")
+            variant=self.rng.randrange(2)
+            if variant == 0:
+                count=1 if self.phase==1 else 2 if self.phase==2 else 3
+                homing_count=0
+                for i in range(count):
+                    off=(i-(count-1)/2)*0.20 + self.rng.uniform(-0.08,0.08)
+                    homing=4.0+0.7*self.phase if self.rng.random()<0.22 else 0.0
+                    if homing>0: homing_count+=1
+                    sim.spawn_projectile(1,self.x,self.y,base+off,225+28*self.phase,
+                        5+self.phase,7.0+0.8*self.phase,7.0,tuple(self.d.color),"fire",0,0,
+                        False,None,self.phase>=3,88+16*self.phase,False,homing,1.75+0.18*self.phase)
+                if homing_count:
+                    sim.emit("boss_homing",self.x,self.y,self.phase,base)
+                sim.emit("enemy_shoot", self.x, self.y, f"commander_guided_phase{self.phase}")
+            else:
+                count=4+self.phase
+                spread=0.34+0.05*self.phase
+                for i in range(count):
+                    off=(i-(count-1)/2)*spread + self.rng.uniform(-0.05,0.05)
+                    sim.spawn_projectile(1,self.x,self.y,base+off,260+20*self.phase,
+                        4+self.phase*0.7,5.5,6.0,tuple(self.d.color),"fire",0,0,
+                        False,None,False,0.0,1.5)
+                sim.emit("enemy_shoot", self.x, self.y, f"commander_fan_phase{self.phase}")
             return
 
         # Matrona: invocación + anillo giratorio. No dispara la misma ráfaga que el Custodio.
         if style == "summoner":
-            base=sim.time*1.4
-            count=6+self.phase*2
-            for i in range(count):
-                a=base+2*math.pi*i/count
-                sim.spawn_projectile(1,self.x,self.y,a,150+18*self.phase,3.0+self.phase*0.6,
-                    6.0,5.0,tuple(self.d.color),"ice",0,0,False,None,False,0,False,0,1.25+0.1*self.phase)
-            sim.emit("boss_summon_ring",self.x,self.y,self.phase)
-            sim.emit("enemy_shoot", self.x, self.y, f"summon_ring_phase{self.phase}")
+            variant=self.rng.randrange(2)
+            if variant == 0:
+                base=sim.time*1.4
+                count=6+self.phase*2
+                for i in range(count):
+                    a=base+2*math.pi*i/count+self.rng.uniform(-0.035,0.035)
+                    sim.spawn_projectile(1,self.x,self.y,a,150+18*self.phase,3.0+self.phase*0.6,
+                        6.0,5.0,tuple(self.d.color),"ice",0,0,False,None,False,0,False,0,1.25+0.1*self.phase)
+                sim.emit("boss_summon_ring",self.x,self.y,self.phase)
+            else:
+                base=math.atan2(p.y-self.y,p.x-self.x)
+                count=3+self.phase
+                for i in range(count):
+                    off=(i-(count-1)/2)*0.28+self.rng.uniform(-0.08,0.08)
+                    sim.spawn_projectile(1,self.x,self.y,base+off,225+20*self.phase,4+self.phase*0.5,
+                        5.5,5.0,tuple(self.d.color),"ice",0,0,False,None,False,0,False,0,1.1)
+                sim.emit("boss_summon_fan",self.x,self.y,self.phase)
+            sim.emit("enemy_shoot", self.x, self.y, f"summoner_pattern_{variant}_phase{self.phase}")
             if self.phase>=2 and self.summon_timer<=0:
                 self.summon_timer=2.0
             return
 
         # Juez: pesado. Una descarga explosiva lenta y una onda frontal en fases altas.
         if style == "tank":
-            base=math.atan2(p.y-self.y,p.x-self.x)
-            count=2 if self.phase<3 else 3
-            for i in range(count):
-                off=(i-(count-1)/2)*0.24
-                sim.spawn_projectile(1,self.x,self.y,base+off,165+18*self.phase,7+self.phase,
-                    10.0,7.0,tuple(self.d.color),"explosive",0,0,False,None,True,
-                    95+18*self.phase,False,0,1.9+0.15*self.phase)
-            sim.emit("boss_heavy_burst",self.x,self.y,self.phase)
-            sim.emit("enemy_shoot", self.x, self.y, f"heavy_burst_phase{self.phase}")
+            variant=self.rng.randrange(2)
+            if variant == 0:
+                base=math.atan2(p.y-self.y,p.x-self.x)
+                count=2 if self.phase<3 else 3
+                for i in range(count):
+                    off=(i-(count-1)/2)*0.24+self.rng.uniform(-0.06,0.06)
+                    sim.spawn_projectile(1,self.x,self.y,base+off,165+18*self.phase,7+self.phase,
+                        10.0,7.0,tuple(self.d.color),"explosive",0,0,False,None,True,
+                        95+18*self.phase,False,0,1.9+0.15*self.phase)
+                sim.emit("boss_heavy_burst",self.x,self.y,self.phase)
+            else:
+                count=5+self.phase
+                base=self.rng.random()*math.tau
+                for i in range(count):
+                    a=base+math.tau*i/count+self.rng.uniform(-0.06,0.06)
+                    sim.spawn_projectile(1,self.x,self.y,a,125+15*self.phase,5+self.phase,
+                        8.0,7.0,tuple(self.d.color),"explosive",0,0,False,None,True,
+                        70+12*self.phase,False,0,1.7)
+                sim.emit("boss_explosive_ring",self.x,self.y,self.phase)
+            sim.emit("enemy_shoot", self.x, self.y, f"tank_pattern_{variant}_phase{self.phase}")
             return
 
         # Arconte: barrera + lanzas rápidas en cruz. Es un patrón de precisión, no de abanico.
