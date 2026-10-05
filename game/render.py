@@ -1955,7 +1955,15 @@ class Renderer:
             if getattr(it, "kind", "item") == "weapon":
                 pygame.draw.circle(screen, (18, 24, 35), (px, py), 18)
                 pygame.draw.circle(screen, (100, 220, 255), (px, py), 18, 1)
-                icon = self.weapon_scaled_images.get(getattr(it, "weapon_id", ""))
+                weapon_id = getattr(it, "weapon_id", "")
+                icon = self.weapon_scaled_images.get(weapon_id)
+                if icon is None:
+                    weapon_def = self.data.weapons.get(weapon_id)
+                    sheet_key = getattr(weapon_def, "weapon_sprite_sheet", None) if weapon_def is not None else None
+                    frames = self.weapon_variant_frames.get(sheet_key, [])
+                    if frames:
+                        index = int(getattr(weapon_def, "weapon_sprite_index", 0)) % len(frames)
+                        icon = self._fit_image(frames[index], 30)
                 if icon is not None:
                     icon = self._fit_image(icon, 30)
                     screen.blit(icon, icon.get_rect(center=(px, py)))
