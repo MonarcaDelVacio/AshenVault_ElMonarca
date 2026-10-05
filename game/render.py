@@ -40,6 +40,14 @@ class Renderer:
         self._circle_mask_cache = {}
         self._merchant_room_seen = set()
         self._confusion_star_cache = {}
+        self._fit_cache = {}
+        self._player_flip_cache = {}
+        self._weapon_rotation_cache = {}
+        self._rotation_cache = {}
+        self._light_surface_cache = {}
+        self._hazard_surface_cache = {}
+        self._ambient_surface = pygame.Surface((VIEW_W, VIEW_H), pygame.SRCALPHA)
+        self._ambient_surface.fill((6, 9, 20, 66))
         self.chest_images = {}
         self.chest_type_images = {}
         self.decoration_images = {}
@@ -729,17 +737,22 @@ class Renderer:
         except (pygame.error, OSError):
             return None
 
-    @staticmethod
-    def _fit_image(image, max_dimension):
+    def _fit_image(self, image, max_dimension, cache_key=None):
         if image is None:
             return None
+        key=(id(image), int(round(float(max_dimension)*2.0)), cache_key)
+        cached=self._fit_cache.get(key)
+        if cached is not None:
+            return cached
         bbox=image.get_bounding_rect(min_alpha=8)
         if bbox.width and bbox.height:
             image=image.subsurface(bbox).copy()
         w,h=image.get_size()
-        scale=min(max_dimension/max(w,h),1.0)
+        scale=min(float(max_dimension)/max(w,h),1.0)
         size=(max(1,int(w*scale)),max(1,int(h*scale)))
-        return pygame.transform.smoothscale(image,size)
+        out=image if size==(w,h) else pygame.transform.smoothscale(image,size)
+        self._fit_cache[key]=out
+        return out
 
     @staticmethod
     def _melee_grip_anchor(weapon_def):
@@ -1235,7 +1248,7 @@ class Renderer:
         if shield_ability_active and self.ability_shield_image is not None:
             # El WEBP puede tener dimensiones enormes: ajustarlo al cuerpo del
             # personaje (mismo orden de tamaño que el sprite de 48x52).
-            shield_overlay = pygame.transform.smoothscale(self.ability_shield_image, (52, 52))
+            shield_overlay = self._fit_image(self.ability_shield_image, 52, "ability_shield")
             pulse = 0.5 + 0.5 * math.sin(t * 18.0)
             shield_overlay.set_alpha(int(95 + 85 * pulse))
             screen.blit(shield_overlay, shield_overlay.get_rect(center=(x, y)))
@@ -1582,9 +1595,7 @@ class Renderer:
         screen.blit(self._background(arena), (ox, oy))
         # Corrección de color ambiental: baja ligeramente el brillo del escenario y
         # deja que las fuentes de luz cálidas/frías resalten sin saturar toda la sala.
-        ambient = pygame.Surface((VIEW_W, VIEW_H), pygame.SRCALPHA)
-        ambient.fill((6, 9, 20, 66))
-        screen.blit(ambient, (0, 0))
+        screen.blit(self._ambient_surface, (0, 0))
 
         # Iluminación dinámica 2D económica: luces radiales aditivas se calculan en
         # coordenadas de pantalla y se dibujan detrás de los actores y objetos.
@@ -1726,14 +1737,20 @@ class Renderer:
             if frame is not None and horizontal:
                 # En accesos norte/sur, los postes se apoyan en el suelo interior:
                 # no flotan en el centro del tile de puerta.
-                narrow=pygame.transform.smoothscale(frame,(8,44))
+                narrow=self._fit_cache.get(("door_narrow",id(frame)))
+                if narrow is None:
+                    narrow=pygame.transform.smoothscale(frame,(8,44))
+                    self._fit_cache[("door_narrow",id(frame))]=narrow
                 base_y = y + TILE * 2 if d.side == "N" else y
                 for frame_x in (x,x+TILE-8):
                     screen.blit(narrow,narrow.get_rect(midbottom=(frame_x+4,base_y)))
             elif frame is not None:
                 # Para los accesos laterales se reutiliza la piedra como dintel,
                 # con la pieza girada y anclada al lado interior del umbral.
-                lintel=pygame.transform.smoothscale(pygame.transform.rotate(frame,90),(32,8))
+                lintel=self._fit_cache.get(("door_lintel",id(frame)))
+                if lintel is None:
+                    lintel=pygame.transform.smoothscale(pygame.transform.rotate(frame,90),(32,8))
+                    self._fit_cache[("door_lintel",id(frame))]=lintel
                 left = x if d.side == "W" else x
                 for fy in (y,y+TILE-8):
                     screen.blit(lintel,(left,fy))
