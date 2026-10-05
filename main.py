@@ -774,9 +774,6 @@ class App:
             self.hub_dropdown_open=True; self.hub_dropdown_sel=self.char_ids.index(self.char_id)
         elif item == "Mejoras":
             self.hub_sel=2
-        elif item == "Arsenal":
-            self.weapon_info_id=None
-            self.info="Arsenal"
         elif item.startswith("UPGRADE:"):
             kind=item.split(":",1)[1]
             if self.save.buy_character_upgrade(self.char_id,kind): self.audio.play("ui",self.t)
@@ -1167,8 +1164,8 @@ class App:
                 else:
                     price="MEJORAR · %d FRAGMENTOS"%cost; color=(255,219,133) if s["meta_currency"]>=cost else (161,167,181)
             self.r.text(self.screen,price,(x+w//2,y+h-15),color,self.r.menu_small,True)
-        for n,item in enumerate(("Personajes","Arsenal","Volver al menu")):
-            self.draw_option_card((145+n*235,438,210,44),item,self.hub_sel==HUB_ITEMS.index(item))
+        for n,item in enumerate(("Personajes","Volver al menu")):
+            self.draw_option_card((250+n*240,438,220,44),item,self.hub_sel==HUB_ITEMS.index(item))
         self.r.text(self.screen,"Las mejoras son exclusivas de %s y afectan sus partidas."%c.name.split(",")[0],(VIEW_W//2,518),(150,165,180),self.r.menu_small,True)
         if self.hub_dropdown_open:
             panel=pygame.Rect(120,250,720,176)
