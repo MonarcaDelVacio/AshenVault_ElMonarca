@@ -7,9 +7,9 @@
     "max_energy": 100,
     "speed": 170,
     "energy_regen": 10,
-    "shield_regen_delay": 3.0,
+    "shield_regen_delay": 3,
     "shield_regen_rate": 0.8,
-    "damage_mult": 1.0,
+    "damage_mult": 1,
     "crit_chance": 0.05,
     "radius": 10,
     "start_weapon": "plasma_pistol",
@@ -21,12 +21,12 @@
     "dash": {
       "speed": 480,
       "duration": 0.16,
-      "cooldown": 1.0
+      "cooldown": 1
     },
     "ability": {
       "name": "Bastion",
       "kind": "shield",
-      "cooldown": 9.0,
+      "cooldown": 9,
       "amount": 4,
       "invuln": 0.8
     }
@@ -58,7 +58,7 @@
     "ability": {
       "name": "Reanimar",
       "kind": "heal",
-      "cooldown": 10.0,
+      "cooldown": 10,
       "amount": 3
     }
   },
@@ -71,7 +71,7 @@
     "speed": 145,
     "energy_regen": 8,
     "shield_regen_delay": 2.5,
-    "shield_regen_rate": 1.0,
+    "shield_regen_rate": 1,
     "damage_mult": 1.1,
     "crit_chance": 0.04,
     "radius": 11,
@@ -89,7 +89,7 @@
     "ability": {
       "name": "Impacto",
       "kind": "burst",
-      "cooldown": 8.0,
+      "cooldown": 8,
       "radius": 125,
       "damage": 24
     }
@@ -102,7 +102,7 @@
     "max_energy": 130,
     "speed": 180,
     "energy_regen": 15,
-    "shield_regen_delay": 3.0,
+    "shield_regen_delay": 3,
     "shield_regen_rate": 0.7,
     "damage_mult": 1.15,
     "crit_chance": 0.08,
@@ -121,9 +121,9 @@
     "ability": {
       "name": "Estasis",
       "kind": "freeze",
-      "cooldown": 9.0,
+      "cooldown": 9,
       "radius": 190,
-      "duration": 3.0
+      "duration": 3
     }
   },
   "striker": {
@@ -136,7 +136,7 @@
     "energy_regen": 11,
     "shield_regen_delay": 3.2,
     "shield_regen_rate": 0.8,
-    "damage_mult": 1.0,
+    "damage_mult": 1,
     "crit_chance": 0.12,
     "radius": 9,
     "start_weapon": "arc_blade",
@@ -153,8 +153,8 @@
     "ability": {
       "name": "Sobremarcha",
       "kind": "haste",
-      "cooldown": 7.0,
-      "duration": 5.0
+      "cooldown": 7,
+      "duration": 5
     }
   },
   "engineer": {
@@ -165,7 +165,7 @@
     "max_energy": 120,
     "speed": 155,
     "energy_regen": 13,
-    "shield_regen_delay": 3.0,
+    "shield_regen_delay": 3,
     "shield_regen_rate": 0.9,
     "damage_mult": 0.95,
     "crit_chance": 0.06,
@@ -179,13 +179,14 @@
     "dash": {
       "speed": 450,
       "duration": 0.16,
-      "cooldown": 1.0
+      "cooldown": 1
     },
     "ability": {
-      "name": "Dron",
       "kind": "drone",
-      "cooldown": 8.0,
-      "max_drones": 2
+      "cooldown": 20,
+      "max_drones": 2,
+      "base_drones": 2,
+      "name": "Drones de apoyo"
     }
   }
 }
