@@ -66,6 +66,8 @@ class App:
         self.sim = None
         self.char_id = "soldier"
         self.hub_sel = 0
+        self.hub_dropdown_open = False
+        self.hub_dropdown_sel = 0
         self.char_sel = 0
         self.char_ids = list(self.data.characters)
         self.character_portraits = {}
@@ -337,6 +339,20 @@ class App:
             return
         if self.state == HUB and not self.info:
             from game.save import CHARACTER_UPGRADES
+            if self.hub_dropdown_open:
+                dropdown=pygame.Rect(120,250,720,176)
+                if dropdown.collidepoint(pos):
+                    for n,cid_option in enumerate(self.char_ids):
+                        col,row=n%3,n//3
+                        rect=pygame.Rect(135+col*230,265+row*72,215,60)
+                        if rect.collidepoint(pos):
+                            self.hub_dropdown_sel=n
+                            if click:
+                                self.char_id=cid_option; self.hub_dropdown_open=False; self.hub_sel=0; self.audio.play("ui",self.t)
+                            return
+                if click:
+                    self.hub_dropdown_open=False
+                return
             cid=self.char_id; tree=CHARACTER_UPGRADES.get(cid,{})
             for n,kind in enumerate(tree):
                 col,row=n%2,n//2
@@ -424,6 +440,7 @@ class App:
 
     def new_run(self):
         self.sim = Sim(self.data, self.char_id, meta_upgrades=self.save.data.get("upgrades", {}), character_progress=self.save.data.get("character_progress", {}).get(self.char_id, {}))
+        self.sim.decoration_collider_provider = self.r.decoration_collider
         self.fx = Fx()
         self.inp = Input()
         self.state = PLAY
@@ -554,6 +571,20 @@ class App:
             if self.info:
                 if k == pygame.K_ESCAPE or k in (pygame.K_RETURN, pygame.K_SPACE): self.info=None
                 return
+            if self.hub_dropdown_open:
+                if k == pygame.K_ESCAPE:
+                    self.hub_dropdown_open=False; return
+                if k in (pygame.K_LEFT, pygame.K_a):
+                    self.hub_dropdown_sel=(self.hub_dropdown_sel-1)%len(self.char_ids); return
+                if k in (pygame.K_RIGHT, pygame.K_d):
+                    self.hub_dropdown_sel=(self.hub_dropdown_sel+1)%len(self.char_ids); return
+                if k in (pygame.K_UP, pygame.K_w):
+                    self.hub_dropdown_sel=(self.hub_dropdown_sel-3)%len(self.char_ids); return
+                if k in (pygame.K_DOWN, pygame.K_s):
+                    self.hub_dropdown_sel=(self.hub_dropdown_sel+3)%len(self.char_ids); return
+                if k in (pygame.K_RETURN, pygame.K_SPACE):
+                    self.char_id=self.char_ids[self.hub_dropdown_sel]; self.hub_dropdown_open=False; self.hub_sel=0; self.audio.play("ui",self.t); return
+                return
             if k == pygame.K_ESCAPE:
                 self.go(MENU); return
             from game.save import CHARACTER_UPGRADES
@@ -563,7 +594,11 @@ class App:
             if k in (pygame.K_DOWN, pygame.K_s):
                 self.hub_sel=(self.hub_sel+1)%len(dynamic); return
             if k in (pygame.K_RETURN, pygame.K_SPACE):
-                self.activate_hub(dynamic[self.hub_sel]); return
+                if self.hub_sel==0:
+                    self.hub_dropdown_open=True; self.hub_dropdown_sel=self.char_ids.index(self.char_id)
+                else:
+                    self.activate_hub(dynamic[self.hub_sel])
+                return
             return
         if k == pygame.K_ESCAPE:
             if self.state == MAP:
@@ -637,7 +672,7 @@ class App:
     def activate_hub(self, item):
         if item == "Iniciar run": self.new_run()
         elif item == "Personajes":
-            self.back_state=HUB; self.char_sel=self.char_ids.index(self.char_id); self.go(CHAR_SELECT)
+            self.hub_dropdown_open=True; self.hub_dropdown_sel=self.char_ids.index(self.char_id)
         elif item == "Mejoras":
             self.hub_sel=2
         elif item.startswith("UPGRADE:"):
@@ -837,6 +872,20 @@ class App:
         for n,item in enumerate(("Personajes","Volver al menu")):
             self.draw_option_card((250+n*240,438,220,44),item,self.hub_sel==HUB_ITEMS.index(item))
         self.r.text(self.screen,"Las mejoras son exclusivas de %s y afectan sus partidas."%c.name.split(",")[0],(VIEW_W//2,518),(150,165,180),self.r.menu_small,True)
+        if self.hub_dropdown_open:
+            panel=pygame.Rect(120,250,720,176)
+            pygame.draw.rect(self.screen,(7,10,19,248),panel,border_radius=10)
+            pygame.draw.rect(self.screen,(78,220,210,230),panel,2,border_radius=10)
+            self.r.text(self.screen,"SELECCIONAR PERSONAJE PARA MEJORAR",(VIEW_W//2,258),(240,205,120),self.r.menu_small,True)
+            for n,cid_option in enumerate(self.char_ids):
+                col,row=n%3,n//3
+                rect=pygame.Rect(135+col*230,265+row*72,215,60)
+                selected=n==self.hub_dropdown_sel
+                pygame.draw.rect(self.screen,(19,35,43,245) if selected else (12,17,27,230),rect,border_radius=6)
+                pygame.draw.rect(self.screen,(75,226,220) if selected else (72,87,108),rect,2 if selected else 1,border_radius=6)
+                copt=self.data.characters[cid_option]
+                self.r.text(self.screen,copt.name.split(",")[0],(rect.centerx,rect.y+22),(255,225,145) if selected else (205,216,229),self.r.menu_font,True)
+                self.r.text(self.screen,"NIVEL %d"%self.save.data.get("character_progress",{}).get(cid_option,{}).get("level",1),(rect.centerx,rect.y+43),(120,220,205) if selected else (150,165,180),self.r.menu_small,True)
 
     def draw(self):
         scr = self.screen
