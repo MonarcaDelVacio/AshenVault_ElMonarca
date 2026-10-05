@@ -333,6 +333,47 @@ class Dungeon:
             rs["zone_index"]=zone
             self.rooms[tuple(rid)]=Room(rid,rs)
             self.rooms[tuple(rid)].portal_room = (typ == "boss" and zone == 5)
+        # Regla de espaciado: salas especiales sin enemigos no pueden quedar juntas.
+        # Los jefes y minibosses también deben tener al menos una sala intermedia.
+        special_no_enemy={"shop","treasure","event","healing","secret","boss"}
+        def adjacent(rid):
+            x,y=rid
+            return [q for q in ((x+1,y),(x-1,y),(x,y+1),(x,y-1)) if q in self.rooms]
+
+        def rebuild_type(rid,new_type):
+            old=self.rooms[rid]
+            sides=[side for side,nrid in {"N":(rid[0],rid[1]-1),"S":(rid[0],rid[1]+1),"W":(rid[0]-1,rid[1]),"E":(rid[0]+1,rid[1])}.items() if nrid in self.rooms]
+            biome=old.arena.biome
+            rs=generate_room(self.seed*1009+rid[0]*97+rid[1]*193,new_type,biome,sides)
+            rs["zone_index"]=old.data.get("zone_index",0)
+            room=Room(rid,rs)
+            room.portal_room=getattr(old,"portal_room",False) and new_type=="boss"
+            self.rooms[rid]=room
+
+        for _ in range(3):
+            changed=False
+            for rid,room in list(self.rooms.items()):
+                if rid==tuple(self.layout["start"]): continue
+                typ=room.room_type
+                if typ not in special_no_enemy and typ!="miniboss": continue
+                for nrid in adjacent(rid):
+                    other=self.rooms[nrid]
+                    if nrid==tuple(self.layout["start"]): continue
+                    if other.room_type not in special_no_enemy and other.room_type!="miniboss": continue
+                    # Nunca se convierte un boss; se reemplaza la sala especial contigua.
+                    if typ=="boss" and other.room_type!="boss":
+                        rebuild_type(nrid,"combat")
+                    elif other.room_type=="boss" and typ!="boss":
+                        rebuild_type(rid,"combat")
+                    elif typ!="boss":
+                        rebuild_type(rid,"combat")
+                    else:
+                        continue
+                    changed=True
+                    break
+                if changed: break
+            if not changed: break
+
         # Fase 3: cada dungeon ofrece al menos una tienda accesible; se coloca en una rama existente.
         if not any(r.room_type == "shop" for r in self.rooms.values()):
             branch=[rid for rid in self.rooms if rid not in path_set and rid not in (tuple(self.layout["start"]),tuple(self.layout["boss"]))]
