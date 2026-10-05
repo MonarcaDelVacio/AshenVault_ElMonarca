@@ -46,8 +46,11 @@ def bonfire_positions(arena):
 
 
 class Door:
-    __slots__=("side","open","locked","x","y")
-    def __init__(self,side,x,y): self.side=side; self.open=False; self.locked=False; self.x=x; self.y=y
+    __slots__=("side","open","locked","x","y","width")
+    def __init__(self,side,x,y): self.side=side; self.open=False; self.locked=False; self.x=x; self.y=y; self.width=2
+    def tiles(self):
+        if self.side in ("N","S"): return ((self.x,self.y),(self.x-1,self.y))
+        return ((self.x,self.y),(self.x,self.y-1))
 
 class Arena:
     def __init__(self, adata, room_id=(0,0)):
@@ -214,7 +217,7 @@ class Arena:
         v=self.grid[ty][tx]
         if v==SECRET:return True
         for d in self.doors.values():
-            if d.x==tx and d.y==ty:return not d.open
+            if (tx,ty) in d.tiles(): return not d.open
         return v!=FLOOR
     def point_solid(self,x,y): return self.solid_tile(int(math.floor(x/TILE)),int(math.floor(y/TILE)))
     def decoration_hits(self,x,y,radius):
