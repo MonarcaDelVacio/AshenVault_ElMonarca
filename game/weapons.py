@@ -91,7 +91,7 @@ def _fire_projectiles(sim, p, w, charge_ratio=0.0):
             explosive, TILE * (getattr(d, "explosion_tiles", 3) / 2) if explosive else 0,
             bool(getattr(d, "stick_on_hit", False)),
             0.0,
-            1.0,
+            float(getattr(d, "projectile_visual_scale", 1.0)),
             float(getattr(d, "status_chance", 0.24 if getattr(d, "damage_type", "") in ("ice", "fire", "poison", "electric") else 0.0)),
         )
     p.rvx -= math.cos(p.aim) * d.recoil
