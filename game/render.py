@@ -2155,7 +2155,9 @@ class Renderer:
                 self.ui_atlas.draw_icon_cooldown(screen, center, size=icon_size, kind=atlas_kind, ratio=cooldown_ratio)
                 return
             if image is not None:
-                scaled = pygame.transform.smoothscale(image, (icon_size, icon_size))
+                scaled = self._fit_image(image, icon_size)
+                if scaled is None:
+                    return
                 screen.blit(scaled, scaled.get_rect(center=center))
                 if cooldown_ratio > 0:
                     mask = pygame.mask.from_surface(scaled, 8)
