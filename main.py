@@ -1073,7 +1073,7 @@ class App:
 
     def draw_weapon_collection(self):
         self.draw_menu_bg()
-        self.r.text(self.screen,"ARSENAL",(VIEW_W//2,42),(240,195,105),self.r.menu_title,True)
+        self.r.text(self.screen,"ARMAS",(VIEW_W//2,42),(240,195,105),self.r.menu_title,True)
         scores=self.save.data.get("weapon_scores",{})
         used=[wid for wid,count in scores.items() if count>0 and wid in self.data.weapons]
         used.sort(key=lambda wid:(-int(scores.get(wid,0)), self.data.weapons[wid].name))
