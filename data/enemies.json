@@ -204,6 +204,9 @@
     "boss_uses_supplied_model": true
   },
   "wisp": {
+    "magic_user": true,
+    "shielded": true,
+    "shield_chance": 0.12,
     "name": "Espectro",
     "ai": "ranged",
     "hp": 24,
@@ -235,6 +238,9 @@
     "projectile_asset_sheet": "assets/enemies/ghost/projectile.png"
   },
   "summoner": {
+    "magic_user": true,
+    "shielded": true,
+    "shield_chance": 0.18,
     "name": "Tejedor",
     "ai": "ranged",
     "hp": 55,
@@ -582,6 +588,9 @@
     "boss_uses_supplied_model": true
   },
   "arcane_acolyte": {
+    "magic_user": true,
+    "shielded": true,
+    "shield_chance": 0.14,
     "name": "Acólito Arcano",
     "ai": "ranged",
     "hp": 32,
