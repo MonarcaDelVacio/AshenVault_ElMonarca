@@ -124,6 +124,7 @@ def try_fire(sim, p, inp, dt):
             if p.noenergy_cd <= 0:
                 sim.emit("no_energy", p.x, p.y); p.noenergy_cd = 0.4
             return False
+        p.since_shot=0.0
         w.charge_time = min(float(getattr(d, "laser_max_charge", 3.0)), w.charge_time + dt)
         if w.charge_time >= float(getattr(d, "laser_start_charge", 1.0)):
             w.laser_active = True
