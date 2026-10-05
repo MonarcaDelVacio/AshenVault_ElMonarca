@@ -1914,7 +1914,7 @@ class Renderer:
                                       "assets/weapons/snipers/sniper5" in sprite_path)
                 if scaled.get_width() > scaled.get_height() * 1.35 or directional_sprite:
                     angle = math.degrees(math.atan2(pr.vy, pr.vx)) if not pr.stuck else math.degrees(pr.stuck_angle)
-                    correction = 45.0 if "assets/weapons/melee/lanza" in sprite_path else 0.0
+                    correction = 62.0 if "assets/weapons/melee/lanza" in sprite_path else 0.0
                     scaled = pygame.transform.rotate(scaled, correction - angle)
                 if pr.stuck and pr.stuck_timer < 1.0:
                     scaled = scaled.copy()
