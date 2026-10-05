@@ -61,7 +61,10 @@ class Renderer:
         self.decoration_images = {}
         self.decoration_frames = {}
         self.npc_frames = {}
+        self.merchant_variants = []
+        self.drone_frames = []
         self.special_effect_frames = {}
+        self.weapon_variant_frames = {}
         # Animaciones de movimiento de los seis personajes jugables. Cada spritesheet
         # contiene 8 fotogramas en una tira horizontal. Los fotogramas se normalizan
         # al tamaño de render del jugador para conservar la escala del juego y evitar
@@ -268,6 +271,17 @@ class Renderer:
                     self.named_floor_images[name]=pygame.transform.scale(image,(TILE,TILE))
                 except (pygame.error,OSError,ValueError):
                     pass
+        new_floor_dir = floor_dir / "new"
+        if new_floor_dir.is_dir():
+            for path in sorted(new_floor_dir.glob("*.png")):
+                try:
+                    image=pygame.image.load(str(path)).convert_alpha()
+                    bbox=image.get_bounding_rect(min_alpha=8)
+                    if bbox.width and bbox.height:
+                        image=image.subsurface(bbox).copy()
+                    self.named_floor_images[path.stem]=pygame.transform.scale(image,(TILE,TILE))
+                except (pygame.error,OSError,ValueError):
+                    pass
         self.wall_top_images = {}
         self.wall_fill_images = {}
         # Sprites individuales para los ocho segmentos del perímetro de la sala.
@@ -403,13 +417,27 @@ class Renderer:
                 pass
 
         npc_dir = self.asset_root / "npcs"
-        for name, filename in {
-            "merchant_idle":"merchant_idle.png", "merchant_near":"merchant_near.png",
-        }.items():
-            path = npc_dir / filename
+        merchant_dir = npc_dir / "merchants"
+        for index in range(1, 4):
+            path = merchant_dir / f"merchant{index}.png"
             if path.is_file():
                 frames = self._load_sheet_frames(path)
-                if frames: self.npc_frames[name] = frames
+                if frames:
+                    self.merchant_variants.append(frames)
+        if not self.merchant_variants:
+            for name, filename in {
+                "merchant_idle":"merchant_idle.png", "merchant_near":"merchant_near.png",
+            }.items():
+                path = npc_dir / filename
+                if path.is_file():
+                    frames = self._load_sheet_frames(path)
+                    if frames: self.npc_frames[name] = frames
+        drone_path = npc_dir / "mira_drone.png"
+        if drone_path.is_file():
+            self.drone_frames = self._load_sheet_frames(drone_path)
+
+        self.door_front_frames = self._load_sheet_frames(self.asset_root / "doors" / "front_open_closed.png")
+        self.door_side_frames = self._load_sheet_frames(self.asset_root / "doors" / "side_open_closed.png")
 
         # Sprites transparentes de armas, proyectiles y consumibles.
         self.weapon_images = {}
@@ -443,6 +471,12 @@ class Renderer:
             if path.is_file():
                 frames = self._load_sheet_frames(path)
                 if frames: self.special_effect_frames[key] = frames
+        new_effect_dir = self.asset_root / "effects" / "new"
+        for key, filename in (("new_fireball","boladefuego_spritesheet.png"),("new_ability_atlas","spritesheesdeeffectosparahabilidades.png")):
+            path = new_effect_dir / filename
+            if path.is_file():
+                frames = self._load_sheet_frames(path)
+                if frames: self.special_effect_frames[key] = frames
 
         # Enemy sprites supplied as transparent spritesheets. Frames are detected
         # from transparent gaps, so sheets may contain different frame sizes and
@@ -473,6 +507,7 @@ class Renderer:
             "small_demon_melee": {"walk":"small_demon_melee/walk.png","attack":"small_demon_melee/attack.png","death":"small_demon_melee/death.png"},
             "mage2": {"idle":"mage2/idle.png","walk":"mage2/idle.png","attack":"mage2/idle.png"},
             "ogro": {"idle":"Ogro/ogro_ataquedesendente.png","walk":"Ogro/ogro_ataquedesendente.png","attack":"Ogro/ogro_ataquedesendente.png","attack_heavy":"Ogro/ogro_ataquedesendentepesado.png"},
+            "new_flyer": {"walk":"flying/enemigovolador_spritesheet.png","attack":"flying/enemigovolador_spritesheet.png","death":"flying/enemigovolador_spritesheet.png"},
         }
         for key, spec in enemy_specs.items():
             loaded = {}
@@ -498,6 +533,13 @@ class Renderer:
                 image = self._load_trimmed_asset(projectile_path)
                 if image is not None:
                     self.projectile_images[projectile_path] = image
+        new_weapon_dir = self.asset_root / "weapons" / "new"
+        for key, filename in (("ranged","modelosarmas.png"),("melee","modelosarmasmelee.png")):
+            path = new_weapon_dir / filename
+            if path.is_file():
+                frames = self._load_sheet_frames(path)
+                if frames: self.weapon_variant_frames[key] = frames
+
         self.default_projectiles = {
             "physical": "assets/projectiles/projectile_06.png",
             "energy": "assets/projectiles/projectile_02.png",
@@ -1136,8 +1178,7 @@ class Renderer:
         x=int(drone["x"]+ox); y=int(drone["y"]+oy)
         bob=math.sin(float(drone.get("phase",0.0)))*3.0
         pygame.draw.ellipse(screen,(12,14,20,120),(x-13,y+8,x+13-(x-13),9))
-        frames=self.enemy_sprites.get("drone",{})
-        frames=frames.get("idle") or frames.get("run") or frames.get("walk") or next(iter(frames.values()),[])
+        frames=self.drone_frames or self.enemy_sprites.get("drone",{}).get("idle") or self.enemy_sprites.get("drone",{}).get("run") or self.enemy_sprites.get("drone",{}).get("walk") or []
         if frames:
             frame=frames[int(t*8.0)%len(frames)]
             frame=self._fit_image(frame,42)
@@ -1691,8 +1732,13 @@ class Renderer:
             if self._merchant_intro_room != room_key:
                 self._merchant_intro_room = room_key
                 self._merchant_intro_start = t
-            merchant_idle=self.npc_frames.get("merchant_idle", [])
-            merchant_near=self.npc_frames.get("merchant_near", [])
+            if self.merchant_variants:
+                variant_index = abs(hash(room_key)) % len(self.merchant_variants)
+                merchant_idle = self.merchant_variants[variant_index]
+                merchant_near = merchant_idle
+            else:
+                merchant_idle=self.npc_frames.get("merchant_idle", [])
+                merchant_near=self.npc_frames.get("merchant_near", [])
             near = math.hypot(p.x-arena.width/2,p.y-arena.height/2)<155
             actors.append((arena.height/2-48, "merchant", {
                 "idle": merchant_idle,
@@ -1775,6 +1821,12 @@ class Renderer:
                 if lintel is None:
                     lintel=pygame.transform.smoothscale(pygame.transform.rotate(frame,90),(32,8)); self._fit_cache[("door_lintel",id(frame))]=lintel
                 for fy in (span.top,span.bottom-8): screen.blit(lintel,(span.x,fy))
+            door_frames = self.door_front_frames if horizontal else self.door_side_frames
+            if door_frames:
+                state_index = 1 if d.open and len(door_frames) > 1 else 0
+                door_img = pygame.transform.scale(door_frames[state_index], span.size)
+                screen.blit(door_img, span.topleft)
+                continue
             if not d.open:
                 inner=span.inflate(-6,-6)
                 pygame.draw.rect(screen,(24,22,29),inner,border_radius=3); pygame.draw.rect(screen,(130,55,58),inner,2,border_radius=3)
