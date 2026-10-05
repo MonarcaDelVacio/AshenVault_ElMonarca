@@ -1541,9 +1541,9 @@ class Renderer:
             sheet_key = getattr(weapon_def, "weapon_sprite_sheet", None)
             frames = self.weapon_variant_frames.get(sheet_key, [])
             if frames:
-                seed = float(getattr(equipped_weapon, "sprite_variant_seed", 0.0))
-                index = int(seed * len(frames)) % len(frames) if seed else int(getattr(weapon_def, "weapon_sprite_index", 0)) % len(frames)
-                weapon_image = self._fit_image(frames[index], self._weapon_max_dimension(getattr(weapon_def, "class", "pistol")))
+                # Atlas: cada arma debe conservar exactamente el modelo asignado.
+                index = int(getattr(weapon_def, "weapon_sprite_index", 0))
+                weapon_image = self._fit_image(frames[index], self._weapon_max_dimension(getattr(weapon_def, "class", "pistol"))) if 0 <= index < len(frames) else None
             else:
                 weapon_image = self.weapon_scaled_images.get(weapon_id)
             if weapon_image is not None:
@@ -2188,9 +2188,8 @@ class Renderer:
                 sheet_key = getattr(weapon_def, "weapon_sprite_sheet", None) if weapon_def is not None else None
                 frames = self.weapon_variant_frames.get(sheet_key, [])
                 if frames:
-                    seed = (abs(hash((weapon_id, round(float(ix), 1), round(float(iy), 1)))) % 100000) / 100000.0
-                    index = int(seed * len(frames)) % len(frames)
-                    icon = self._fit_image(frames[index], 30)
+                    index = int(getattr(weapon_def, "weapon_sprite_index", 0))
+                    icon = self._fit_image(frames[index], 30) if 0 <= index < len(frames) else None
                 else:
                     icon = self.weapon_scaled_images.get(weapon_id)
                 if icon is not None:
