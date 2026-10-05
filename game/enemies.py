@@ -177,6 +177,40 @@ class Enemy:
             else:
                 self._chase(sim, dt, d.speed * (0.75 if self.brain_state == "approach" else 1.0))
 
+    def _defensive_reaction(self, sim, dt):
+        threats=[]
+        for pr in sim.pool.items:
+            if not pr.active or pr.team != 0: continue
+            vx,vy=pr.vx,pr.vy; speed2=vx*vx+vy*vy
+            if speed2<=1: continue
+            t=((self.x-pr.x)*vx+(self.y-pr.y)*vy)/speed2
+            if 0<t<0.8:
+                cx,cy=pr.x+vx*t,pr.y+vy*t
+                if math.hypot(self.x-cx,self.y-cy)<self.radius+22: threats.append((pr,t))
+        if not threats: return False
+        pr,_=min(threats,key=lambda q:q[1])
+        lethal=float(pr.damage)>=max(1.0,self.hp+self.shield_integrity)
+        if lethal and self.rng.random()<float(getattr(self.d,"emergency_shield_chance",0.12)):
+            self.shield_active=True
+            self.shield_timer=float(getattr(self.d,"emergency_shield_duration",1.2))
+            sim.emit("enemy_emergency_shield",self.x,self.y,self.shield_timer)
+            return True
+        if self.dodge_cd<=0 and self.rng.random()<float(getattr(self.d,"dodge_chance",0.10)):
+            self.dodge_cd=float(getattr(self.d,"dodge_cooldown",0.9))
+            vx,vy=pr.vx,pr.vy; n=math.hypot(vx,vy) or 1.0
+            self._step(sim,-vy/n*self.strafe,vx/n*self.strafe,self.d.speed*1.35,dt)
+            self.strafe*=-1
+            sim.emit("enemy_dodge",self.x,self.y)
+            return True
+        if self.rng.random()<float(getattr(self.d,"cover_chance",0.12)):
+            props=[q for q in getattr(sim,"props",[]) if not q.get("broken") and math.hypot(q["x"]-self.x,q["y"]-self.y)<150]
+            if props:
+                q=min(props,key=lambda o:math.hypot(o["x"]-self.x,o["y"]-self.y))
+                self._step(sim,q["x"]-self.x,q["y"]-self.y,self.d.speed*0.9,dt)
+                sim.emit("enemy_cover",self.x,self.y)
+                return True
+        return False
+
     def _step(self, sim, ux, uy, speed, dt):
         ox, oy = self.x, self.y
         # Flying enemies can cross interior walls; they still remain inside arena bounds.
