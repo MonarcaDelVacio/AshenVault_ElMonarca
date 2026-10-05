@@ -48,6 +48,8 @@ class Enemy:
         self.is_boss=False; self.is_miniboss=False; self.is_summoned=False; self.is_boss_guard=False
         self.weapon_id=getattr(edef, "weapon_id", None)
         self.shield_integrity=float(getattr(edef, "shield_durability", 48.0)) if getattr(edef, "shielded", False) else 0.0
+        self.brain_state="observe"; self.brain_timer=r.uniform(0.45,1.15); self.dodge_cd=0.0
+        self.target=None; self.shield_active=False; self.shield_timer=0.0
         return self
 
     @property
@@ -129,15 +131,26 @@ class Enemy:
                 self.state = MOVE
             return
 
+        self.brain_timer -= dt
+        if self.brain_timer <= 0:
+            if d.ai in ("melee","charger"):
+                self.brain_state=self.rng.choice(("observe","approach","attack","retreat","rush"))
+            else:
+                self.brain_state=self.rng.choice(("observe","approach","attack","retreat","strafe"))
+            self.brain_timer=self.rng.uniform(0.55,1.45)
         self.state = MOVE
         if d.ai in ("melee", "charger"):
-            if dist <= d.attack_range and self.cooldown <= 0:
+            if dist <= d.attack_range and self.cooldown <= 0 and self.brain_state in ("attack","rush","approach"):
                 self.state, self.timer = WINDUP, d.windup
                 self.attack_anim_time = 0.0
-            elif d.ai == "charger" and sees and dist > d.attack_range:
+            elif self.brain_state == "retreat" and sees:
+                self._step(sim, -dx / dist, -dy / dist, d.speed * 1.15, dt)
+            elif d.ai == "charger" and sees and dist > d.attack_range and self.brain_state == "rush":
                 self._step(sim, dx / dist, dy / dist, getattr(d, "charge_speed", d.speed), dt)
+            elif self.brain_state == "observe":
+                self._step(sim, -dy / dist * self.strafe, dx / dist * self.strafe, d.speed * 0.18, dt)
             else:
-                self._chase(sim, dt, d.speed)
+                self._chase(sim, dt, d.speed * (0.72 if self.brain_state == "approach" else 1.0))
         elif d.ai == "flying":
             # Los voladores no necesitan navegar por el flow-field; sólo evitan el contacto.
             if sees and dist <= d.attack_range and self.cooldown <= 0:
@@ -151,16 +164,18 @@ class Enemy:
             else:
                 self._step(sim, dx / dist, dy / dist, d.speed, dt)
         else:
-            if sees and dist <= d.attack_range and self.cooldown <= 0:
+            if sees and dist <= d.attack_range and self.cooldown <= 0 and self.brain_state in ("attack","strafe","retreat"):
                 self.state, self.timer = WINDUP, d.windup
-            elif sees and dist < d.preferred_distance * 0.7:
-                self._step(sim, -dx / dist, -dy / dist, d.speed, dt)
-            elif sees and dist <= d.preferred_distance * 1.15:
-                self._step(sim, -dy / dist * self.strafe, dx / dist * self.strafe, d.speed * 0.6, dt)
-                if self.rng and self.rng.random() < dt * 0.4:
+            elif self.brain_state == "retreat" and sees:
+                self._step(sim, -dx / dist, -dy / dist, d.speed * 1.15, dt)
+            elif self.brain_state in ("strafe","observe") and sees:
+                self._step(sim, -dy / dist * self.strafe, dx / dist * self.strafe, d.speed * 0.72, dt)
+                if self.rng and self.rng.random() < dt * 0.55:
                     self.strafe *= -1
+            elif sees and dist < d.preferred_distance * 0.65:
+                self._step(sim, -dx / dist, -dy / dist, d.speed, dt)
             else:
-                self._chase(sim, dt, d.speed)
+                self._chase(sim, dt, d.speed * (0.75 if self.brain_state == "approach" else 1.0))
 
     def _step(self, sim, ux, uy, speed, dt):
         ox, oy = self.x, self.y
