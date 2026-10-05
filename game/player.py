@@ -48,7 +48,7 @@ class Player:
         elif cid == "engineer":
             self.ability["max_drones"] = self.ability.get("base_drones",2) + lv("drone_count")
             self.ability["drone_damage_mult"] = self.drone_damage_mult
-            self.ability["drone_attack_interval"] = 0.62 / max(0.1,self.drone_attack_speed_mult)
+            self.ability["drone_attack_interval"] = 1.0 / max(0.1,self.drone_attack_speed_mult)
             self.ability["drone_hp"] = 18 + self.drone_hp_bonus
         self.weapon = WeaponState(wdef)
         self.inventory = [self.weapon]
