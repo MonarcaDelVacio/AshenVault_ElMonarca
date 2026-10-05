@@ -411,7 +411,7 @@ class App:
                 if click:
                     self._apply_fullscreen(not self.save.data["settings"].get("fullscreen", False))
                 return
-            reset_rect = pygame.Rect(126, 353, 266, 32)
+            reset_rect = pygame.Rect(126, 369, 266, 32)
             if reset_rect.collidepoint(pos):
                 self.settings_sel = 13
                 if click:
@@ -1077,8 +1077,8 @@ class App:
             if sens_selected:
                 pygame.draw.rect(scr, (20, 35, 45), sens_rect, border_radius=6)
                 pygame.draw.rect(scr, (80, 223, 215), sens_rect, 1, border_radius=6)
-            self.r.text(scr, "SENSIBILIDAD MOUSE", (139, 291), (240, 245, 247) if sens_selected else (174, 191, 204), self.r.menu_small, True)
-            self.r.text(scr, "%.2fx" % sens, (370, 291), (240, 245, 247) if sens_selected else (174, 191, 204), self.r.menu_small, True)
+            self.r.text(scr, "SENSIBILIDAD MOUSE", (138, 291), (240, 245, 247) if sens_selected else (174, 191, 204), self.r.menu_small)
+            self.r.text(scr, "%.2fx" % sens, (379, 291), (240, 245, 247) if sens_selected else (174, 191, 204), self.r.menu_small, True)
 
             fullscreen = bool(settings.get("fullscreen", False))
             fullscreen_rect = pygame.Rect(126, 314, 266, 32)
@@ -1091,7 +1091,7 @@ class App:
             if fullscreen:
                 pygame.draw.line(scr, (105, 235, 180), (143, 330), (148, 334), 2)
                 pygame.draw.line(scr, (105, 235, 180), (148, 334), (155, 325), 2)
-            self.r.text(scr, "PANTALLA COMPLETA", (166, 330), (225, 232, 240), self.r.menu_small)
+            self.r.text(scr, "PANTALLA COMPLETA", (259, 330), (225, 232, 240), self.r.menu_small, True)
 
             reset_rect = pygame.Rect(126, 353, 266, 32)
             self.ui_atlas.draw_button(scr, reset_rect, "Restablecer", selected=self.settings_sel == 13)
@@ -1108,7 +1108,7 @@ class App:
             if self.rebind_action:
                 self.r.text(scr, "PULSA UNA TECLA PARA ASIGNAR · ESC CANCELA", (VIEW_W // 2, 514), (123, 238, 222), self.r.menu_small, True)
             else:
-                self.r.text(scr, "FLECHAS: NAVEGAR · A/D: AUDIO · ENTER: REASIGNAR", (VIEW_W // 2, 532), (172, 183, 199), self.r.menu_small, True)
+                pass
         if self.state != PLAY:
             mx, my = mouse
             pygame.draw.circle(scr, (255, 255, 255), (mx, my), 4, 1)
