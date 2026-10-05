@@ -159,7 +159,9 @@ class Arena:
             if door.side in ("N","S"):
                 y_end=cy
                 step=1 if door.side=="N" else -1
-                y=door.y
+                # Nunca tallar el borde exterior: allí solo deben existir los
+                # dos bloques pertenecientes a la puerta.
+                y=1 if door.side=="N" else self.rows-2
                 while True:
                     for xx in range(max(1,cx-1),min(self.cols-1,cx+2)):
                         self.grid[y][xx]=0
@@ -168,7 +170,7 @@ class Arena:
             else:
                 x_end=cx
                 step=1 if door.side=="W" else -1
-                x=door.x
+                x=1 if door.side=="W" else self.cols-2
                 while True:
                     for yy in range(max(1,cy-1),min(self.rows-1,cy+2)):
                         self.grid[yy][x]=0
