@@ -24,15 +24,15 @@ def use_ability(sim):
         p.set_status("shield", max(2.2, a.get("invuln", 0.8) * ability_mult))
         sim.emit("ability_shield", p.x, p.y)
     elif kind == "burst":
-        radius = a.get("radius", 120) * (0.9 + 0.1*ability_mult)
-        damage = a.get("damage", 18) * p.damage_mult * ability_mult
-        hits = 0
-        for e in sim.enemies:
-            if math.hypot(e.x - p.x, e.y - p.y) <= radius:
-                if e.alive:
-                    e.hurt(damage, math.atan2(e.y - p.y, e.x - p.x))
-                    hits += 1
-        sim.emit("ability_burst", p.x, p.y, radius, hits)
+        radius = a.get("radius", 125) * (0.9 + 0.1*ability_mult)
+        damage = a.get("damage", 24) * p.damage_mult * ability_mult
+        sim.wave_attacks.append({
+            "x":p.x,"y":p.y,"radius":10.0,"speed":float(a.get("wave_speed",520.0)),
+            "life":max(0.8,float(a.get("wave_life",1.2))),"damage":damage,
+            "color":tuple(a.get("color",(220,150,80))),"team":0,"max_radius":radius,
+            "stun":float(a.get("stun",0.45)),"hit_ids":set()
+        })
+        sim.emit("ability_burst", p.x, p.y, radius, 0)
     elif kind == "haste":
         p.ability_buff = max(p.ability_buff, a.get("duration", 5.0) * ability_mult)
         sim.emit("ability_haste", p.x, p.y)
