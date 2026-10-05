@@ -6,6 +6,7 @@ from .world import TILE
 class WeaponState:
     def __init__(self, wdef):
         self.d = wdef
+        self.damage_mult = 1.0
         self.ammo = wdef.magazine
         self.reserve_magazines = int(getattr(wdef, "max_magazines", 5))
         self.max_reserve_magazines = self.reserve_magazines
@@ -88,7 +89,7 @@ def _fire_projectiles(sim, p, w, charge_ratio=0.0):
         a = p.aim + math.radians(uniform(-spread, spread))
         class_name = str(getattr(d, "class", "")).lower()
         statue_mult = getattr(p, "statue_melee_mult", 1.0) if class_name == "melee" else getattr(p, "statue_ranged_mult", 1.0)
-        dmg = d.damage * p.damage_mult * damage_mult * statue_mult
+        dmg = d.damage * getattr(w, "damage_mult", 1.0) * p.damage_mult * damage_mult * statue_mult
         crit = rand() < p.crit_chance
         if crit:
             dmg *= 2 * getattr(p, "statue_crit_damage_mult", 1.0)
@@ -181,7 +182,7 @@ def try_fire(sim, p, inp, dt):
     if not want or w.cooldown > 0 or w.reloading:
         return False
     if getattr(d, "class", "") == "melee":
-        if w.durability <= 0:
+        if not w.unlimited_ammo and w.durability <= 0:
             return False
         p.fire_buffer = 0.0
         w.cooldown = d.fire_interval / max(0.1, getattr(p, "attack_speed_mult", 1.0))
@@ -193,12 +194,13 @@ def try_fire(sim, p, inp, dt):
                 return False
             p.energy -= d.energy_cost
         p.since_shot = 0.0
-        w.durability = max(0, w.durability - 1)
-        w.ammo = w.durability
+        if not w.unlimited_ammo:
+            w.durability = max(0, w.durability - 1)
+            w.ammo = w.durability
         sim.stats["shots"] += 1
         sim.stats.setdefault("weapon_usage", {})[d.id] = sim.stats.get("weapon_usage", {}).get(d.id, 0) + 1
         sim.perform_melee_attack(p, d)
-        if w.durability <= 0:
+        if not w.unlimited_ammo and w.durability <= 0:
             sim.break_weapon(p, w)
         # La defensa contra proyectiles existe únicamente durante el golpe real.
         # Apuntar por sí solo nunca activa esta protección.
