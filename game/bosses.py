@@ -140,14 +140,23 @@ class Boss(Enemy):
 
         # Arconte: barrera + lanzas rápidas en cruz. Es un patrón de precisión, no de abanico.
         if style == "mage":
-            base=math.atan2(p.y-self.y,p.x-self.x)
-            count=4 if self.phase<3 else 6
-            for i in range(count):
-                a=base + (i-(count-1)/2)*0.12
-                sim.spawn_projectile(1,self.x,self.y,a,360+35*self.phase,3.5+self.phase,
-                    5.0,5.0,tuple(self.d.color),"energy",0,0,False,None,False,0,False,0,1.35+0.1*self.phase)
-            sim.emit("boss_lance",self.x,self.y,self.phase)
-            sim.emit("enemy_shoot", self.x, self.y, f"lance_phase{self.phase}")
+            variant=self.rng.randrange(2)
+            if variant == 0:
+                base=math.atan2(p.y-self.y,p.x-self.x)
+                count=4 if self.phase<3 else 6
+                for i in range(count):
+                    a=base + (i-(count-1)/2)*0.12 + self.rng.uniform(-0.04,0.04)
+                    sim.spawn_projectile(1,self.x,self.y,a,360+35*self.phase,3.5+self.phase,
+                        5.0,5.0,tuple(self.d.color),"energy",0,0,False,None,False,0,False,0,1.35+0.1*self.phase)
+                sim.emit("boss_lance",self.x,self.y,self.phase)
+            else:
+                base=self.rng.random()*math.tau
+                for i in range(4+self.phase):
+                    a=base+math.tau*i/(4+self.phase)+self.rng.uniform(-0.05,0.05)
+                    sim.spawn_projectile(1,self.x,self.y,a,300+25*self.phase,4+self.phase,
+                        5.0,5.0,tuple(self.d.color),"energy",0,0,False,None,False,0,False,0,1.2)
+                sim.emit("boss_cross_burst",self.x,self.y,self.phase)
+            sim.emit("enemy_shoot", self.x, self.y, f"mage_pattern_{variant}_phase{self.phase}")
             return
 
         # Coloso: pisotón cerca; a distancia lanza proyectiles pesados en línea y, en
@@ -170,15 +179,19 @@ class Boss(Enemy):
             base=sim.time*getattr(self.d,"spiral_speed",3.5)
             count=8+self.phase*2
             for i in range(count):
-                a=base+2*math.pi*i/count
+                a=base+2*math.pi*i/count+self.rng.uniform(-0.025,0.025)
                 sim.spawn_projectile(1,self.x,self.y,a,205+22*self.phase,4+self.phase,
-                    6.5,6.0,tuple(self.d.color),"fire",0,0,False,None,self.phase>=3,
-                    78+15*self.phase,False,0,1.5+0.12*self.phase)
+                    6.5,6.0,tuple(self.d.color),"fire",0,0,False,None,False,
+                    0,False,0,1.5+0.12*self.phase)
             if self.phase>=3:
                 target=math.atan2(p.y-self.y,p.x-self.x)
-                sim.spawn_projectile(1,self.x,self.y,target,300,9,8,7,tuple(self.d.color),"fire",
-                    0,0,False,None,True,120,False,5.0,2.2)
-                sim.emit("boss_homing",self.x,self.y,self.phase,target)
+                if self.rng.random()<0.20:
+                    sim.spawn_projectile(1,self.x,self.y,target+self.rng.uniform(-0.12,0.12),300,9,8,7,tuple(self.d.color),"fire",
+                        0,0,False,None,True,120,False,5.0,2.2)
+                    sim.emit("boss_homing",self.x,self.y,self.phase,target)
+                else:
+                    sim.spawn_projectile(1,self.x,self.y,target+self.rng.uniform(-0.16,0.16),300,9,8,7,tuple(self.d.color),"fire",
+                        0,0,False,None,True,120,False,0.0,2.2)
                 sim.emit("enemy_shoot", self.x, self.y, f"regent_spiral_phase{self.phase}")
             return
 
