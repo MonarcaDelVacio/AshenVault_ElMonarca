@@ -113,9 +113,24 @@ class Player:
             self.energy_flash=max(self.energy_flash,duration)
 
     # ---- daño: primero escudo, luego vida ----
-    def take_damage(self, amount):
+    def take_damage(self, amount, incoming_angle=None):
         if self.invuln > 0 or not self.alive:
             return False
+        # El escudo temporal de habilidad sólo cubre el frente del jugador.
+        # Los ataques que llegan por detrás atraviesan el escudo y siguen al
+        # escudo normal/vida. incoming_angle apunta desde el jugador hacia el origen.
+        if getattr(self, "ability_shield_fx", 0.0) > 0.0 and getattr(self, "ability_shield_hp", 0.0) > 0.0:
+            blocked = True
+            if incoming_angle is not None:
+                delta = (float(incoming_angle) - float(self.aim) + math.pi) % (2 * math.pi) - math.pi
+                blocked = abs(delta) <= math.radians(60.0)
+            if blocked:
+                self.ability_shield_hp = max(0.0, float(self.ability_shield_hp) - float(amount))
+                self.hurt_flash = 0.18
+                self.since_hit = 0.0
+                if self.ability_shield_hp <= 0.0:
+                    self.ability_shield_fx = 0.0
+                return True
         self.since_hit = 0.0
         self.invuln = 0.6
         self.hurt_flash = 0.25
