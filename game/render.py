@@ -452,7 +452,7 @@ class Renderer:
         for kind, filename in biome_decor_files.items():
             path = biome_decor_dir / filename
             if path.is_file():
-                frames = self._load_component_frames(path, minimum=35, merge_gap=8)
+                frames = self._load_component_frames(path, minimum=12, merge_gap=8)
                 if frames:
                     self.decoration_frames[kind] = frames
                     self.decoration_images[kind] = frames[0]
@@ -497,7 +497,7 @@ class Renderer:
                 self.special_effect_frames["new_fireball"] = frames
         ability_atlas_path = new_effect_dir / "spritesheesdeeffectosparahabilidades.png"
         if ability_atlas_path.is_file():
-            frames = self._load_component_frames(ability_atlas_path, minimum=30, merge_gap=10)
+            frames = self._load_component_frames(ability_atlas_path, minimum=8, merge_gap=10)
             if frames:
                 self.special_effect_frames["new_ability_atlas"] = frames
 
