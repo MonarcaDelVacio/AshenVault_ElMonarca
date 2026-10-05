@@ -6,7 +6,7 @@ class Projectile:
     __slots__ = ("active", "team", "x", "y", "vx", "vy", "damage", "radius", "life", "color",
                  "dtype", "pierce", "bounces", "crit", "hit_ids", "sprite_key", "explosive", "explosion_radius",
                  "stick_on_hit", "stuck", "stuck_timer", "stuck_angle", "stuck_enemy_id", "stuck_offset_x", "stuck_offset_y", "age",
-                 "homing", "visual_scale", "status_chance")
+                 "homing", "visual_scale", "status_chance", "ally_heal")
 
     def __init__(self):
         self.active = False
@@ -21,7 +21,7 @@ class ProjectilePool:
 
     def spawn(self, team, x, y, angle, speed, damage, radius, life, color, dtype="physical",
               pierce=0, bounces=0, crit=False, sprite_key=None, explosive=False, explosion_radius=0,
-              stick_on_hit=False, homing=0.0, visual_scale=1.0, status_chance=0.0):
+              stick_on_hit=False, homing=0.0, visual_scale=1.0, status_chance=0.0, ally_heal=0.0):
         n = len(self.items)
         for i in range(n):
             p = self.items[(self._cursor + i) % n]
@@ -48,6 +48,7 @@ class ProjectilePool:
         p.homing = float(homing or 0.0)
         p.visual_scale = max(0.55, float(visual_scale or 1.0))
         p.status_chance = max(0.0, min(1.0, float(status_chance or 0.0)))
+        p.ally_heal = max(0.0, float(ally_heal or 0.0))
         p.hit_ids.clear()
         return p
 
