@@ -7,10 +7,10 @@ class WeaponState:
     def __init__(self, wdef):
         self.d = wdef
         self.ammo = wdef.magazine
-        self.reserve_magazines = int(getattr(wdef, "max_magazines", 3))
+        self.reserve_magazines = int(getattr(wdef, "max_magazines", 5))
         self.max_reserve_magazines = self.reserve_magazines
-        self.durability = int(getattr(wdef, "durability", wdef.magazine))
-        self.max_durability = int(getattr(wdef, "durability", wdef.magazine))
+        self.durability = int(getattr(wdef, "durability", max(int(wdef.magazine), 40) if getattr(wdef, "class", "") == "melee" else wdef.magazine))
+        self.max_durability = int(getattr(wdef, "durability", max(int(wdef.magazine), 40) if getattr(wdef, "class", "") == "melee" else wdef.magazine))
         self.cooldown = 0.0
         self.reload_left = 0.0
         self.charge_time = 0.0
