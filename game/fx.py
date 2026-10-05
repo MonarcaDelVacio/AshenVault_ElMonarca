@@ -56,6 +56,13 @@ class Fx:
             _, x, y, amount = ev
             self.burst(x, y, (255, 220, 80), 7, 95, 0.22, 2.0)
             self.text(x, y - 4, "+%d" % int(amount), (255, 225, 110))
+        elif k == "laser_impact":
+            _, x, y, color, radius = ev
+            color=tuple(color)
+            self.burst(x,y,color,10,150,0.18,2.5)
+            self.burst(x,y,(255,245,210),6,90,0.14,2.0)
+            if len(self.explosions) < 100:
+                self.explosions.append([x,y,0.0,0.20,max(24.0,float(radius)*1.35)])
         elif k == "player_hit":
             _, x, y, a = ev
             self.burst(x, y, (255, 70, 70), 14, 170, 0.4, 3)
