@@ -116,6 +116,12 @@ class App:
             if icon_path.is_file():
                 try:
                     icon = pygame.image.load(str(icon_path)).convert_alpha()
+                    # Recorta el PNG al contorno real del modelo. Así el fondo
+                    # negro sólo ocupa la silueta rectangular necesaria y no un
+                    # margen transparente enorme alrededor del logo.
+                    bbox = icon.get_bounding_rect(min_alpha=8)
+                    if bbox.width > 0 and bbox.height > 0:
+                        icon = icon.subsurface(bbox).copy()
                     opaque=pygame.Surface(icon.get_size()).convert()
                     opaque.fill((0,0,0))
                     opaque.blit(icon,(0,0))
@@ -127,9 +133,9 @@ class App:
             splash.fill((0, 0, 0))
             if icon is not None:
                 iw, ih = icon.get_size()
-                max_w = int(splash_w * 0.50)
-                max_h = int(splash_h * 0.84)
-                scale = min(max_w / max(1, iw), max_h / max(1, ih), 1.0)
+                max_w = int(splash_w * 0.66)
+                max_h = int(splash_h * 0.90)
+                scale = min(max_w / max(1, iw), max_h / max(1, ih))
                 if scale < 0.999:
                     icon = pygame.transform.smoothscale(
                         icon, (max(1, int(iw * scale)), max(1, int(ih * scale)))
