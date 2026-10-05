@@ -1326,6 +1326,12 @@ class Renderer:
             ax, ay = math.cos(p.aim), math.sin(p.aim)
             weapon_id = getattr(weapon_def, "id", "")
             weapon_image = self.weapon_scaled_images.get(weapon_id)
+            if weapon_image is None:
+                sheet_key = getattr(weapon_def, "weapon_sprite_sheet", None)
+                frames = self.weapon_variant_frames.get(sheet_key, [])
+                if frames:
+                    index = int(getattr(weapon_def, "weapon_sprite_index", 0)) % len(frames)
+                    weapon_image = self._fit_image(frames[index], self._weapon_max_dimension(getattr(weapon_def, "class", "pistol")))
             if weapon_image is not None:
                 weapon_class = getattr(weapon_def, "class", "")
                 sprite_path = str(getattr(weapon_def, "weapon_sprite", "")).lower()
