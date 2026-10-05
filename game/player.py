@@ -61,6 +61,8 @@ class Player:
         self.rvx = self.rvy = 0.0
         self.invuln = 0.0
         self.hurt_flash = 0.0
+        self.heal_flash = 0.0
+        self.energy_flash = 0.0
         self.dash_left = 0.0
         self.dash_cd = 0.0
         self.dash_dir = (1.0, 0.0)
