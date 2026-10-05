@@ -439,6 +439,23 @@ class Renderer:
         self.door_front_frames = self._load_sheet_frames(self.asset_root / "doors" / "front_open_closed.png")
         self.door_side_frames = self._load_sheet_frames(self.asset_root / "doors" / "side_open_closed.png")
 
+        # Decoraciones nuevas por bioma. Se cargan como spritesheets para
+        # aprovechar todas las variantes transparentes que contenga cada PNG.
+        biome_decor_dir = self.asset_root / "decorations" / "biomes"
+        biome_decor_files = {
+            "biome_red_bush": "Arbustosrojizos.png",
+            "biome_lava_rock": "decoracionesrocosasdezonadelava.png",
+            "biome_lava_rock_purple": "decoracionesrocosasparazonadelavamorada.png",
+            "biome_shared_rock": "decoracionesrocosasparavariosbiomas.png",
+        }
+        for kind, filename in biome_decor_files.items():
+            path = biome_decor_dir / filename
+            if path.is_file():
+                frames = self._load_sheet_frames(path)
+                if frames:
+                    self.decoration_frames[kind] = frames
+                    self.decoration_images[kind] = frames[0]
+
         # Sprites transparentes de armas, proyectiles y consumibles.
         self.weapon_images = {}
         self.weapon_scaled_images = {}
