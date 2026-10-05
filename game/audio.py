@@ -45,6 +45,7 @@ RECIPES = {
     "reload_start": dict(freq=400, dur=0.07, sweep=200, vol=0.2),
     "reload_done": dict(freq=800, dur=0.08, sweep=300, vol=0.25),
     "coin": dict(freq=1200, dur=0.08, sweep=500, vol=0.2),
+    "coin_pickup": dict(freq=1200, dur=0.08, sweep=500, vol=0.2),
     "dash": dict(freq=500, dur=0.14, sweep=-300, noise=0.5, vol=0.25),
     "no_energy": dict(freq=160, dur=0.08, vol=0.25),
     "swing": dict(freq=260, dur=0.1, sweep=-100, noise=0.5, vol=0.2),
