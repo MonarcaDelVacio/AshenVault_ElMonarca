@@ -35,6 +35,8 @@ class Renderer:
         self._merchant_intro_room = None
         self._merchant_intro_start = 0.0
         self._decor_light_cache = {}
+        self._decoration_collider_cache = {}
+        self._merchant_room_seen = set()
         self.chest_images = {}
         self.chest_type_images = {}
         self.decoration_images = {}
@@ -594,7 +596,10 @@ class Renderer:
         if math.cos(e.facing)<0:
             frame=pygame.transform.flip(frame,True,False)
         if e.flash>0:
-            frame=frame.copy(); frame.fill((255,255,255,0),special_flags=pygame.BLEND_RGBA_ADD)
+            frame=frame.copy()
+            mask=pygame.mask.from_surface(frame,threshold=8)
+            flash=mask.to_surface(setcolor=(255,255,255,175),unsetcolor=(0,0,0,0))
+            frame.blit(flash,(0,0),special_flags=pygame.BLEND_RGBA_ADD)
         elif light_level < 0.98:
             frame=frame.copy(); frame.fill((max(1,int(255*light_level)),)*3+(255,),special_flags=pygame.BLEND_RGBA_MULT)
         screen.blit(frame,frame.get_rect(center=(x,y)))
@@ -1149,7 +1154,15 @@ class Renderer:
             elif getattr(p,"energy_flash",0.0)>0:
                 flash_kind=(255,225,55); flash_alpha=int(175*min(1.0,p.energy_flash/.26))
             if flash_kind:
-                tint=sprite.copy(); tint.fill((*flash_kind,flash_alpha),special_flags=pygame.BLEND_RGBA_ADD); sprite=tint
+                # BLEND_RGBA_ADD sobre una superficie completa puede levantar el
+                # alpha de píxeles transparentes. La máscara de alpha garantiza que
+                # el parpadeo quede estrictamente dentro del contorno del PNG.
+                tint=pygame.Surface(sprite.get_size(),pygame.SRCALPHA)
+                tint.fill((*flash_kind,flash_alpha))
+                mask=pygame.mask.from_surface(sprite,threshold=8)
+                clipped=mask.to_surface(setcolor=(*flash_kind,flash_alpha),unsetcolor=(0,0,0,0))
+                tint.blit(clipped,(0,0),special_flags=pygame.BLEND_RGBA_MULT)
+                sprite.blit(tint,(0,0),special_flags=pygame.BLEND_RGBA_ADD)
             screen.blit(sprite, sprite.get_rect(midbottom=(x,y+27)))
         else:
             pygame.draw.circle(screen, p.c.color, (x, y), p.radius)
@@ -1259,6 +1272,45 @@ class Renderer:
             pygame.draw.circle(screen,(80,210,255),(int(px),int(py)),34,4)
             pygame.draw.circle(screen,(150,240,255),(int(px),int(py)),22,2)
 
+    def decoration_collider(self, deco):
+        """Devuelve una huella elíptica basada en el alpha real del PNG.
+
+        La huella física se concentra en la parte inferior visible del modelo:
+        las zonas transparentes y el volumen vertical decorativo no bloquean al actor.
+        """
+        kind=str(deco.get("kind",""))
+        variant=int(deco.get("variant",0))
+        key=(kind,variant)
+        if key in self._decoration_collider_cache:
+            rx,ry,ox,oy=self._decoration_collider_cache[key]
+        else:
+            image=self.decoration_images.get(kind)
+            if image is None and kind in ("bush","rock"):
+                image=self.decoration_images.get(f"{kind}_{variant%6+1}")
+            if image is None:
+                return None
+            bbox=image.get_bounding_rect(min_alpha=8)
+            if not bbox.width or not bbox.height:
+                return None
+            max_size={
+                "fountain_active":104,"fountain_inactive":104,"fountain_small":68,"well_empty":104,
+                "bench_large":92,"bench_small":66,"barrel_large":62,"signpost":70,"crate_stack":76,
+                "crate_pair":68,"table":72,"counter":84,"wood_chest_decor":68,
+                "statue_goddess":510,"statue_archer":510,"statue_assassin":510,"statue_knight":510,"statue_mage":510,
+                "bush":56,"rock":58,
+            }.get(kind,56)
+            scale=min(max_size/max(1,image.get_width(),image.get_height()),1.0)
+            visible_w=bbox.width*scale; visible_h=bbox.height*scale
+            # Collider is the lower footprint, not the whole visual height.
+            rx=max(7.0,visible_w*0.36)
+            ry=max(6.0,min(visible_h*0.18,visible_w*0.30))
+            ox=(bbox.centerx-image.get_width()/2)*scale
+            oy=(bbox.bottom-image.get_height())*scale*0.12
+            self._decoration_collider_cache[key]=(rx,ry,ox,oy)
+        cx=float(deco.get("x",0))*TILE+TILE/2+ox
+        cy=float(deco.get("y",0))*TILE+TILE+oy
+        return cx+0.0,cy+0.0,rx,ry
+
     def _draw_single_scene_decoration(self, screen, deco, ox, oy, t):
         kind=deco.get("kind")
         image=self.decoration_images.get(kind)
@@ -1297,21 +1349,26 @@ class Renderer:
 
     def _draw_shop_npcs(self, screen, sim, ox, oy, t):
         arena=sim.arena
-        if arena.room_type != "shop":
-            return []
-        entries=[]
-        merchant=self.npc_frames.get("merchant_near" if math.hypot(sim.player.x-arena.width/2,sim.player.y-arena.height/2)<155 else "merchant_idle")
-        if merchant:
-            entries.append((arena.height/2-48, "merchant", merchant))
-        # Las mascotas del comerciante se retiran de la escena.
-        for y,kind,frames in entries:
-            frame=frames[int(t*(7.0 if kind=="merchant" else 8.0))%len(frames)]
-            size=70 if kind=="merchant" else 34
-            frame=self._fit_image(frame,size)
-            x=arena.width/2 if kind=="merchant" else arena.width/2+55
-            y += 0
-            screen.blit(frame,frame.get_rect(midbottom=(int(x+ox),int(y+oy))))
-        return [y for y,_,_ in entries]
+        if arena.room_type != "shop": return []
+        room_key=tuple(getattr(arena,"room_id",()))
+        merchant_idle=self.npc_frames.get("merchant_idle",[])
+        merchant_near=self.npc_frames.get("merchant_near",[])
+        if not merchant_idle and not merchant_near: return []
+        # La animación de quitarse la capa ocurre una sola vez al entrar en la sala.
+        if room_key not in self._merchant_room_seen:
+            self._merchant_room_seen.add(room_key)
+            intro=merchant_near or merchant_idle
+            idx=min(len(intro)-1,int(t*7.0)) if intro else 0
+            frame=intro[idx] if intro else None
+        else:
+            # Después de la entrada se usa únicamente el ciclo idle. Nunca vuelve
+            # a reproducirse la secuencia de quitar la capa al acercarse el jugador.
+            frames=merchant_idle or merchant_near
+            frame=frames[int(t*7.0)%len(frames)] if frames else None
+        if frame is not None:
+            frame=self._fit_image(frame,70)
+            screen.blit(frame,frame.get_rect(midbottom=(int(arena.width/2+ox),int(arena.height/2-48+oy))))
+        return [arena.height/2-48]
 
     def _draw_special_effects(self, screen, fx, ox, oy, t):
         for effect in getattr(fx, "special_effects", []):
@@ -1598,6 +1655,21 @@ class Renderer:
             self.text(screen, str(offer.price), (px, py + 24), (255, 225, 135), self.small, center=True)
             self.text(screen, str(offer.name)[:12], (px, py + 37), col, self.small, center=True)
 
+        # Rayos láser persistentes: finos al inicio, crecen entre 1 y 3 s,
+        # siguen el apuntado del propietario y terminan en la primera colisión.
+        for laser in getattr(sim, "lasers", []):
+            owner=laser.get("owner"); angle=float(laser.get("angle",0.0))
+            if owner is None: continue
+            length,point,_=sim._laser_hit_target(laser,0.0)
+            sx,sy=owner.x+ox,owner.y+oy
+            ex,ey=owner.x+math.cos(angle)*length+ox,owner.y+math.sin(angle)*length+oy
+            width=max(1,int(laser.get("width",2.0)))
+            color=tuple(laser.get("color",(120,220,255)))
+            # halo + núcleo para un aspecto energético tipo Kamehameha.
+            pygame.draw.line(screen, tuple(min(255,int(c*0.38)) for c in color), (int(sx),int(sy)), (int(ex),int(ey)), max(3,width*3))
+            pygame.draw.line(screen, color, (int(sx),int(sy)), (int(ex),int(ey)), width)
+            pygame.draw.circle(screen,(255,255,255),(int(ex),int(ey)),max(2,width//2+1))
+
         # Loot: armas y consumibles del suelo flotan ligeramente sobre su sombra.
         for item_index, it in enumerate(sim.items):
             ix = getattr(it, "x", arena.width / 2)
@@ -1678,7 +1750,7 @@ class Renderer:
                 filename = Path(sprite_path).name
                 max_dim = 12
                 if "assets/weapons/melee/lanza" in sprite_path or "assets/weapons/snipers/sniper5" in sprite_path:
-                    max_dim = 42 if "assets/weapons/melee/lanza" in sprite_path else 26
+                    max_dim = 58 if "assets/weapons/melee/lanza" in sprite_path else 26
                 if filename == "projectile_04.png": max_dim = 19
                 elif filename == "projectile_05.png": max_dim = 18
                 elif filename in ("projectile_06.png", "projectile_07.png", "projectile_08.png", "projectile_09.png"): max_dim = 14
@@ -1694,7 +1766,7 @@ class Renderer:
                                       "assets/weapons/snipers/sniper5" in sprite_path)
                 if scaled.get_width() > scaled.get_height() * 1.35 or directional_sprite:
                     angle = math.degrees(math.atan2(pr.vy, pr.vx)) if not pr.stuck else math.degrees(pr.stuck_angle)
-                    correction = 35.0 if "assets/weapons/melee/lanza" in sprite_path else 0.0
+                    correction = float(getattr(self.data.weapons.get(getattr(pr, "weapon_id", ""), None), "projectile_rotation_offset", 0.0)) if False else (45.0 if "assets/weapons/melee/lanza" in sprite_path else 0.0)
                     scaled = pygame.transform.rotate(scaled, correction - angle)
                 if pr.stuck and pr.stuck_timer < 1.0:
                     scaled = scaled.copy()
@@ -1899,10 +1971,10 @@ class Renderer:
         panel(weapon_rect, fill=(15, 17, 25, 218), border=(64, 70, 86))
         hud_weapon = self._fit_image(self.weapon_scaled_images.get(getattr(w.d, "id", "")), 28)
         if hud_weapon is not None:
-            screen.blit(hud_weapon, hud_weapon.get_rect(topleft=(33, VIEW_H - 61)))
-            self.text(screen, w.d.name, (67, VIEW_H - 61), (240, 241, 246), self.small)
+            screen.blit(hud_weapon, hud_weapon.get_rect(topleft=(52, VIEW_H - 61)))
+            self.text(screen, w.d.name, (92, VIEW_H - 61), (240, 241, 246), self.small)
         else:
-            self.text(screen, w.d.name, (33, VIEW_H - 61), (240, 241, 246), self.small)
+            self.text(screen, w.d.name, (52, VIEW_H - 61), (240, 241, 246), self.small)
         is_melee = getattr(w.d, "class", "") == "melee"
         if is_melee:
             ammo_text = "USOS  %d/%d" % (w.ammo, w.d.magazine)
@@ -1915,13 +1987,13 @@ class Renderer:
 
         # Munición y estado de recarga quedan en una sola línea limpia. La barra
         # de progreso fue eliminada para evitar ruido visual en el panel.
-        ammo_pos = (33, VIEW_H - 34)
+        ammo_pos = (52, VIEW_H - 34)
         self.text(screen, ammo_text, ammo_pos, ammo_color, self.small)
 
         # Solo cuando el cargador está completamente vacío mostramos el icono de
         # recarga, pegado a la munición y dentro del mismo panel.
         if not is_melee and not w.reloading and w.ammo <= 0:
-            reload_center = (148, VIEW_H - 31)
+            reload_center = (167, VIEW_H - 31)
             if not self.ui_atlas.draw_icon(screen, reload_center, size=22, kind="refresh"):
                 pygame.draw.circle(screen, (240, 200, 90), reload_center, 9, 2)
                 self.text(screen, "R", reload_center, (240, 200, 90), self.small, center=True)
