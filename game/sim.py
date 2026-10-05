@@ -1023,12 +1023,12 @@ class Sim:
         owner=laser["owner"]; angle=laser["angle"]; ux,uy=math.cos(angle),math.sin(angle)
         max_range=laser["range"]; width=laser["width"]
         # The beam stops at the first solid/prop/decoration or actor in its path.
-        length=max_range; hit_enemy=None; hit_point=None
+        length=max_range; hit_enemy=None; hit_point=None; blocked=False
         steps=max(1,int(max_range/6))
         for i in range(1,steps+1):
             d=i*max_range/steps; x=owner.x+ux*d; y=owner.y+uy*d
             if self.arena.point_solid(x,y) or self._crate_collision(x,y,width) or self._decoration_collision(x,y,width):
-                length=d; hit_point=(x,y); break
+                length=d; hit_point=(x,y); blocked=True; break
             if laser["team"]==0:
                 candidates=[e for e in self.enemies if e.alive and e.spawn_delay<=0]
             else:
@@ -1036,11 +1036,11 @@ class Sim:
             for target in candidates:
                 if target is owner: continue
                 if math.hypot(target.x-x,target.y-y) <= target.radius+width*0.75:
-                    length=d; hit_enemy=target; hit_point=(x,y); break
+                    length=d; hit_enemy=target; hit_point=(x,y); blocked=True; break
             if hit_enemy is not None: break
         if hit_point is None:
             hit_point=(owner.x+ux*length,owner.y+uy*length)
-        if hit_enemy is not None and laser["tick"]<=0 and dt>0.0 and float(laser.get("travel",length)) >= length-8.0:
+        if blocked and laser["tick"]<=0 and dt>0.0 and float(laser.get("travel",length)) >= length-8.0:
             if laser["team"]==0:
                 damage=min(laser["damage"],hit_enemy.max_hp*(0.24 if getattr(hit_enemy,"is_boss",False) else 0.55))
                 if not self._damage_shield(hit_enemy,damage,math.atan2(owner.y-hit_enemy.y,owner.x-hit_enemy.x),"laser"):
