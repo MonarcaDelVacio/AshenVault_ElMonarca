@@ -264,7 +264,7 @@
     "stick_on_hit": true,
     "pellets": 1,
     "bounces": 0,
-    "projectile_rotation_offset": 45,
+    "projectile_rotation_offset": 62,
     "projectile_visual_scale": 1.65
   },
   "ricochet_disc": {
