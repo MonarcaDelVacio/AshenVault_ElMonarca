@@ -16,7 +16,7 @@ from game.sim import Sim, Input
 INTRO, MENU, PLAY, PAUSE, MAP, DEAD, VICTORY, SETTINGS, CHAR_SELECT, HUB, STATUE = "intro", "menu", "play", "pause", "map", "dead", "victory", "settings", "char_select", "hub", "statue"
 MENU_ITEMS = ["Jugar", "Configuracion", "Salir"]
 PAUSE_ITEMS = ["Continuar", "Configuracion", "Reiniciar run", "Salir al menu"]
-SETTINGS_ITEMS = ["Volumen efectos", "Volumen musica", "Mover arriba", "Mover abajo", "Mover izquierda", "Mover derecha", "Dash", "Habilidad", "Recargar", "Pausa", "Minimapa", "Pantalla completa", "Restablecer", "Volver"]
+SETTINGS_ITEMS = ["Volumen efectos", "Volumen musica", "Sensibilidad mouse", "Mover arriba", "Mover abajo", "Mover izquierda", "Mover derecha", "Dash", "Habilidad", "Recargar", "Pausa", "Minimapa", "Pantalla completa", "Restablecer", "Volver"]
 SETTING_KEYS = {"Mover arriba":"up", "Mover abajo":"down", "Mover izquierda":"left", "Mover derecha":"right", "Dash":"dash", "Habilidad":"ability", "Recargar":"reload", "Pausa":"pause", "Minimapa":"map"}
 HUB_ITEMS = ["Iniciar run", "Personajes", "Mejoras", "Volver al menu"]
 
@@ -631,15 +631,15 @@ class App:
             elif k in (pygame.K_DOWN, pygame.K_s):
                 self.settings_sel = (self.settings_sel + 1) % len(SETTINGS_ITEMS)
                 self.audio.play("ui", self.t)
-            elif k in (pygame.K_LEFT, pygame.K_a) and self.settings_sel in (0,1):
+            elif k in (pygame.K_LEFT, pygame.K_a) and self.settings_sel in (0,1,2):
                 field="effects_volume" if self.settings_sel==0 else "music_volume"
-                v=max(0.0,self.save.data["settings"].get(field,0.6)-0.1); self.save.data["settings"][field]=round(v,2)
+                v=(max(0.25,self.save.data["settings"].get("mouse_sensitivity",1.0)-0.05) if self.settings_sel==2 else max(0.0,self.save.data["settings"].get(field,0.6)-0.1)); self.save.data["settings"]["mouse_sensitivity" if self.settings_sel==2 else field]=round(v,2)
                 if field=="effects_volume": self.audio.set_effects_volume(v)
                 else: self.audio.set_music_volume(v)
                 self.save.save()
             elif k in (pygame.K_RIGHT, pygame.K_d) and self.settings_sel in (0,1):
                 field="effects_volume" if self.settings_sel==0 else "music_volume"
-                v=min(1.0,self.save.data["settings"].get(field,0.6)+0.1); self.save.data["settings"][field]=round(v,2)
+                v=(min(2.0,self.save.data["settings"].get("mouse_sensitivity",1.0)+0.05) if self.settings_sel==2 else min(1.0,self.save.data["settings"].get(field,0.6)+0.1)); self.save.data["settings"]["mouse_sensitivity" if self.settings_sel==2 else field]=round(v,2)
                 if field=="effects_volume": self.audio.set_effects_volume(v)
                 else: self.audio.set_music_volume(v)
                 self.save.save()
@@ -651,7 +651,7 @@ class App:
                     self._apply_fullscreen(not self.save.data["settings"].get("fullscreen", False))
                 elif item == "Restablecer":
                     self._reset_settings()
-                elif item not in ("Volumen efectos","Volumen musica"):
+                elif item not in ("Volumen efectos","Volumen musica","Sensibilidad mouse"):
                     self.rebind_action=SETTING_KEYS[item]
             return
         if self.info:
@@ -750,6 +750,7 @@ class App:
     def world_mouse(self):
         mx, my = self._logical_mouse_pos()
         ox, oy = getattr(self.r, "cam", (0, 0))
+        sensitivity=float(self.save.data["settings"].get("mouse_sensitivity",1.0)); mx=VIEW_W*0.5+(mx-VIEW_W*0.5)*sensitivity; my=VIEW_H*0.5+(my-VIEW_H*0.5)*sensitivity
         return mx - ox, my - oy
 
     def draw_option_card(self, rect, label, selected=False, value=None, compact=False, use_atlas=True):
