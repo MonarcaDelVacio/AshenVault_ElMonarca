@@ -123,9 +123,6 @@ class Fx:
         elif k == "boss_shield":
             _, x, y, active = ev
             self.burst(x,y,(100,180,255),18,130,0.4,3)
-        elif k == "coin":
-            _, x, y = ev
-            self.burst(x, y, (255, 215, 60), 5, 80, 0.25, 2)
         elif k == "chest_spawn":
             _, x, y, _ = ev
             self.burst(x, y, (255, 215, 110), 10, 70, 0.35, 2.5)
