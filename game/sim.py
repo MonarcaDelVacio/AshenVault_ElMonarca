@@ -993,6 +993,7 @@ class Sim:
                       "width":float(getattr(d,"laser_width",2.0)),"base_width":float(getattr(d,"laser_width",2.0)),"max_width":float(getattr(d,"laser_max_width",14.0)),
                       "range":float(getattr(d,"laser_range",760.0)),"explosion_radius":float(getattr(d,"laser_explosion_radius",26.0))}
             self.lasers.append(existing)
+            self.emit("laser_start",self.player.x,self.player.y,self.player.aim,existing["color"])
         existing["angle"]=self.player.aim; existing["charge"]=min(3.0,float(charge_time)); existing["duration"]=0.0
 
     def start_enemy_laser(self, owner, angle, duration=2.2, color=None, damage=14.0, width=2.0, max_width=12.0, range_=760.0, explosion_radius=24.0):
