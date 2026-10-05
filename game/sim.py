@@ -1779,7 +1779,7 @@ class Sim:
                         else:
                             e.hurt(wave["damage"],math.atan2(e.y-wave["y"],e.x-wave["x"]))
                             if wave.get("stun",0)>0:
-                                e.frozen=max(getattr(e,"frozen",0),wave["stun"])
+                                e.stunned=max(getattr(e,"stunned",0.0),wave["stun"])
                                 if wave.get("confusion",False):
                                     e.confused=max(getattr(e,"confused",0.0),wave["stun"])
                                     self.emit("enemy_confused",e.x,e.y,wave["stun"])
