@@ -40,10 +40,30 @@ class Sim:
 
     def _new_enemy(self, edef, x, y, summoned=False):
         scaled_def=copy.copy(edef)
+        variants=getattr(self.data, "enemy_variants", {})
+        chance=float(variants.get("chance", 0.0)) if isinstance(variants, dict) else 0.0
+        if not summoned and self.wave >= int(variants.get("min_wave", 2)) and self.rng.random() < chance:
+            families=variants.get("families", {}) if isinstance(variants, dict) else {}
+            sprite_set=getattr(edef, "sprite_set", None)
+            candidates=families.get(sprite_set) or families.get("*") or []
+            if candidates:
+                variant=self.rng.choice(candidates)
+                for key,value in variant.items():
+                    if key in ("id","name_suffix","tint","projectile_color"):
+                        continue
+                    if key.endswith("_mult"):
+                        base=float(getattr(scaled_def, key[:-5], 1.0))
+                        setattr(scaled_def, key[:-5], base*float(value))
+                    else:
+                        setattr(scaled_def, key, value)
+                scaled_def.variant_id=variant.get("id")
+                scaled_def.variant_name_suffix=variant.get("name_suffix","")
+                scaled_def.variant_tint=tuple(variant.get("tint", getattr(edef, "color", (200,80,80))))
+                scaled_def.projectile_color=tuple(variant.get("projectile_color", scaled_def.variant_tint))
         scale=1.0 + 0.12*(self.difficulty-1)
-        scaled_def.hp=float(edef.hp)*scale
-        scaled_def.damage=float(edef.damage)*scale
-        scaled_def.speed=float(edef.speed)*(1.0 + 0.035*(self.difficulty-1))
+        scaled_def.hp=float(scaled_def.hp)*scale
+        scaled_def.damage=float(scaled_def.damage)*scale
+        scaled_def.speed=float(scaled_def.speed)*(1.0 + 0.035*(self.difficulty-1))
         # Si el enemigo tiene un proyectil visual propio (bola de fuego, roca, etc.),
         # su arquetipo debe ser a distancia aunque un dato antiguo lo haya marcado
         # como melee. Esto evita que el comportamiento contradiga la animación.
