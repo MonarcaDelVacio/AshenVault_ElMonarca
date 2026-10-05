@@ -1171,6 +1171,7 @@ class App:
             ("VELOCIDAD", "%.2f s"%getattr(w,"fire_interval",0)),
             ("PROYECTILES",str(pellets)),
             ("MUNICIÓN",str(getattr(w,"magazine",0))),
+            ("PARTIDAS",str(self.save.data.get("weapon_scores",{}).get(wid,0))),
             ("EFECTOS",effects_text),
         ]
         left_x=panel.x+118; right_x=panel.x+342
