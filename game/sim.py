@@ -801,11 +801,13 @@ class Sim:
             p.statue_crit_damage_mult *= 1.0 + value*1.8
 
     def break_weapon(self, player, weapon):
+        old_index=player.inventory.index(weapon) if weapon in player.inventory else 0
         if weapon in player.inventory:
             player.inventory.remove(weapon)
         if player.weapon is weapon:
             if player.inventory:
-                player.weapon=player.inventory[min(0,len(player.inventory)-1)]
+                player.selected_slot=min(old_index,len(player.inventory)-1)
+                player.weapon=player.inventory[player.selected_slot]
             else:
                 from types import SimpleNamespace
                 fist=SimpleNamespace(name="Puños",class_="melee")
@@ -855,6 +857,7 @@ class Sim:
                     elif len(p.inventory) < 3:
                         new_weapon = WeaponState(self.data.weapons[weapon_id])
                         p.inventory.append(new_weapon)
+                        p.selected_slot=len(p.inventory)-1
                         p.weapon = new_weapon
                         self.items.remove(item)
                     else:
