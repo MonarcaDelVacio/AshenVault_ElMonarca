@@ -821,9 +821,13 @@ class Sim:
                 is_boss = getattr(e, "is_boss", False) or getattr(e, "is_miniboss", False)
                 drop_coins = is_boss or self.rng.random() < min(0.48, 0.08 + coin_value * 0.07)
                 if drop_coins:
-                    amount = coin_value if is_boss else self.rng.randint(1, coin_value)
-                    cx, cy = self._safe_drop_position(e.x + self.rng.uniform(-10,10), e.y + self.rng.uniform(-10,10), 7.0)
-                    self.pickups.append({"kind":"coin","x":cx,"y":cy,"amount":amount,"phase":self.rng.random()*math.tau})
+                    # Cada pickup de moneda vale exactamente 1. Los enemigos con
+                    # mayor valor pueden soltar varias monedas físicas, nunca una
+                    # moneda apilada con valor superior.
+                    drop_count = coin_value if is_boss else 1
+                    for _ in range(max(1, drop_count)):
+                        cx, cy = self._safe_drop_position(e.x + self.rng.uniform(-10,10), e.y + self.rng.uniform(-10,10), 7.0)
+                        self.pickups.append({"kind":"coin","x":cx,"y":cy,"amount":1,"phase":self.rng.random()*math.tau})
             if not getattr(e,"is_boss",False) and not getattr(e,"is_miniboss",False):
                 self.enemy_pool.append(e)
         self.enemies=[e for e in self.enemies if e.alive]
@@ -1207,10 +1211,10 @@ class Sim:
                         pickup["y"] -= dy/dist*step
                     kept.append(pickup)
                     continue
-                amount=max(1,int(pickup.get("amount",1)))
-                p.coins += amount
-                self.stats["coins"] += amount
-                self.emit("coin_pickup",pickup["x"],pickup["y"],amount)
+                # Cada item de moneda representa una sola moneda.
+                p.coins += 1
+                self.stats["coins"] += 1
+                self.emit("coin_pickup",pickup["x"],pickup["y"],1)
             else:
                 kept.append(pickup)
         self.pickups=kept
