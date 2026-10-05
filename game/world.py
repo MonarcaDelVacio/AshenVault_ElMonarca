@@ -99,16 +99,17 @@ class Arena:
         for x,y in adata.get("secrets",[]):
             self.grid[y][x]=SECRET; self.secrets.append((x,y))
     def _ensure_door_access(self):
-        """Garantiza al menos un camino físico hacia cada puerta abierta.
-        
-        Las paredes de la sala ya deben ser navegables por diseño. Si una decoración
-        indestructible tapa el único corredor, se elimina esa decoración del escenario
-        en lugar de dejar al jugador sin salida.
+        """Garantiza una ruta físicamente transitable desde cada puerta.
+
+        La comprobación usa un margen de actor, no solo el centro de las
+        casillas. Si una decoración bloquea la ruta se elimina; si una forma
+        de pared deja una puerta aislada, se abre un corredor de seguridad de
+        tres casillas hasta la zona central.
         """
         if not self.doors:
             return
 
-        def deco_blocked_tiles(decorations):
+        def deco_blocked_tiles(decorations, clearance=12.0):
             blocked=set()
             for deco in decorations:
                 kind=deco.get("kind")
@@ -117,11 +118,11 @@ class Arena:
                     continue
                 cx=float(deco.get("x",0))*TILE+TILE/2
                 cy=float(deco.get("y",0))*TILE+TILE/2
+                reach=max(0,int(math.ceil((radius+clearance)/TILE)))
                 tx,ty=int(cx//TILE),int(cy//TILE)
-                reach=max(0,int(math.ceil((radius+14)/TILE)))
                 for yy in range(max(0,ty-reach),min(self.rows,ty+reach+1)):
                     for xx in range(max(0,tx-reach),min(self.cols,tx+reach+1)):
-                        if math.hypot(xx*TILE+TILE/2-cx,yy*TILE+TILE/2-cy) <= radius+14:
+                        if math.hypot(xx*TILE+TILE/2-cx,yy*TILE+TILE/2-cy) <= radius+clearance:
                             blocked.add((xx,yy))
             return blocked
 
@@ -143,29 +144,57 @@ class Arena:
                         continue
                     if (nx,ny) in seen or (nx,ny) in blocked:
                         continue
-                    if (nx,ny)==(door.x,door.y):
-                        pass
-                    elif self.solid_tile(nx,ny):
-                        continue
-                    if dx and dy and (self.solid_tile(x+dx,y) or self.solid_tile(x,y+dy)):
+                    if (nx,ny)!=(door.x,door.y) and self.solid_tile(nx,ny):
                         continue
                     seen.add((nx,ny)); q.append((nx,ny))
             return False
 
-        # If the room's walls themselves make the door unreachable, do not destroy
-        # scenery to hide a generation problem.
+        def carve_door_corridor(door):
+            cx,cy=self.cols//2,self.rows//2
+            if door.side in ("N","S"):
+                y_end=cy
+                step=1 if door.side=="N" else -1
+                y=door.y
+                while True:
+                    for xx in range(max(1,cx-1),min(self.cols-1,cx+2)):
+                        self.grid[y][xx]=0
+                    if y==y_end: break
+                    y+=step
+            else:
+                x_end=cx
+                step=1 if door.side=="W" else -1
+                x=door.x
+                while True:
+                    for yy in range(max(1,cy-1),min(self.rows-1,cy+2)):
+                        self.grid[yy][x]=0
+                    if x==x_end: break
+                    x+=step
+
+        # Primero se valida la sala solo contra paredes. Si una puerta no puede
+        # alcanzar el centro, la generación de su forma dejó un cuello inválido:
+        # se corrige abriendo únicamente el corredor de esa puerta.
         for door in self.doors.values():
-            if path_exists(door,set()):
-                blocked=deco_blocked_tiles(self.decorations)
+            if not path_exists(door,set()):
+                carve_door_corridor(door)
+
+        # Después se valida con el volumen físico de las decoraciones. Si una
+        # decoración indestructible tapa el corredor, se elimina esa decoración.
+        for door in self.doors.values():
+            blocked=deco_blocked_tiles(self.decorations)
+            if not path_exists(door,blocked):
+                candidates=[d for d in self.decorations if d.get("kind") in self._decoration_radii]
+                candidates.sort(key=lambda d: math.hypot(
+                    float(d.get("x",0))*TILE+TILE/2-(door.x*TILE+TILE/2),
+                    float(d.get("y",0))*TILE+TILE/2-(door.y*TILE+TILE/2)))
+                while candidates and not path_exists(door,blocked):
+                    doomed=candidates.pop(0)
+                    self.decorations.remove(doomed)
+                    blocked=deco_blocked_tiles(self.decorations)
+
+                # Si aun así no existe ruta, la decoración no era la causa:
+                # reabrimos el corredor y verificamos de nuevo.
                 if not path_exists(door,blocked):
-                    candidates=[d for d in self.decorations if d.get("kind") in self._decoration_radii]
-                    candidates.sort(key=lambda d: math.hypot(
-                        float(d.get("x",0))*TILE+TILE/2-(door.x*TILE+TILE/2),
-                        float(d.get("y",0))*TILE+TILE/2-(door.y*TILE+TILE/2)))
-                    while candidates and not path_exists(door,blocked):
-                        doomed=candidates.pop(0)
-                        self.decorations.remove(doomed)
-                        blocked=deco_blocked_tiles(self.decorations)
+                    carve_door_corridor(door)
 
         # Rebuild physical decoration colliders after any safety removal.
         self.decoration_colliders=[]
