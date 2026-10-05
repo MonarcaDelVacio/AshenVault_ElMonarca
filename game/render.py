@@ -1341,11 +1341,15 @@ class Renderer:
             }.get(kind,56)
             scale=max_size/max(1,image.get_width(),image.get_height())
             visible_w=bbox.width*scale; visible_h=bbox.height*scale
-            # Collider is the lower footprint, not the whole visual height.
-            rx=max(7.0,visible_w*0.36)
-            ry=max(6.0,min(visible_h*0.18,visible_w*0.30))
-            # _fit_image() recorta el bbox antes de dibujarlo, por lo que el
-            # punto de anclaje físico coincide con el centro de la base visible.
+            # El tamaño físico de la estatua deriva del mismo PNG y escala
+            # que su modelo visible. Para estatuas usamos una huella más amplia
+            # porque el cuerpo ocupa realmente el espacio alrededor de su base.
+            if kind.startswith("statue_"):
+                rx=max(8.0, visible_w*0.40)
+                ry=max(7.0, min(visible_h*0.22, visible_w*0.34))
+            else:
+                rx=max(7.0,visible_w*0.36)
+                ry=max(6.0,min(visible_h*0.18,visible_w*0.30))
             ox=0.0
             oy=0.0
             self._decoration_collider_cache[key]=(rx,ry,ox,oy)
