@@ -42,6 +42,7 @@ class Enemy:
         self.target = None
         self.shield_active = False
         self.shield_timer = 0.0
+        self.dot_effects = {}
         self.stomp_timer = r.uniform(2.8, 5.2) if float(getattr(edef, "radius", 0)) >= 22 else 999.0
 
     def reset(self, edef, x, y, rng=None):
@@ -58,7 +59,7 @@ class Enemy:
         self.shield_integrity=0.0
         self.shield_timer=0.0
         self.brain_state="observe"; self.brain_timer=r.uniform(0.45,1.15); self.dodge_cd=0.0
-        self.target=None; self.shield_active=False; self.shield_timer=0.0
+        self.target=None; self.shield_active=False; self.shield_timer=0.0; self.dot_effects = {}
         self.stomp_timer=r.uniform(2.8,5.2) if float(getattr(edef,"radius",0))>=22 else 999.0
         return self
 
@@ -96,7 +97,7 @@ class Enemy:
         if self.frozen > 0:
             return
         if abs(self.kx) + abs(self.ky) > 1:
-            self.x, self.y = sim.arena.move(self.x, self.y, self.kx * dt, self.ky * dt, self.radius)
+            self.x, self.y = sim.move_actor(self.x, self.y, self.kx * dt, self.ky * dt, self.radius)
             self.kx *= max(0.0, 1 - 10 * dt)
             self.ky *= max(0.0, 1 - 10 * dt)
         if self.spawn_delay > 0 or not p.alive:
@@ -221,7 +222,12 @@ class Enemy:
         if not threats: return False
         pr,_=min(threats,key=lambda q:q[1])
         lethal=float(pr.damage)>=max(1.0,self.hp+self.shield_integrity)
-        if getattr(self.d,"shielded",False) and self.shield_timer <= 0 and self.rng.random() < 0.45:
+        weapon_def=sim.data.weapons.get(getattr(self.d,"weapon_id",None))
+        magic_capable=(getattr(self.d,"magic_user",False)
+                        or getattr(weapon_def,"class","")=="magic"
+                        or getattr(self.d,"damage_type","") in ("arcane","magic","void","ice","fire"))
+        shield_chance=float(getattr(self.d,"shield_chance",0.015 if getattr(self.d,"min_wave",99)<=2 else 0.16))
+        if magic_capable and getattr(self.d,"shielded",False) and self.shield_timer <= 0 and self.rng.random() < shield_chance:
             self.shield_active=True
             self.shield_integrity=float(getattr(self.d,"shield_durability",48.0))
             self.shield_timer=float(getattr(self.d,"emergency_shield_duration",1.2))
@@ -330,7 +336,7 @@ class Enemy:
                         sim._apply_freeze(p, d.damage)
                         p.set_status("freeze", 1.6)
                     elif dtype in ("fire", "poison", "electric"):
-                        p.set_status({"fire":"burn","poison":"poison","electric":"electric"}[dtype], 2.4)
+                        sim._apply_dot(p,dtype,4.0,d.damage) if dtype in ("fire","poison") else p.set_status("electric",2.4)
             rank_scale = 1.0
             if getattr(self, "is_miniboss", False): rank_scale = 1.28
             elif getattr(self, "is_boss", False): rank_scale = 1.65
