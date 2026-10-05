@@ -692,7 +692,8 @@ class Sim:
                 drop_coins = is_boss or self.rng.random() < min(0.48, 0.08 + coin_value * 0.07)
                 if drop_coins:
                     amount = coin_value if is_boss else self.rng.randint(1, coin_value)
-                    # Las monedas/esferas físicas fueron retiradas del suelo.
+                    cx, cy = self._safe_drop_position(e.x + self.rng.uniform(-10,10), e.y + self.rng.uniform(-10,10), 7.0)
+                    self.pickups.append({"kind":"coin","x":cx,"y":cy,"amount":amount,"phase":self.rng.random()*math.tau})
             if not getattr(e,"is_boss",False) and not getattr(e,"is_miniboss",False):
                 self.enemy_pool.append(e)
         self.enemies=[e for e in self.enemies if e.alive]
@@ -726,6 +727,10 @@ class Sim:
 
     def _apply_freeze(self, target, power):
         duration = self._freeze_duration(power)
+        if getattr(target, "is_boss", False):
+            duration = min(duration, 1.2)
+        elif getattr(target, "is_miniboss", False):
+            duration = min(duration, 1.7)
         if hasattr(target, "frozen"):
             target.frozen = max(float(getattr(target, "frozen", 0.0)), duration)
         self.emit("freeze", target.x, target.y, duration)
@@ -742,13 +747,24 @@ class Sim:
                 da=math.atan2(dy,dx)-p.aim
                 da=(da+math.pi)%(2*math.pi)-math.pi
                 if abs(da) <= arc*0.5:
-                    damage = d.damage * p.damage_mult
+                    raw_damage = d.damage * p.damage_mult * getattr(p, "statue_melee_mult", 1.0)
+                    is_boss = getattr(e, "is_boss", False) or getattr(e, "is_miniboss", False)
+                    damage_cap = e.max_hp * (0.55 if not is_boss else 0.18)
+                    damage = min(raw_damage, max(1.0, damage_cap))
                     if self._damage_shield(e, damage, math.atan2(p.y - e.y, p.x - e.x), "melee"):
                         hit += 1
                         continue
                     e.hurt(damage, p.aim)
-                    if getattr(d, "damage_type", "physical") == "ice":
+                    level = max(1, int(getattr(d, "melee_level", 1)))
+                    knockback = 105.0 + level * 24.0
+                    e.kx += math.cos(p.aim) * knockback
+                    e.ky += math.sin(p.aim) * knockback
+                    status_type = getattr(d, "damage_type", "physical")
+                    status_chance = float(getattr(d, "status_chance", 0.24 if status_type in ("ice","fire","poison","electric") else 0.0))
+                    if status_type == "ice" and self.rng.random() < status_chance:
                         self._apply_freeze(e, damage)
+                    elif status_type in ("fire","poison","electric") and self.rng.random() < status_chance:
+                        self.emit("enemy_status",e.x,e.y,status_type,2.4)
                     hit += 1
                     self.emit("enemy_hit",e.x,e.y,d.color,damage,False)
         for prop in self.props:
@@ -874,7 +890,7 @@ class Sim:
                 if self._damage_shield(enemy, pr.damage, from_explosion, "projectile"):
                     continue
                 enemy.hurt(pr.damage, math.atan2(enemy.y - pr.y, enemy.x - pr.x))
-                if pr.dtype == "ice":
+                if pr.team == 0 and pr.status_chance > 0.0 and self.rng.random() < pr.status_chance and pr.dtype == "ice":
                     self._apply_freeze(enemy, pr.damage)
                 self.emit("enemy_hit", enemy.x, enemy.y, pr.color, pr.damage, pr.crit)
         self.emit("explosion", pr.x, pr.y, radius, pr.color)
@@ -895,8 +911,11 @@ class Sim:
                     self._explode_projectile(pr)
                     return True
                 e.hurt(pr.damage,math.atan2(pr.vy,pr.vx))
-                if pr.dtype == "ice":
-                    self._apply_freeze(e, pr.damage)
+                if pr.status_chance > 0.0 and self.rng.random() < pr.status_chance:
+                    if pr.dtype == "ice":
+                        self._apply_freeze(e, pr.damage)
+                    elif pr.dtype in ("fire","poison","electric"):
+                        self.emit("enemy_status",e.x,e.y,pr.dtype,2.4)
                 self.emit("enemy_hit",pr.x,pr.y,pr.color,pr.damage,pr.crit);pr.hit_ids.add(e.id)
                 if pr.stick_on_hit:
                     pr.stuck = True; pr.stuck_timer = 3.0; pr.stuck_angle = math.atan2(pr.vy, pr.vx)
@@ -947,4 +966,21 @@ class Sim:
         self.wave_attacks=[w for w in self.wave_attacks if w["life"]>0]
 
     def _update_pickups(self,dt):
-        self.pickups=[]
+        """Actualiza monedas físicas y las recoge al acercarse el jugador."""
+        p=self.player
+        kept=[]
+        for pickup in self.pickups:
+            if pickup.get("kind") != "coin":
+                kept.append(pickup)
+                continue
+            dx,dy=pickup["x"]-p.x,pickup["y"]-p.y
+            dist=math.hypot(dx,dy)
+            magnet=28.0+float(getattr(p,"coin_radius",0))
+            if dist <= magnet:
+                amount=max(1,int(pickup.get("amount",1)))
+                p.coins += amount
+                self.stats["coins"] += amount
+                self.emit("coin_pickup",pickup["x"],pickup["y"],amount)
+            else:
+                kept.append(pickup)
+        self.pickups=kept
