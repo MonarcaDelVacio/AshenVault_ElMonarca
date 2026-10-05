@@ -314,7 +314,7 @@ class Room:
         self.arena=Arena(adata,self.id)
 
 class Dungeon:
-    BIOME_ORDER=("ruins","forest","dungeon","laboratory","volcanic","final")
+    BIOME_ORDER=("ruins","forest","dungeon","laboratory","volcanic","desert","swamp","final")
     def __init__(self,seed=None,biome=None,difficulty=1):
         self.seed=seed if seed is not None else 0
         self.difficulty=max(1,int(difficulty))
