@@ -10,6 +10,7 @@ class WeaponState:
         self.cooldown = 0.0
         self.reload_left = 0.0
         self.charge_time = 0.0
+        self.laser_active = False
 
     @property
     def reloading(self):
@@ -106,6 +107,28 @@ def _fire_projectiles(sim, p, w, charge_ratio=0.0):
 def try_fire(sim, p, inp, dt):
     w = p.weapon
     d = w.d
+    if getattr(d, "laser_weapon", False):
+        # El láser consume energía de forma continua. La primera línea aparece
+        # al completar 1 s de carga y puede seguir creciendo hasta 3 s.
+        if not inp.fire_held or w.reloading or w.cooldown > 0:
+            if w.laser_active:
+                w.laser_active = False
+                sim.stop_player_laser()
+            w.charge_time = 0.0
+            return False
+        if p.energy <= 0.01:
+            if w.laser_active:
+                w.laser_active = False
+                sim.stop_player_laser()
+            w.charge_time = 0.0
+            if p.noenergy_cd <= 0:
+                sim.emit("no_energy", p.x, p.y); p.noenergy_cd = 0.4
+            return False
+        w.charge_time = min(float(getattr(d, "laser_max_charge", 3.0)), w.charge_time + dt)
+        if w.charge_time >= float(getattr(d, "laser_start_charge", 1.0)):
+            w.laser_active = True
+            sim.update_player_laser(w.charge_time, dt)
+        return False
     finished = w.update(dt)
     if finished:
         sim.emit("reload_done", p.x, p.y)
