@@ -1297,6 +1297,17 @@ class Sim:
                     for _ in range(max(1, drop_count)):
                         cx, cy = self._safe_drop_position(e.x + self.rng.uniform(-10,10), e.y + self.rng.uniform(-10,10), 7.0)
                         self.pickups.append({"kind":"coin","x":cx,"y":cy,"amount":1,"phase":self.rng.random()*math.tau})
+            # Los enemigos también pueden soltar munición. Los esbirros invocados
+            # participan con una probabilidad menor, pero ya no quedan excluidos.
+            ammo_chance = 0.075 if getattr(e, "is_summoned", False) else 0.11
+            if getattr(e, "is_miniboss", False):
+                ammo_chance = 0.16
+            elif getattr(e, "is_boss", False):
+                ammo_chance = 0.22
+            if self.rng.random() < ammo_chance:
+                ax, ay = self._safe_drop_position(e.x + self.rng.uniform(-10,10), e.y + self.rng.uniform(-10,10), 8.0)
+                self.items.append(type("AmmoLoot",(),{"kind":"ammo","x":ax,"y":ay,"magazines":1})())
+
             if not getattr(e,"is_boss",False) and not getattr(e,"is_miniboss",False):
                 self.enemy_pool.append(e)
         self.enemies=[e for e in self.enemies if e.alive]
