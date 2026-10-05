@@ -48,6 +48,8 @@ class Renderer:
         self._hazard_surface_cache = {}
         self._ambient_surface = pygame.Surface((VIEW_W, VIEW_H), pygame.SRCALPHA)
         self._ambient_surface.fill((6, 9, 20, 66))
+        self._shadow_layer = pygame.Surface((VIEW_W, VIEW_H), pygame.SRCALPHA)
+        self._pillar_positions_cache = {}
         self.chest_images = {}
         self.chest_type_images = {}
         self.decoration_images = {}
@@ -961,19 +963,26 @@ class Renderer:
                         screen.blit(piece, (int(tx * TILE + ox), int(dest_y + oy)))
 
     def _draw_dynamic_shadows(self, screen, arena, sim, ox, oy):
-        """Sombras suaves de pilares y objetos, proyectadas desde las luces activas.
-
-        Las paredes de borde (WALL) delimitan la sala y no proyectan sombras. Solo
-        los pilares interiores y los objetos elevados generan sombras sobre el suelo.
-        """
+        """Sombras dinamicas con una sola capa reutilizable y posiciones de pilares cacheadas."""
         px, py = sim.player.x, sim.player.y
         decor_lights = self._room_decor_lights(arena)
         sources = [(px, py, 190, 1.0)]
         sources.extend((light["x"], light["y"], light["radius"], 0.42) for light in decor_lights)
 
-        for source_x, source_y, source_radius, source_strength in sources:
-            layer = pygame.Surface((VIEW_W, VIEW_H), pygame.SRCALPHA)
+        room_key=(getattr(arena,"room_id",None),arena.cols,arena.rows,str(arena.grid))
+        pillars=self._pillar_positions_cache.get(room_key)
+        if pillars is None:
+            pillars=[]
+            for ty,row in enumerate(arena.grid):
+                for tx,tile in enumerate(row):
+                    if tile in (PILLAR,TORCH_PILLAR):
+                        pillars.append((tx*TILE+TILE/2,ty*TILE+TILE/2))
+            self._pillar_positions_cache[room_key]=pillars
 
+        layer=self._shadow_layer
+        layer.fill((0,0,0,0))
+
+        for source_x, source_y, source_radius, source_strength in sources:
             def cast_shadow(world_x, world_y, width, height, length, alpha):
                 sx, sy = world_x + ox, world_y + oy
                 if sx < -100 or sy < -100 or sx > VIEW_W + 100 or sy > VIEW_H + 100:
@@ -985,48 +994,35 @@ class Renderer:
                 if distance < 1:
                     dx, dy, distance = 0.0, 1.0, 1.0
                 dx, dy = dx / distance, dy / distance
-                rect = pygame.Rect(int(sx - width / 2), int(sy - height / 2), width, height)
-                corners = [(rect.left, rect.top), (rect.right, rect.top),
-                           (rect.right, rect.bottom), (rect.left, rect.bottom)]
-                # La sombra se proyecta en dirección opuesta a la fuente de luz.
-                far_edge = sorted(corners, key=lambda point: point[0] * dx + point[1] * dy, reverse=True)[:2]
-                ex, ey = dx * length, dy * length
-                a, b = far_edge
-                shadow_alpha = max(12, min(100, int(alpha * source_strength)))
-                pygame.draw.polygon(layer, (0, 0, 0, shadow_alpha),
-                                    [a, b, (int(b[0] + ex), int(b[1] + ey)),
-                                     (int(a[0] + ex), int(a[1] + ey))])
-                base = pygame.Rect(0, 0, max(18, int(width * 1.05)), max(8, int(height * 0.48)))
-                base.center = (int(sx + dx * 7), int(sy + dy * 10))
-                pygame.draw.ellipse(layer, (0, 0, 0, min(110, shadow_alpha + 18)), base)
+                rect = pygame.Rect(int(sx-width/2),int(sy-height/2),width,height)
+                corners=[(rect.left,rect.top),(rect.right,rect.top),(rect.right,rect.bottom),(rect.left,rect.bottom)]
+                far_edge=sorted(corners,key=lambda point:point[0]*dx+point[1]*dy,reverse=True)[:2]
+                ex,ey=dx*length,dy*length
+                a,b=far_edge
+                shadow_alpha=max(12,min(100,int(alpha*source_strength)))
+                pygame.draw.polygon(layer,(0,0,0,shadow_alpha),
+                                    [a,b,(int(b[0]+ex),int(b[1]+ey)),(int(a[0]+ex),int(a[1]+ey))])
+                base=pygame.Rect(0,0,max(18,int(width*1.05)),max(8,int(height*.48)))
+                base.center=(int(sx+dx*7),int(sy+dy*10))
+                pygame.draw.ellipse(layer,(0,0,0,min(110,shadow_alpha+18)),base)
 
-            # Solo los pilares interiores proyectan sombras arquitectónicas.
-            for ty, row in enumerate(arena.grid):
-                for tx, tile in enumerate(row):
-                    if tile not in (PILLAR, TORCH_PILLAR):
-                        continue
-                    wx, wy = tx * TILE + TILE / 2, ty * TILE + TILE / 2
-                    sx, sy = wx + ox, wy + oy
-                    if sx < -TILE or sy < -TILE or sx > VIEW_W + TILE or sy > VIEW_H + TILE:
-                        continue
-                    cast_shadow(wx, wy, TILE - 3, TILE - 3, 58, 72)
+            for wx,wy in pillars:
+                sx,sy=wx+ox,wy+oy
+                if -TILE <= sx <= VIEW_W+TILE and -TILE <= sy <= VIEW_H+TILE:
+                    cast_shadow(wx,wy,TILE-3,TILE-3,58,72)
 
-            chest = getattr(sim, "chest", None)
+            chest=getattr(sim,"chest",None)
             if chest is not None:
-                cast_shadow(chest.x, chest.y, 42, 30, 28, 58 if not chest.is_open else 32)
-            for prop in getattr(sim, "props", []):
+                cast_shadow(chest.x,chest.y,42,30,28,58 if not chest.is_open else 32)
+            for prop in getattr(sim,"props",[]):
                 if not prop.get("broken"):
-                    size = 30 if prop.get("kind") == "crate" else 42
-                    cast_shadow(prop["x"], prop["y"], size, size, 30, 56)
+                    size=30 if prop.get("kind")=="crate" else 42
+                    cast_shadow(prop["x"],prop["y"],size,size,30,56)
+            for enemy in getattr(sim,"enemies",[]):
+                if enemy.alive and getattr(enemy,"spawn_delay",0)<=0:
+                    cast_shadow(enemy.x,enemy.y,max(14,enemy.radius*1.6),max(12,enemy.radius),18,42)
 
-            # Los enemigos proyectan sombras sobre el suelo desde las fuentes cercanas.
-            for enemy in getattr(sim, "enemies", []):
-                if enemy.alive and getattr(enemy, "spawn_delay", 0) <= 0:
-                    cast_shadow(enemy.x, enemy.y, max(14, enemy.radius * 1.6),
-                                max(12, enemy.radius), 18, 42)
-
-            screen.blit(layer, (0, 0))
-
+        screen.blit(layer,(0,0))
     def _room_decor_lights(self, arena):
         """Luces de antorchas ancladas a pilares sólidos y hogueras decorativas."""
         key = (getattr(arena, "room_id", None), arena.cols, arena.rows, arena.biome, str(arena.grid))
