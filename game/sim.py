@@ -369,10 +369,16 @@ class Sim:
         return self.arena.decoration_hits(x, y, radius)
 
     def _chest_collision(self, x, y, radius):
-        """Los cofres de recompensa ocupan exactamente un bloque físico."""
         chest=self.chest
         if chest is None:
             return False
+        provider=getattr(self,"decoration_collider_provider",None)
+        if provider is not None and hasattr(provider,"chest_collider"):
+            shape=provider.chest_collider(chest)
+            if shape:
+                cx,cy,rx,ry=shape
+                dx=(x-cx)/max(1.0,rx+radius); dy=(y-cy)/max(1.0,ry+radius)
+                return dx*dx+dy*dy<1.0
         half=TILE*0.5
         return abs(x-float(chest.x)) < half+radius and abs(y-float(chest.y)) < half+radius
 
@@ -381,7 +387,8 @@ class Sim:
         # Así, si el jugador queda encima del cofre justo cuando muere el último
         # enemigo, nunca puede quedar atrapado dentro de su hitbox.
         return (self._decoration_collision(x,y,radius) or
-                self._crate_collision(x,y,radius))
+                self._crate_collision(x,y,radius) or
+                self._chest_collision(x,y,radius))
 
     def move_actor(self, x, y, dx, dy, radius):
         """Movimiento contra paredes y objetos físicos de una casilla, permitiendo deslizarse por sus lados."""
@@ -953,6 +960,11 @@ class Sim:
                         pr.active=False
                     self.emit("wall_hit",pr.x,pr.y,pr.color);break
                 pr.x,pr.y=nx,ny
+                if self._chest_collision(pr.x,pr.y,pr.radius):
+                    if pr.explosive: self._explode_projectile(pr)
+                    else: pr.active=False
+                    self.emit("chest_hit",pr.x,pr.y,pr.color)
+                    break
                 hit_prop=self._damage_props(pr.x,pr.y,pr.damage,pr.explosive,pr.color)
                 if hit_prop:
                     if pr.explosive: self._explode_projectile(pr)
