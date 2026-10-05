@@ -116,6 +116,10 @@ class App:
             if icon_path.is_file():
                 try:
                     icon = pygame.image.load(str(icon_path)).convert_alpha()
+                    opaque=pygame.Surface(icon.get_size()).convert()
+                    opaque.fill((0,0,0))
+                    opaque.blit(icon,(0,0))
+                    icon=opaque
                 except (pygame.error, OSError):
                     icon = None
 
