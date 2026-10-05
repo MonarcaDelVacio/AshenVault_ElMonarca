@@ -296,7 +296,12 @@ class App:
         if not opaque:
             return out
         avg = tuple(sum(p[i] for p in opaque)//len(opaque) for i in range(3))
-        if min(avg) > 205:
+        # Muchos retratos vienen con fondo gris plano. Si las esquinas son
+        # prácticamente del mismo color, se considera fondo aunque no sea blanco.
+        corner_spread=max(max(p[i] for p in opaque)-min(p[i] for p in opaque) for i in range(3))
+        if corner_spread <= 18:
+            bg, tol = avg, 42
+        elif min(avg) > 205:
             bg, tol = (255,255,255), 48
         elif max(avg) < 55:
             bg, tol = (0,0,0), 42
@@ -400,13 +405,13 @@ class App:
             scores=self.save.data.get("weapon_scores",{})
             used=[wid for wid,count in scores.items() if count>0 and wid in self.data.weapons]
             used.sort(key=lambda wid:(-int(scores.get(wid,0)), self.data.weapons[wid].name))
-            cols=8; card_w,card_h=83,56; gap_x,gap_y=8,8
+            cols=8; card_w,card_h=92,74; gap_x,gap_y=9,9
             start_x=(VIEW_W-(cols*card_w+(cols-1)*gap_x))//2; start_y=86
             if self.weapon_info_id:
                 if click:
                     self.weapon_info_id=None
                 return
-            for n,wid in enumerate(used[:25]):
+            for n,wid in enumerate(used[:40]):
                 row,col=divmod(n,cols)
                 rect=pygame.Rect(start_x+col*(card_w+gap_x),start_y+row*(card_h+gap_y),card_w,card_h)
                 if rect.collidepoint(pos):
@@ -1113,23 +1118,26 @@ class App:
         if not used:
             self.r.text(self.screen,"AUN NO HAS UTILIZADO ARMAS EN UNA PARTIDA",(VIEW_W//2,230),(175,190,205),self.r.menu_font,True)
         else:
-            cols=5; card_w,card_h=166,112; gap_x,gap_y=12,10
+            cols=8; card_w,card_h=92,74; gap_x,gap_y=9,9
             start_x=(VIEW_W-(cols*card_w+(cols-1)*gap_x))//2; start_y=86
-            for n,wid in enumerate(used[:25]):
+            mouse=self._logical_mouse_pos()
+            for n,wid in enumerate(used[:40]):
                 w=self.data.weapons[wid]; row,col=divmod(n,cols)
                 rect=pygame.Rect(start_x+col*(card_w+gap_x),start_y+row*(card_h+gap_y),card_w,card_h)
+                hovered=rect.collidepoint(mouse)
                 selected=self.weapon_info_id==wid
-                pygame.draw.rect(self.screen,(10,14,24,235),rect,border_radius=8)
-                pygame.draw.rect(self.screen,(80,223,214) if selected else (76,91,113),rect,2 if selected else 1,border_radius=8)
+                active=hovered or selected
+                pygame.draw.rect(self.screen,(12,18,29,245) if not active else (18,34,42,250),rect,border_radius=7)
+                pygame.draw.rect(self.screen,(86,230,220) if active else (70,84,105),rect,2 if active else 1,border_radius=7)
                 image=getattr(self.r,"weapon_images",{}).get(wid)
                 if image:
-                    iw,ih=image.get_size(); scale=min(48/max(1,iw),32/max(1,ih))
+                    iw,ih=image.get_size(); scale=min(48/max(1,iw),36/max(1,ih))
                     thumb=pygame.transform.smoothscale(image,(max(1,int(iw*scale)),max(1,int(ih*scale))))
-                    self.screen.blit(thumb,thumb.get_rect(center=(rect.centerx,rect.y+22)))
-                img=self.r.small.render(w.name,True,(224,230,238))
-                if img.get_width()>rect.w-4: img=pygame.transform.smoothscale(img,(rect.w-8,img.get_height()))
-                self.screen.blit(img,img.get_rect(center=(rect.centerx,rect.y+39)))
-                self.r.text(self.screen,"x%d"%scores[wid],(rect.centerx,rect.y+50),(155,210,195),self.r.small,True)
+                    self.screen.blit(thumb,thumb.get_rect(center=(rect.centerx,rect.y+27)))
+                img=self.r.small.render(w.name,True,(236,239,244))
+                if img.get_width()>rect.w-8:
+                    img=pygame.transform.smoothscale(img,(rect.w-8,img.get_height()))
+                self.screen.blit(img,img.get_rect(center=(rect.centerx,rect.bottom-14)))
         if self.weapon_info_id:
             self.draw_weapon_info(self.weapon_info_id)
         else:
@@ -1139,16 +1147,17 @@ class App:
         w=self.data.weapons.get(wid)
         if not w:return
         shade=pygame.Surface((VIEW_W,VIEW_H),pygame.SRCALPHA); shade.fill((2,5,10,190)); self.screen.blit(shade,(0,0))
-        panel=pygame.Rect(190,88,580,370)
-        pygame.draw.rect(self.screen,(8,12,22,250),panel,border_radius=12)
+        panel=pygame.Rect(250,92,460,356)
+        pygame.draw.rect(self.screen,(8,12,22,252),panel,border_radius=12)
         pygame.draw.rect(self.screen,(95,140,155,230),panel,2,border_radius=12)
         image=getattr(self.r,"weapon_images",{}).get(wid)
         if image:
-            iw,ih=image.get_size(); scale=min(100/max(1,iw),85/max(1,ih))
+            iw,ih=image.get_size(); scale=min(78/max(1,iw),62/max(1,ih))
             thumb=pygame.transform.smoothscale(image,(max(1,int(iw*scale)),max(1,int(ih*scale))))
-            self.screen.blit(thumb,thumb.get_rect(center=(panel.centerx,155)))
-        self.r.text(self.screen,w.name.upper(),(panel.centerx,215),(240,210,135),self.r.menu_font,True)
-        self.r.text(self.screen,"RAREZA: %s"%str(w.rarity).upper(),(panel.centerx,241),(105,230,218),self.r.menu_small,True)
+            self.screen.blit(thumb,thumb.get_rect(center=(panel.centerx,142)))
+        self.r.text(self.screen,w.name.upper(),(panel.centerx,191),(240,210,135),self.r.menu_font,True)
+        rarity=str(getattr(w,"rarity","common")).upper()
+        self.r.text(self.screen,"RARIDAD · "+rarity,(panel.centerx,216),(105,230,218),self.r.menu_small,True)
         pellets=int(getattr(w,"pellets",1))
         effects=[]
         if getattr(w,"damage_type","physical")!="physical": effects.append(str(getattr(w,"damage_type","")).upper())
@@ -1158,16 +1167,19 @@ class App:
         if getattr(w,"bounces",0)>0: effects.append("REBOTE")
         effects_text=", ".join(effects) if effects else "NINGUNO"
         rows=[
-            "DAÑO: %s"%getattr(w,"damage",0),
-            "VELOCIDAD DE ATAQUE: %.2f s"%getattr(w,"fire_interval",0),
-            "CANTIDAD DE PROYECTILES: %d"%pellets,
-            "MUNICION: %d"%getattr(w,"magazine",0),
-            "EFECTOS: %s"%effects_text,
-            "RARIDAD: %s"%str(getattr(w,"rarity","common")).upper(),
+            ("DAÑO",str(getattr(w,"damage",0))),
+            ("VELOCIDAD", "%.2f s"%getattr(w,"fire_interval",0)),
+            ("PROYECTILES",str(pellets)),
+            ("MUNICIÓN",str(getattr(w,"magazine",0))),
+            ("EFECTOS",effects_text),
         ]
-        for i,line in enumerate(rows):
-            self.r.text(self.screen,line,(panel.centerx,275+i*25),(215,224,235),self.r.menu_small,True)
-        self.r.text(self.screen,"CLICK / ENTER / ESC · CERRAR",(panel.centerx,442),(150,170,185),self.r.small,True)
+        left_x=panel.x+118; right_x=panel.x+342
+        for i,(label,value) in enumerate(rows):
+            x=left_x if i<3 else right_x
+            y=260+(i%3)*38
+            self.r.text(self.screen,label,(x,y),(130,155,175),self.r.small,True)
+            self.r.text(self.screen,value,(x,y+17),(224,231,238),self.r.menu_small,True)
+        self.r.text(self.screen,"CLICK / ENTER / ESC · CERRAR",(panel.centerx,423),(150,170,185),self.r.small,True)
 
     def draw_hub(self):
         if self.info: self.draw_info(); return
