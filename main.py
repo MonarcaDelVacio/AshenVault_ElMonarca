@@ -641,8 +641,9 @@ class App:
             elif k in (pygame.K_RIGHT, pygame.K_d) and self.settings_sel in (0,1,2):
                 field="effects_volume" if self.settings_sel==0 else "music_volume"
                 v=(min(2.0,self.save.data["settings"].get("mouse_sensitivity",1.0)+0.05) if self.settings_sel==2 else min(1.0,self.save.data["settings"].get(field,0.6)+0.1)); self.save.data["settings"]["mouse_sensitivity" if self.settings_sel==2 else field]=round(v,2)
-                if field=="effects_volume": self.audio.set_effects_volume(v)
-                else: self.audio.set_music_volume(v)
+                if self.settings_sel != 2:
+                    if field=="effects_volume": self.audio.set_effects_volume(v)
+                    else: self.audio.set_music_volume(v)
                 self.save.save()
             elif k in (pygame.K_RETURN, pygame.K_SPACE):
                 item=SETTINGS_ITEMS[self.settings_sel]
