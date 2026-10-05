@@ -356,8 +356,13 @@ class App:
         """Permite navegar y activar las opciones con el ratón."""
         if self.state == SCORE:
             if click:
-                continue_rect = pygame.Rect(VIEW_W // 2 - 82, VIEW_H - 58, 164, 40)
-                if continue_rect.collidepoint(pos):
+                if self.score_phase == "stats":
+                    continue_rect = pygame.Rect(VIEW_W // 2 - 82, VIEW_H - 58, 164, 40)
+                elif self.score_phase == "done":
+                    continue_rect = pygame.Rect(VIEW_W - 180, VIEW_H - 58, 150, 40)
+                else:
+                    continue_rect = None
+                if continue_rect is not None and continue_rect.collidepoint(pos):
                     self.continue_score()
             return
         if self.state == STATUE:
@@ -1132,8 +1137,6 @@ class App:
             self.r.text(scr,"+%d XP"%self.score_xp_total,(VIEW_W//2,366),(245,220,145),self.r.menu_small,True)
             if self.score_continue_ready:
                 self.draw_option_card((VIEW_W-180,VIEW_H-58,150,40),"Continuar",True)
-            else:
-                self.r.text(scr,"ESC / ENTER / ESPACIO / CLICK · SKIP",(VIEW_W//2,VIEW_H-32),(145,160,180),self.r.menu_small,True)
 
     def draw_weapon_collection(self):
         self.draw_menu_bg()
