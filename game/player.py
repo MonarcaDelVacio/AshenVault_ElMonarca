@@ -54,9 +54,13 @@ class Player:
             self.ability["drone_hp"] = 12 + self.drone_hp_bonus
         self.weapon = WeaponState(wdef)
         if getattr(cdef, "start_weapon", None) == getattr(wdef, "id", None):
+            # Arma inicial única del personaje: cargadores infinitos (pero
+            # cada cargador sigue consumiéndose y recargándose).
             self.weapon.unlimited_ammo = True
             self.weapon.reserve_magazines = 0
             self.weapon.max_reserve_magazines = 0
+            # Se reduce el daño para compensar la munición/reserva infinita.
+            self.weapon.damage_mult = 0.70
         self.inventory = [self.weapon]
         self.selected_slot = 0
         self.items = []
