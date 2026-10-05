@@ -70,6 +70,13 @@ def test_new_entity_models_and_projectile_sheets_are_backed_by_files():
         "small_demon_ranged": ("walk.png", "attack.png", "death.png", "projectile.png"),
         "small_demon_melee": ("walk.png", "attack.png", "death.png"),
         "mage2": ("idle.png",),
+        "esbirromago": ("esbirromagoquieto.png", "esbirromago_caminando.png", "esbirromago_corriendo.png", "esbirromago_atacando.png", "esbirromago_muerte.png"),
+        "gargola": ("gargola_moviendose.png", "gargola_atacandomelee.png", "gargola_muerte.png"),
+        "minigolem": ("minigolemdepiedra_quieto.png", "minigolemdepiedra_caminando.png", "minigolemdepiedra_lanzandoroca.png", "minigolemdepiedra_muerte.png"),
+        "nomuerto": ("NoMuerto_caminando.png", "NoMuerto_atacando.png", "NoMuerto_muriendo.png"),
+        "nomuerto2": ("NoMuerto_caminando2.png", "NoMuerto_atacando2.png", "NoMuerto_muriendo2.png"),
+        "monodehielo": ("Monodehielo_caminando.png", "Monodehielo_atacando.png", "Monodehielo_muriendo.png"),
+        "minotaurogigante": ("MinotauroGigante_quieto.png", "MinotauroGigante_ataque.png", "MinotauroGigante_muerte.png"),
     }
     for sprite_set, files in expected.items():
         assert all((root / sprite_set / filename).is_file() for filename in files)
