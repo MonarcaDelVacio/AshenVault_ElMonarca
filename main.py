@@ -449,12 +449,17 @@ class App:
                     self.hub_sel=n+3
                     if click: self.activate_hub("UPGRADE:"+kind)
                     return
-            actions=["Personajes","Volver al menu"]
+            back_label = "Volver" if self.back_state == CHAR_SELECT else "Volver al menu"
+            actions=["Personajes",back_label]
             for n,item in enumerate(actions):
                 rect=pygame.Rect(250+n*240,438,220,44)
                 if rect.collidepoint(pos):
-                    self.hub_sel=HUB_ITEMS.index(item)
-                    if click: self.activate_hub(item)
+                    if click:
+                        if item == "Volver" and self.back_state == CHAR_SELECT:
+                            self.go(CHAR_SELECT)
+                        else:
+                            self.hub_sel=HUB_ITEMS.index("Volver al menu")
+                            self.activate_hub("Volver al menu")
                     return
             return
         if self.state == SETTINGS:
