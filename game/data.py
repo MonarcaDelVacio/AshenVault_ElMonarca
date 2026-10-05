@@ -90,6 +90,8 @@ class GameData:
                 raise ValueError(f"Arma {wid}: falta projectile_sprite")
             if not os.path.isfile(os.path.join(root, projectile.replace("/", os.sep))):
                 raise ValueError(f"Arma {wid}: asset inexistente {projectile}")
+            if getattr(weapon, "class", "") == "launcher" and int(getattr(weapon, "bounces", 0) or 0) != 0:
+                raise ValueError(f"Arma {wid}: los proyectiles de lanzador no pueden rebotar")
         for eid, enemy in self.enemies.items():
             sprite_set = getattr(enemy, "sprite_set", None)
             if sprite_set and not isinstance(sprite_set, str):
