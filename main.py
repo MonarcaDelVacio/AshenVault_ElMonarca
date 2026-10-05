@@ -388,6 +388,25 @@ class App:
                 self.go(HUB)
                 return
             return
+        if self.state == HUB and self.info == "Armas":
+            scores=self.save.data.get("weapon_scores",{})
+            used=[wid for wid,count in scores.items() if count>0 and wid in self.data.weapons]
+            used.sort(key=lambda wid:(-int(scores.get(wid,0)), self.data.weapons[wid].name))
+            cols=5; card_w,card_h=166,112; gap_x,gap_y=12,10
+            start_x=(VIEW_W-(cols*card_w+(cols-1)*gap_x))//2; start_y=86
+            if self.weapon_info_id:
+                if click: self.weapon_info_id=None
+                return
+            for n,wid in enumerate(used[:25]):
+                row,col=divmod(n,cols)
+                rect=pygame.Rect(start_x+col*(card_w+gap_x),start_y+row*(card_h+gap_y),card_w,card_h)
+                if rect.collidepoint(pos):
+                    if click: self.weapon_info_id=wid
+                    return
+            back=pygame.Rect(VIEW_W//2-100,488,200,30)
+            if click and back.collidepoint(pos):
+                self.info=None
+            return
         if self.state == HUB and not self.info:
             from game.save import CHARACTER_UPGRADES
             if self.hub_dropdown_open:
