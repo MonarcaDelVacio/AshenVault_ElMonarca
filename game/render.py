@@ -2154,13 +2154,17 @@ class Renderer:
             if weapon_id == "fists":
                 ammo_text, ammo_color = "PUÑOS", (210, 218, 230)
             elif is_melee:
-                ammo_text = "USOS  %d/%d" % (w.durability, w.max_durability)
-                ammo_color = (255, 120, 120) if w.durability <= 3 else (210, 218, 230)
+                if getattr(w, "unlimited_ammo", False):
+                    ammo_text, ammo_color = "USOS  ∞", (210, 218, 230)
+                else:
+                    ammo_text = "USOS  %d/%d" % (w.durability, w.max_durability)
+                    ammo_color = (255, 120, 120) if w.durability <= 3 else (210, 218, 230)
             elif w.reloading:
                 ammo_text, ammo_color = "RECARGANDO", (240, 200, 90)
             else:
-                ammo_text = "MUNICIÓN  %d/%d" % (w.ammo, w.reserve_magazines)
-                ammo_color = (255, 120, 120) if w.ammo <= 2 and w.reserve_magazines <= 0 else (210, 218, 230)
+                reserve_text = "∞" if getattr(w, "unlimited_ammo", False) else str(w.reserve_magazines)
+                ammo_text = "MUNICIÓN  %d/%s" % (w.ammo, reserve_text)
+                ammo_color = (210, 218, 230) if getattr(w, "unlimited_ammo", False) else ((255, 120, 120) if w.ammo <= 2 and w.reserve_magazines <= 0 else (210, 218, 230))
 
         # Munición y estado de recarga quedan en una sola línea limpia.
         ammo_pos = (62, VIEW_H - 34)
