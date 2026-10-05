@@ -294,7 +294,7 @@ class Enemy:
                     sim.damage_drone(target["obj"],d.damage,self.x,self.y)
                 return
             if dist <= d.hit_radius + p.radius:
-                if p.take_damage(d.damage, math.atan2(p.y-self.y,p.x-self.x)):
+                if p.take_damage(d.damage, math.atan2(self.y-p.y,self.x-p.x)):
                     sim.on_player_hit(self.x, self.y, d.damage)
                     dtype=getattr(d, "damage_type", "physical")
                     if dtype == "ice":
