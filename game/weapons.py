@@ -113,7 +113,13 @@ def _fire_projectiles(sim, p, w, charge_ratio=0.0):
 def try_fire(sim, p, inp, dt):
     w = p.weapon
     if w is None:
-        return False
+        if not inp.fire_pressed or getattr(p, "fist_cooldown", 0.0) > 0:
+            return False
+        p.fist_cooldown = 0.28 / max(0.1, getattr(p, "attack_speed_mult", 1.0))
+        p.since_shot = 0.0
+        sim.perform_fist_attack(p)
+        sim.emit("melee_swing", p.x, p.y, p.aim, (205, 205, 205), 30.0)
+        return True
     d = w.d
     if getattr(d, "laser_weapon", False):
         # El láser consume energía de forma continua. La primera línea aparece
