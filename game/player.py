@@ -53,6 +53,10 @@ class Player:
             self.ability["drone_attack_interval"] = 1.0 / max(0.1,self.drone_attack_speed_mult)
             self.ability["drone_hp"] = 12 + self.drone_hp_bonus
         self.weapon = WeaponState(wdef)
+        if getattr(cdef, "start_weapon", None) == getattr(wdef, "id", None):
+            self.weapon.unlimited_ammo = True
+            self.weapon.reserve_magazines = 0
+            self.weapon.max_reserve_magazines = 0
         self.inventory = [self.weapon]
         self.selected_slot = 0
         self.items = []
