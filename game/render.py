@@ -36,6 +36,8 @@ class Renderer:
         self._merchant_intro_start = 0.0
         self._decor_light_cache = {}
         self._decoration_collider_cache = {}
+        self._decoration_mask_cache = {}
+        self._circle_mask_cache = {}
         self._merchant_room_seen = set()
         self.chest_images = {}
         self.chest_type_images = {}
@@ -1321,6 +1323,56 @@ class Renderer:
         else:
             pygame.draw.circle(screen,(80,210,255),(int(px),int(py)),34,4)
             pygame.draw.circle(screen,(150,240,255),(int(px),int(py)),22,2)
+
+    def decoration_overlap(self, deco, x, y, radius):
+        """Prueba la colisión real contra los píxeles opacos del modelo."""
+        kind=str(deco.get("kind",""))
+        variant=int(deco.get("variant",0))
+        key=(kind,variant)
+        mask=self._decoration_mask_cache.get(key)
+        if mask is None:
+            image=self.decoration_images.get(kind)
+            frames=self.decoration_frames.get(kind)
+            if frames:
+                image=frames[0]
+            if image is None and kind in ("bush","rock"):
+                image=self.decoration_images.get(f"{kind}_{variant%6+1}")
+            if image is None:
+                return False
+            max_size={
+                "fountain_active":104,"fountain_inactive":104,"fountain_small":68,"well_empty":104,
+                "bench_large":92,"bench_small":66,"barrel_large":62,"signpost":70,"crate_stack":76,
+                "crate_pair":68,"table":72,"counter":84,"wood_chest_decor":68,
+                "statue_goddess":640,"statue_archer":640,"statue_assassin":640,
+                "statue_knight":640,"statue_mage":640,"bush":56,"rock":58,
+            }.get(kind,56)
+            image=self._fit_image(image,max_size)
+            if image is None:
+                return False
+            mask=pygame.mask.from_surface(image,threshold=8)
+            self._decoration_mask_cache[key]=(mask,image.get_size())
+        else:
+            mask,size=mask
+        if isinstance(mask, tuple):
+            mask,size=mask
+        else:
+            size=mask.get_size()
+        base_x=float(deco.get("x",0))*TILE+TILE/2
+        base_y=float(deco.get("y",0))*TILE+TILE
+        left=base_x-size[0]/2
+        top=base_y-size[1]
+        ir=max(1,int(round(radius)))
+        circle=self._circle_mask_cache.get(ir)
+        if circle is None:
+            circle=pygame.mask.Mask((ir*2+1,ir*2+1), fill=False)
+            circle.draw(pygame.mask.from_surface(pygame.Surface((ir*2+1,ir*2+1),pygame.SRCALPHA)))
+            # Construir un círculo sin depender de un sprite auxiliar.
+            circle_surface=pygame.Surface((ir*2+1,ir*2+1),pygame.SRCALPHA)
+            pygame.draw.circle(circle_surface,(255,255,255,255),(ir,ir),ir)
+            circle=pygame.mask.from_surface(circle_surface,threshold=8)
+            self._circle_mask_cache[ir]=circle
+        offset=(int(round(x-radius-left)),int(round(y-radius-top)))
+        return mask.overlap(circle,offset) is not None
 
     def decoration_collider(self, deco):
         """Devuelve una huella elíptica basada en el alpha real del PNG.
