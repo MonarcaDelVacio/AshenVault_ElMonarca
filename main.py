@@ -385,8 +385,16 @@ class App:
                         else: self.audio.set_music_volume(value)
                         self.save.save()
                     return
+            sens_rect = pygame.Rect(126, 326, 266, 42)
+            if sens_rect.collidepoint(pos):
+                self.settings_sel = 2
+                if click:
+                    v=max(0.25,min(2.0,(pos[0]-140)/230*1.75+0.25))
+                    self.save.data["settings"]["mouse_sensitivity"]=round(v,2)
+                    self.save.save()
+                return
             for offset in range(9):
-                idx = offset + 2
+                idx = offset + 3
                 rect = pygame.Rect(438, 160 + offset * 27, 392, 27)
                 if rect.collidepoint(pos):
                     self.settings_sel = idx
