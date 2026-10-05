@@ -87,10 +87,14 @@ class Sim:
 
     def spawn_drone(self, angle=0.0):
         a=self.player.ability
-        drone={"x":self.player.x+math.cos(angle)*62.0,"y":self.player.y+math.sin(angle)*62.0,
+        radius=10.0
+        desired_x=self.player.x+math.cos(angle)*62.0
+        desired_y=self.player.y+math.sin(angle)*62.0
+        spawn_x,spawn_y=self._safe_drone_position(desired_x,desired_y,radius)
+        drone={"x":spawn_x,"y":spawn_y,
                "angle":float(angle),"orbit":float(angle),"hp":float(a.get("drone_hp",18)),
                "max_hp":float(a.get("drone_hp",18)),"shot_cd":1.0,"burst_left":0,
-               "burst_cd":0.0,"phase":self.rng.random()*math.tau,"radius":10.0,"flash":0.0,
+               "burst_cd":0.0,"phase":self.rng.random()*math.tau,"radius":radius,"flash":0.0,
                "vx":0.0,"vy":0.0,"strafe_sign":(-1 if len(self.drones)%2 else 1)}
         self.drones.append(drone)
         self.player.drones=self.drones
@@ -101,6 +105,42 @@ class Sim:
         if self.arena.box_hits(x, y, radius):
             return True
         return bool(self._world_collision(x, y, radius))
+
+    def _safe_drone_position(self, x, y, radius, avoid_player=True):
+        """Finds the nearest free point for a drone without crossing a hitbox."""
+        margin=float(radius)+1.0
+        x=max(margin,min(self.arena.width-margin,float(x)))
+        y=max(margin,min(self.arena.height-margin,float(y)))
+        occupied=list(self.drones)
+        candidates=[(0.0,x,y)]
+        # Spiral probes cover blocked walls/props near the requested formation slot.
+        for ring in range(1,7):
+            distance=ring*18.0
+            for n in range(16):
+                a=math.tau*n/16.0
+                qx=x+math.cos(a)*distance
+                qy=y+math.sin(a)*distance
+                candidates.append((distance,qx,qy))
+        for _,qx,qy in candidates:
+            qx=max(margin,min(self.arena.width-margin,qx))
+            qy=max(margin,min(self.arena.height-margin,qy))
+            if self._drone_collision(qx,qy,radius):
+                continue
+            if avoid_player and math.hypot(qx-self.player.x,qy-self.player.y)<54.0:
+                continue
+            if any(math.hypot(qx-d["x"],qy-d["y"]) < radius+float(d.get("radius",10.0))+12.0 for d in occupied):
+                continue
+            return qx,qy
+        # Last resort: keep the drone at the player's side rather than inside a wall.
+        for n in range(16):
+            a=math.tau*n/16.0
+            qx=self.player.x+math.cos(a)*68.0
+            qy=self.player.y+math.sin(a)*68.0
+            qx=max(margin,min(self.arena.width-margin,qx))
+            qy=max(margin,min(self.arena.height-margin,qy))
+            if not self._drone_collision(qx,qy,radius):
+                return qx,qy
+        return self.player.x,self.player.y
 
     def _drone_path_clear(self, x0, y0, x1, y1, radius):
         """Checks the actual drone hitbox along a short path, not just its endpoint."""
@@ -474,10 +514,14 @@ class Sim:
         if self.drones:
             for idx, drone in enumerate(self.drones):
                 angle = float(drone.get("orbit", 0.0)) + idx * (math.tau / max(1, len(self.drones)))
-                # Reentrada lateral amplia: nunca reaparecer directamente encima de Mira.
-                drone["x"] = self.player.x + math.cos(angle) * 62.0
-                drone["y"] = self.player.y + math.sin(angle) * 48.0
+                # Reentrada lateral amplia y validada contra las hitboxes reales.
+                desired_x = self.player.x + math.cos(angle) * 68.0
+                desired_y = self.player.y + math.sin(angle) * 52.0
+                drone["x"], drone["y"] = self._safe_drone_position(
+                    desired_x, desired_y, float(drone.get("radius",10.0))
+                )
                 drone["orbit"] = angle
+                drone["vx"] = drone["vy"] = 0.0
                 drone["shot_cd"] = min(float(drone.get("shot_cd", 1.0)), 0.25)
             self.player.drones = self.drones
         self._flow_tile=self.arena.tile_of(self.player.x,self.player.y); self._flow_refresh=0.; self.flow=self.arena.flow_field(*self._flow_tile)
