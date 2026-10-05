@@ -275,7 +275,7 @@ class App:
             if max(abs(r-bg[0]), abs(g-bg[1]), abs(b-bg[2])) > tol:
                 continue
             seen.add((x,y))
-            px[x,y] = out.map_rgba((r,g,b,0))
+            out.set_at((x,y),(r,g,b,0))
             stack.extend(((x-1,y),(x+1,y),(x,y-1),(x,y+1)))
         del px
         return out
