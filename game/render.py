@@ -490,8 +490,18 @@ class Renderer:
                     bbox=image.get_bounding_rect(min_alpha=8)
                     image=image.subsurface(bbox).copy() if bbox.width and bbox.height else image
                     if key=="energy":
-                        image=image.copy(); image.fill((255,218,55,255),special_flags=pygame.BLEND_RGBA_MULT)
-                        glow=pygame.Surface(image.get_size(),pygame.SRCALPHA); glow.fill((255,220,50,28),special_flags=pygame.BLEND_RGBA_ADD); image.blit(glow,(0,0))
+                        # Recolorización directa: conserva únicamente el alpha/silueta del PNG.
+                        alpha=image.get_alpha()
+                        mask=image.get_masks()[3] if image.get_masks() else None
+                        recolored=pygame.Surface(image.get_size(),pygame.SRCALPHA)
+                        recolored.fill((255,220,45,255))
+                        recolored.blit(image,(0,0),special_flags=pygame.BLEND_RGBA_MIN)
+                        recolored.set_colorkey(None)
+                        if alpha is not None: recolored.set_alpha(alpha)
+                        image=recolored
+                        glow=pygame.Surface(image.get_size(),pygame.SRCALPHA)
+                        glow.fill((255,220,50,34),special_flags=pygame.BLEND_RGBA_ADD)
+                        image.blit(glow,(0,0),special_flags=pygame.BLEND_RGBA_ADD)
                     self.misc_images[key]=image
                 except (pygame.error, OSError):
                     pass
