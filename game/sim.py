@@ -272,13 +272,19 @@ class Sim:
         return max(margin,min(self.arena.width-margin,sx)), max(margin,min(self.arena.height-margin,sy))
 
     def _crate_collision(self, x, y, radius):
-        """Comprueba colisión AABB del actor contra cajas intactas de una casilla."""
-        half=TILE*0.5
+        """Comprueba la huella visible de las cajas, con fallback a una casilla."""
+        provider=getattr(self, "decoration_collider_provider", None)
         for prop in self.props:
-            if prop.get("broken") or prop.get("kind")!="crate":
-                continue
-            if abs(x-prop["x"]) < half+radius and abs(y-prop["y"]) < half+radius:
-                return True
+            if prop.get("broken") or prop.get("kind")!="crate": continue
+            if provider is not None:
+                shape=provider(prop) if hasattr(provider,"__self__") and hasattr(provider.__self__,"prop_collider") else None
+                if shape:
+                    cx,cy,rx,ry=shape
+                    dx=(x-cx)/max(1.0,rx+radius); dy=(y-cy)/max(1.0,ry+radius)
+                    if dx*dx+dy*dy<1.0: return True
+                    continue
+            half=TILE*0.5
+            if abs(x-prop["x"]) < half+radius and abs(y-prop["y"]) < half+radius: return True
         return False
 
     def _decoration_collision(self, x, y, radius):
@@ -356,7 +362,14 @@ class Sim:
     def _damage_props(self, x, y, damage, explosive=False, color=None):
         for prop in self.props:
             if prop.get("broken"): continue
-            if math.hypot(x-prop["x"],y-prop["y"]) <= prop.get("radius",24)+5:
+            provider=getattr(self, "decoration_collider_provider", None)
+            hit=False
+            if provider is not None and hasattr(provider,"__self__") and hasattr(provider.__self__,"prop_collider"):
+                shape=provider.__self__.prop_collider(prop)
+                if shape:
+                    cx,cy,rx,ry=shape
+                    dx=(x-cx)/max(1.0,rx+5); dy=(y-cy)/max(1.0,ry+5); hit=dx*dx+dy*dy<=1.0
+            if not hit and math.hypot(x-prop["x"],y-prop["y"]) <= prop.get("radius",24)+5:
                 if explosive:
                     self._break_prop(prop,color)
                 else:
