@@ -439,8 +439,8 @@ class Renderer:
             drone = self._load_component_frames(drone_path, minimum=20, merge_gap=4)
             self.drone_frames = drone[:1] if drone else []
 
-        self.door_front_frames = self._load_grid_frames(self.asset_root / "doors" / "front_open_closed.png", 2, 1)
-        self.door_side_frames = self._load_grid_frames(self.asset_root / "doors" / "side_open_closed.png", 2, 1)
+        self.door_front_frames = self._load_door_frames(self.asset_root / "doors" / "front_open_closed.png")
+        self.door_side_frames = self._load_door_frames(self.asset_root / "doors" / "side_open_closed.png")
 
         # Decoraciones nuevas por bioma. Se cargan como spritesheets para
         # aprovechar todas las variantes transparentes que contenga cada PNG.
@@ -687,6 +687,49 @@ class Renderer:
                     bbox = cell.get_bounding_rect(min_alpha=8)
                     if bbox.width and bbox.height:
                         frames.append(cell.subsurface(bbox).copy())
+            return frames
+        except (pygame.error, OSError, ValueError):
+            return []
+
+    @staticmethod
+    def _trim_edge_background(image, white_threshold=248):
+        """Elimina solo el fondo claro conectado a los bordes del PNG."""
+        image = image.copy().convert_alpha()
+        w, h = image.get_size()
+        seen = set()
+        stack = []
+        for x in range(w):
+            stack.append((x, 0)); stack.append((x, h - 1))
+        for y in range(h):
+            stack.append((0, y)); stack.append((w - 1, y))
+        while stack:
+            x, y = stack.pop()
+            if (x, y) in seen or x < 0 or y < 0 or x >= w or y >= h:
+                continue
+            seen.add((x, y))
+            c = image.get_at((x, y))
+            if c.a < 8:
+                for nx, ny in ((x+1,y),(x-1,y),(x,y+1),(x,y-1)):
+                    if (nx, ny) not in seen: stack.append((nx, ny))
+                continue
+            if c.r >= white_threshold and c.g >= white_threshold and c.b >= white_threshold:
+                image.set_at((x, y), (c.r, c.g, c.b, 0))
+                for nx, ny in ((x+1,y),(x-1,y),(x,y+1),(x,y-1)):
+                    if (nx, ny) not in seen: stack.append((nx, ny))
+        bbox = image.get_bounding_rect(min_alpha=8)
+        return image.subsurface(bbox).copy() if bbox.width and bbox.height else image
+
+    def _load_door_frames(self, path):
+        """Carga las dos variantes de puerta, elimina fondo y recorta al modelo real."""
+        try:
+            image = pygame.image.load(str(path)).convert_alpha()
+            if image.get_width() % 2: return []
+            cell_w = image.get_width() // 2
+            frames = []
+            for col in range(2):
+                cell = image.subsurface(pygame.Rect(col * cell_w, 0, cell_w, image.get_height())).copy()
+                cell = self._trim_edge_background(cell)
+                if cell.get_width() and cell.get_height(): frames.append(cell)
             return frames
         except (pygame.error, OSError, ValueError):
             return []
@@ -1507,7 +1550,7 @@ class Renderer:
                 weapon_class = getattr(weapon_def, "class", "")
                 sprite_path = str(getattr(weapon_def, "weapon_sprite", "")).lower()
                 is_melee_asset = weapon_class == "melee" or "/melee/" in sprite_path
-                base_angle = 35.0 if is_melee_asset and "lanza" in sprite_path else (-35.0 if is_melee_asset else {"magic": -32, "special": -25}.get(weapon_class, 0))
+                base_angle = 0.0 if is_melee_asset and "lanza" in sprite_path else (-35.0 if is_melee_asset else {"magic": -32, "special": -25}.get(weapon_class, 0))
                 if math.cos(p.aim) < 0:
                     weapon_image = pygame.transform.flip(weapon_image, True, False)
                     rotation = base_angle + 180 - math.degrees(p.aim)
@@ -2243,7 +2286,7 @@ class Renderer:
                                       "assets/weapons/snipers/sniper5" in sprite_path)
                 if scaled.get_width() > scaled.get_height() * 1.35 or directional_sprite:
                     angle = math.degrees(math.atan2(pr.vy, pr.vx)) if not pr.stuck else math.degrees(pr.stuck_angle)
-                    correction = 62.0 if "assets/weapons/melee/lanza" in sprite_path else 0.0
+                    correction = 0.0
                     rot_key=(sprite_path,max_dim,round(float(getattr(pr,"visual_scale",1.0)),2),int(round((correction-angle)/8.0))*8)
                     rotated=self._rotation_cache.get(rot_key)
                     if rotated is None:
