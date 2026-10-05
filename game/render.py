@@ -1869,9 +1869,9 @@ class Renderer:
             content_x = (width - cols*cell)//2
             content_y = 10
             origin_y=content_y
-            panel=pygame.Surface((width,height),pygame.SRCALPHA);
-            if not self.ui_atlas.draw_panel(panel, pygame.Rect(0,0,width,height), border=6):
-                pygame.draw.rect(panel,(8,12,22,205),panel.get_rect(),border_radius=6); pygame.draw.rect(panel,(82,100,125,220),panel.get_rect(),1,border_radius=6)
+            panel=pygame.Surface((width,height),pygame.SRCALPHA)
+            pygame.draw.rect(panel,(8,12,22,172),panel.get_rect(),border_radius=6)
+            pygame.draw.rect(panel,(82,100,125,195),panel.get_rect(),1,border_radius=6)
         for rid in rooms:
             rx=content_x+(rid[0]-min_x)*cell; ry=origin_y+(rid[1]-min_y)*cell; cx,cy=rx+cell//2,ry+cell//2
             for nr in ((rid[0]+1,rid[1]),(rid[0],rid[1]+1)):
