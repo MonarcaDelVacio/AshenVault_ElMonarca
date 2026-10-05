@@ -85,6 +85,11 @@ class Fx:
                 color = (220, 105, 95)
             self.burst(x, y, tuple(color), 26, 150, 0.35, 2.5)
             self.add_shake(2.0)
+        elif k == "miniboss_shockwave":
+            _, x, y, radius, color = ev
+            if not isinstance(color, (tuple, list)):
+                color = (190, 110, 220)
+            self.burst(x, y, tuple(color), 16, 105, 0.28, 2.0)
         elif k == "melee_swing":
             _, x, y, angle, color, weapon_range, *extra = ev
             # The six-frame slash is now the only melee visual. Size follows weapon
