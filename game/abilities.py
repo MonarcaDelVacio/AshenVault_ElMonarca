@@ -37,10 +37,14 @@ def use_ability(sim):
         p.ability_buff = max(p.ability_buff, a.get("duration", 5.0) * ability_mult)
         sim.emit("ability_haste", p.x, p.y)
     elif kind == "freeze":
-        duration = a.get("duration", 2.5) * ability_mult
-        for e in sim.enemies:
-            if math.hypot(e.x - p.x, e.y - p.y) <= a.get("radius", 180) * (0.9 + 0.1*ability_mult):
-                e.frozen = max(getattr(e, "frozen", 0.0), duration)
+        radius = a.get("radius", 190) * (0.9 + 0.1*ability_mult)
+        sim.wave_attacks.append({
+            "x":p.x,"y":p.y,"radius":10.0,"speed":float(a.get("wave_speed",520.0)),
+            "life":max(0.8,float(a.get("wave_life",1.2))),"damage":0.0,
+            "color":tuple(a.get("color",(110,190,255))),"team":0,"max_radius":radius,
+            "stun":0.0,"freeze_duration":float(a.get("duration",2.5)*ability_mult),
+            "effect":"freeze","hit_ids":set()
+        })
         sim.emit("ability_freeze", p.x, p.y)
     elif kind == "drone":
         max_drones = max(1, int(a.get("max_drones", 2)))
