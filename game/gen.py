@@ -77,12 +77,12 @@ def _flood(grid, start):
 def _choose_floor_surface(seed, room_type, biome):
     """Elige una única superficie para toda la sala. Nunca mezcla texturas nuevas."""
     families = {
-        "ruins": ("ladrillosdepiedra", "roca"),
-        "forest": ("hierba", "madera", "roca"),
-        "dungeon": ("roca", "rocanegra", "ladrillosdepiedra"),
-        "laboratory": ("ladrillos", "roca"),
-        "volcanic": ("rocanegra", "roca"),
-        "final": ("rocanegra", "ladrillosdepiedra"),
+        "ruins": ("suelodeladrillosdepiedra", "sueloderocas", "sueloderocas2"),
+        "forest": ("suelodehierbas", "suelodehierbas2", "sueloderocasyhierba", "sueloderocasyhierba2"),
+        "dungeon": ("sueloderocaoscura2", "sueloderocas", "sueloderocas2"),
+        "laboratory": ("sueloderocasyfuegoazul", "sueloderocasypasto", "sueloderocasyhierba"),
+        "volcanic": ("suelodelava", "sueloderocaylava", "suelodelavarosa", "tierracalienterojiza"),
+        "final": ("sueloderocaoscura2", "sueloderocaylava", "tierracalientemorada", "sueloderocasyfuegoazul"),
     }
     # El tipo de sala ya no cambia el bioma visual. Todas las habitaciones de
     # una misma dungeon comparten la familia de suelo de su temática.
@@ -123,6 +123,7 @@ def _generate_decorations(rng, room_type, biome, floor, reserved, seed_value=0):
     elif biome == "forest":
         take("bush", rng.randint(3,5), 6)
         take("rock", rng.randint(2,3), 6)
+        if rng.random() < 0.65: take("biome_red_bush", 1, 7)
     elif room_type == "shop":
         take("bench_small", 2, 5)
         take("barrel_large", 1, 6)
@@ -149,6 +150,8 @@ def _generate_decorations(rng, room_type, biome, floor, reserved, seed_value=0):
             if rng.random()<0.20: take("signpost", 1, 8)
         elif biome == "volcanic":
             take("rock", rng.randint(3,5), 6)
+            take("biome_lava_rock", rng.randint(1,2), 7)
+            if rng.random() < 0.55: take("biome_lava_rock_purple", 1, 8)
         elif biome == "final":
             take("rock", rng.randint(2,4), 6)
     return result
@@ -238,6 +241,25 @@ def generate_room(seed=None, room_type="combat", biome="ruins", door_sides=None)
         for ox,oy in opening:
             if 0<=ox<ROOM_W and 0<=oy<ROOM_H: g[oy][ox]=0
         ix,iy=inward; g[iy][ix]=0
+
+    # El perímetro nunca puede quedar abierto por más de los dos bloques de
+    # una puerta. Los corredores de acceso se tallan hacia dentro, no sobre el
+    # borde exterior de la sala.
+    active_openings=set()
+    for x,y in doors:
+        if x in (0,ROOM_W-1):
+            active_openings.update(((x,y),(x,y-1)))
+        else:
+            active_openings.update(((x,y),(x-1,y)))
+    for bx in range(ROOM_W):
+        for by in (0,ROOM_H-1):
+            if (bx,by) not in active_openings:
+                g[by][bx]=1
+    for by in range(ROOM_H):
+        for bx in (0,ROOM_W-1):
+            if (bx,by) not in active_openings:
+                g[by][bx]=1
+
     cx,cy=ROOM_W//2,ROOM_H//2
     reserved={(x,y) for y in range(cy-2,cy+3) for x in range(cx-2,cx+3)}
     reserved.update(doors)
