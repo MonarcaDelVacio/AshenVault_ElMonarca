@@ -277,7 +277,7 @@ class Sim:
         for prop in self.props:
             if prop.get("broken") or prop.get("kind")!="crate": continue
             if provider is not None:
-                shape=provider(prop) if hasattr(provider,"__self__") and hasattr(provider.__self__,"prop_collider") else None
+                shape=provider.prop_collider(prop) if hasattr(provider,"prop_collider") else None
                 if shape:
                     cx,cy,rx,ry=shape
                     dx=(x-cx)/max(1.0,rx+radius); dy=(y-cy)/max(1.0,ry+radius)
@@ -296,7 +296,7 @@ class Sim:
         provider=getattr(self, "decoration_collider_provider", None)
         if provider is not None:
             for deco in getattr(self.arena, "decorations", []):
-                shape=provider(deco)
+                shape=provider.decoration_collider(deco) if hasattr(provider,"decoration_collider") else provider(deco)
                 if not shape: continue
                 cx,cy,rx,ry=shape
                 dx=(x-cx)/max(1.0,rx+radius)
@@ -364,8 +364,8 @@ class Sim:
             if prop.get("broken"): continue
             provider=getattr(self, "decoration_collider_provider", None)
             hit=False
-            if provider is not None and hasattr(provider,"__self__") and hasattr(provider.__self__,"prop_collider"):
-                shape=provider.__self__.prop_collider(prop)
+            if provider is not None and hasattr(provider,"prop_collider"):
+                shape=provider.prop_collider(prop)
                 if shape:
                     cx,cy,rx,ry=shape
                     dx=(x-cx)/max(1.0,rx+5); dy=(y-cy)/max(1.0,ry+5); hit=dx*dx+dy*dy<=1.0
