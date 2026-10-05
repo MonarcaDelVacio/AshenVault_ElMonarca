@@ -512,6 +512,16 @@ class Renderer:
     def _load_sheet_frames(self, path):
         try:
             image = pygame.image.load(str(path)).convert_alpha()
+            # Las fuentes son tiras de 3 frames muy próximos entre sí.
+            # La detección por alpha puede unirlos en un solo componente, por lo
+            # que aquí usamos las tres celdas horizontales explícitas.
+            if path.name in ("fountain_active.png", "fountain_inactive.png") and image.get_width() % 3 == 0:
+                frame_w = image.get_width() // 3
+                return [
+                    image.subsurface(pygame.Rect(i * frame_w, 0, frame_w, image.get_height())).copy()
+                    for i in range(3)
+                ]
+
             # El ataque del Minotauro Gigante es una cuadrícula 3x3 real.
             # Sus celdas tienen fondo/transparencia suficiente para que la detección
             # automática pueda confundir las 9 poses con una sola imagen o recortarlas
