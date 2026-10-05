@@ -20,7 +20,7 @@ class Input:
 class Sim:
     def __init__(self,data,char_id,arena_id="ruins_plaza",seed=None,meta_upgrades=None,character_progress=None,difficulty=1):
         self.data=data; self.seed=seed if seed is not None else random.SystemRandom().randrange(1,2**31); self.rng=random.Random(self.seed)
-        self.difficulty=max(1,int(difficulty)); self.dungeon=Dungeon(self.seed,"ruins",self.difficulty); self.room=self.dungeon.room; self.arena=self.room.arena
+        self.difficulty=max(1,int(difficulty)); self.dungeon=Dungeon(self.seed,None,self.difficulty); self.room=self.dungeon.room; self.arena=self.room.arena
         c=data.characters[char_id]; self.meta_upgrades=meta_upgrades or {}
         self.player=Player(c,data.weapons[c.start_weapon],self.arena.player_spawn,self.meta_upgrades,character_progress)
         self.player.inventory=[self.player.weapon]; self.player.items=[]; self.player.bonus_pierce=0; self.player.bonus_projectiles=0; self.player.attack_speed_mult=1.0; self.player.coin_radius=0
@@ -824,7 +824,21 @@ class Sim:
         biome_pool=self.data.biomes.get(self.arena.biome,{}).get("enemy_pool",[])
         pool=[self.data.enemies[eid] for eid in biome_pool if eid in self.data.enemies and self.data.enemies[eid].min_wave<=self.wave]
         if not pool: pool=[e for e in self.data.enemies.values() if e.min_wave<=self.wave]
-        spots=list(self.arena.enemy_spawns) or [self.arena.player_spawn]; self.rng.shuffle(spots); weights=[e.weight for e in pool]
+        spots=list(self.arena.enemy_spawns) or [self.arena.player_spawn]; self.rng.shuffle(spots)
+        weights=[e.weight for e in pool]
+        # La temática también modifica la composición, no solo el suelo.
+        for idx,e in enumerate(pool):
+            wid=getattr(e,"weapon_id",None)
+            wd=self.data.weapons.get(wid) if wid else None
+            dtype=str(getattr(wd,"damage_type","")) if wd else ""
+            if self.arena.biome=="volcanic":
+                weights[idx] *= 3.2 if dtype in ("fire","explosive") else 0.48
+            elif self.arena.biome=="forest":
+                weights[idx] *= 1.8 if dtype in ("poison","ice") else 0.72
+            elif self.arena.biome=="laboratory":
+                weights[idx] *= 1.7 if dtype in ("energy","electric") else 0.8
+            elif self.arena.biome=="final":
+                weights[idx] *= 1.25 if dtype in ("void","energy","fire","ice") else 0.75
         used=[]
         for i in range(min(budget,len(spots))):
             e=self.rng.choices(pool,weights)[0]
