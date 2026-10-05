@@ -52,6 +52,10 @@ class Fx:
                 facing = float(extra[2]) if len(extra) > 2 else 0.0
                 self.enemy_deaths.append([x, y, 0.0, 0.48, sprite_set, size, facing, extra[1] if len(extra) > 1 else None])
             self.add_shake(1.5)
+        elif k == "coin_pickup":
+            _, x, y, amount = ev
+            self.burst(x, y, (255, 220, 80), 7, 95, 0.22, 2.0)
+            self.text(x, y - 4, "+%d" % int(amount), (255, 225, 110))
         elif k == "player_hit":
             _, x, y, a = ev
             self.burst(x, y, (255, 70, 70), 14, 170, 0.4, 3)
