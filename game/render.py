@@ -1866,10 +1866,10 @@ class Renderer:
         panel(weapon_rect, fill=(15, 17, 25, 218), border=(64, 70, 86))
         hud_weapon = self._fit_image(self.weapon_scaled_images.get(getattr(w.d, "id", "")), 28)
         if hud_weapon is not None:
-            screen.blit(hud_weapon, hud_weapon.get_rect(topleft=(21, VIEW_H - 61)))
-            self.text(screen, w.d.name, (55, VIEW_H - 61), (240, 241, 246), self.small)
+            screen.blit(hud_weapon, hud_weapon.get_rect(topleft=(33, VIEW_H - 61)))
+            self.text(screen, w.d.name, (67, VIEW_H - 61), (240, 241, 246), self.small)
         else:
-            self.text(screen, w.d.name, (21, VIEW_H - 61), (240, 241, 246), self.small)
+            self.text(screen, w.d.name, (33, VIEW_H - 61), (240, 241, 246), self.small)
         is_melee = getattr(w.d, "class", "") == "melee"
         if is_melee:
             ammo_text = "USOS  %d/%d" % (w.ammo, w.d.magazine)
@@ -1882,13 +1882,13 @@ class Renderer:
 
         # Munición y estado de recarga quedan en una sola línea limpia. La barra
         # de progreso fue eliminada para evitar ruido visual en el panel.
-        ammo_pos = (21, VIEW_H - 34)
+        ammo_pos = (33, VIEW_H - 34)
         self.text(screen, ammo_text, ammo_pos, ammo_color, self.small)
 
         # Solo cuando el cargador está completamente vacío mostramos el icono de
         # recarga, pegado a la munición y dentro del mismo panel.
         if not is_melee and not w.reloading and w.ammo <= 0:
-            reload_center = (136, VIEW_H - 31)
+            reload_center = (148, VIEW_H - 31)
             if not self.ui_atlas.draw_icon(screen, reload_center, size=22, kind="refresh"):
                 pygame.draw.circle(screen, (240, 200, 90), reload_center, 9, 2)
                 self.text(screen, "R", reload_center, (240, 200, 90), self.small, center=True)
