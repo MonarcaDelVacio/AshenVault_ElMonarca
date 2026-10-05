@@ -395,13 +395,13 @@ class App:
                     return
             fullscreen_rect = pygame.Rect(126, 390, 266, 42)
             if fullscreen_rect.collidepoint(pos):
-                self.settings_sel = 11
+                self.settings_sel = 12
                 if click:
                     self._apply_fullscreen(not self.save.data["settings"].get("fullscreen", False))
                 return
             reset_rect = pygame.Rect(126, 340, 266, 36)
             if reset_rect.collidepoint(pos):
-                self.settings_sel = 12
+                self.settings_sel = 13
                 if click:
                     self._reset_settings()
                 return
@@ -637,7 +637,7 @@ class App:
                 if field=="effects_volume": self.audio.set_effects_volume(v)
                 else: self.audio.set_music_volume(v)
                 self.save.save()
-            elif k in (pygame.K_RIGHT, pygame.K_d) and self.settings_sel in (0,1):
+            elif k in (pygame.K_RIGHT, pygame.K_d) and self.settings_sel in (0,1,2):
                 field="effects_volume" if self.settings_sel==0 else "music_volume"
                 v=(min(2.0,self.save.data["settings"].get("mouse_sensitivity",1.0)+0.05) if self.settings_sel==2 else min(1.0,self.save.data["settings"].get(field,0.6)+0.1)); self.save.data["settings"]["mouse_sensitivity" if self.settings_sel==2 else field]=round(v,2)
                 if field=="effects_volume": self.audio.set_effects_volume(v)
@@ -1057,9 +1057,19 @@ class App:
                     pygame.draw.rect(scr, (73, 221, 211) if selected else (90, 157, 164), fill_rect, border_radius=4)
                 pygame.draw.rect(scr, (126, 151, 171), bar_rect, 1, border_radius=4)
 
-            control_items = SETTINGS_ITEMS[2:11]
+            self.r.text(scr, "SENSIBILIDAD", (145, 319), (205, 215, 225), self.r.menu_small)
+            sens=settings.get("mouse_sensitivity",1.0)
+            sens_selected=self.settings_sel==2
+            sens_rect=pygame.Rect(126,326,266,42)
+            if sens_selected:
+                pygame.draw.rect(scr,(20,35,45),sens_rect,border_radius=6)
+                pygame.draw.rect(scr,(80,223,215),sens_rect,1,border_radius=6)
+            self.r.text(scr, "MOUSE", (145,347), (240,245,247) if sens_selected else (174,191,204), self.r.menu_small, True)
+            self.r.text(scr, "%.2fx"%sens, (365,347), (240,245,247) if sens_selected else (174,191,204), self.r.menu_small, True)
+
+            control_items = SETTINGS_ITEMS[3:12]
             for offset, item in enumerate(control_items):
-                idx = offset + 2
+                idx = offset + 3
                 y = 160 + offset * 27
                 selected = self.settings_sel == idx
                 key_name = k[SETTING_KEYS[item]].upper()
@@ -1067,15 +1077,15 @@ class App:
 
             fullscreen = bool(settings.get("fullscreen", False))
             reset_rect = pygame.Rect(170, 344, 150, 31)
-            self.ui_atlas.draw_button(scr, reset_rect, "Restablecer", selected=self.settings_sel == 12)
+            self.ui_atlas.draw_button(scr, reset_rect, "Restablecer", selected=self.settings_sel == 14)
 
             fullscreen_rect = pygame.Rect(126, 390, 266, 42)
-            if self.settings_sel == 11:
+            if self.settings_sel == 12:
                 pygame.draw.rect(scr, (20, 35, 45), fullscreen_rect, border_radius=6)
                 pygame.draw.rect(scr, (80, 223, 215), fullscreen_rect, 1, border_radius=6)
             checkbox = pygame.Rect(140, 401, 18, 18)
             pygame.draw.rect(scr, (12, 16, 25), checkbox, border_radius=3)
-            pygame.draw.rect(scr, (80, 223, 215) if self.settings_sel == 11 else (116, 132, 151), checkbox, 1, border_radius=3)
+            pygame.draw.rect(scr, (80, 223, 215) if self.settings_sel == 12 else (116, 132, 151), checkbox, 1, border_radius=3)
             if fullscreen:
                 pygame.draw.line(scr, (105, 235, 180), (144, 410), (148, 414), 2)
                 pygame.draw.line(scr, (105, 235, 180), (148, 414), (155, 405), 2)
