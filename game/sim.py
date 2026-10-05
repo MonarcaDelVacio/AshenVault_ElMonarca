@@ -990,7 +990,7 @@ class Sim:
             existing={"owner":self.player,"team":0,"angle":self.player.aim,"charge":charge_time,
                       "duration":0.0,"tick":0.0,"color":tuple(getattr(d,"color",(120,220,255))),
                       "damage":float(getattr(d,"laser_damage",13.5))*self.player.damage_mult,
-                      "width":float(getattr(d,"laser_width",2.0)),"max_width":float(getattr(d,"laser_max_width",14.0)),
+                      "width":float(getattr(d,"laser_width",2.0)),"base_width":float(getattr(d,"laser_width",2.0)),"max_width":float(getattr(d,"laser_max_width",14.0)),
                       "range":float(getattr(d,"laser_range",760.0)),"explosion_radius":float(getattr(d,"laser_explosion_radius",26.0))}
             self.lasers.append(existing)
         existing["angle"]=self.player.aim; existing["charge"]=min(3.0,float(charge_time)); existing["duration"]=0.0
@@ -1050,7 +1050,8 @@ class Sim:
                 if laser["duration"]<=0: continue
             laser["tick"]=max(0.0,laser.get("tick",0.0)-dt)
             charge=max(1.0,min(3.0,float(laser.get("charge",1.0))))
-            laser["width"]=laser.get("width",2.0)+(charge-1.0)/(2.0)*max(0.0,laser.get("max_width",12.0)-laser.get("width",2.0))
+            base_width=laser.get("base_width",laser.get("width",2.0))
+            laser["width"]=base_width+(charge-1.0)/2.0*max(0.0,laser.get("max_width",12.0)-base_width)
             self._laser_hit_target(laser,dt)
             active.append(laser)
         self.lasers=active
