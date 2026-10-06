@@ -638,36 +638,83 @@ class Renderer:
         return runs
 
     def _load_ranged_weapon_atlas(self, path):
-        """Extrae cada arma del atlas de distancia sin separar sus piezas."""
+        """Carga el atlas ranged respetando sus celdas alineadas.
+
+        Los PNG nuevos están organizados como una hoja de modelos, no como una
+        colección de componentes libres. Separar por connected_components es
+        peligroso porque una misma arma puede tener varias piezas desconectadas
+        y además cambia el índice cuando una pieza queda aislada. Primero
+        buscamos una cuadrícula regular compatible con el número de armas
+        declaradas; solo usamos componentes como último recurso.
+        """
         try:
             image = pygame.image.load(str(path)).convert_alpha()
+            expected = 0
+            if hasattr(self, "data") and getattr(self.data, "weapons", None):
+                indices = [
+                    int(getattr(w, "weapon_sprite_index"))
+                    for w in self.data.weapons.values()
+                    if getattr(w, "weapon_sprite_sheet", None) == "ranged"
+                    and isinstance(getattr(w, "weapon_sprite_index", None), int)
+                ]
+                expected = max(indices) + 1 if indices else 0
+            if expected <= 0:
+                expected = 11
+
+            # Evaluamos cuadrículas razonables. Una hoja con armas alineadas
+            # puede tener una celda vacía de separación, por lo que aceptamos
+            # más celdas que modelos siempre que las vacías queden realmente
+            # vacías. El aspecto de la imagen desempata entre 4x3, 3x4, etc.
+            iw, ih = image.get_size()
+            image_ratio = iw / max(1, ih)
+            candidates = []
+            for rows in range(2, 9):
+                for cols in range(2, 9):
+                    total = cols * rows
+                    if total < expected or iw % cols or ih % rows:
+                        continue
+                    cell_w, cell_h = iw // cols, ih // rows
+                    if cell_w < 8 or cell_h < 8:
+                        continue
+                    nonempty = 0
+                    cells = []
+                    for row in range(rows):
+                        for col in range(cols):
+                            rect = pygame.Rect(col * cell_w, row * cell_h, cell_w, cell_h)
+                            cell = image.subsurface(rect)
+                            bbox = cell.get_bounding_rect(min_alpha=8)
+                            if bbox.width >= 2 and bbox.height >= 2:
+                                nonempty += 1
+                            cells.append((rect, bbox))
+                    # Debe haber exactamente los modelos esperados. Si la
+                    # hoja contiene una celda vacía, total puede ser expected+1.
+                    if nonempty != expected:
+                        continue
+                    grid_ratio = cols / rows
+                    ratio_error = abs(grid_ratio - image_ratio)
+                    # Penaliza hojas con demasiadas celdas vacías aunque el
+                    # número de modelos coincida.
+                    empty_penalty = (total - expected) * 0.15
+                    candidates.append((ratio_error + empty_penalty, cols, rows, cells))
+
+            if candidates:
+                _, cols, rows, cells = min(candidates, key=lambda x: x[0])
+                frames = []
+                for rect, bbox in cells:
+                    cell = image.subsurface(rect).copy()
+                    if bbox.width and bbox.height:
+                        frames.append(cell.subsurface(bbox).copy())
+                    else:
+                        frames.append(pygame.Surface((1, 1), pygame.SRCALPHA))
+                # El índice es la posición row-major de la celda. Conservamos
+                # también las celdas vacías para que nunca se corran los IDs.
+                return frames
+
+            # Compatibilidad con hojas antiguas/no regulares.
             mask = pygame.mask.from_surface(image, threshold=8)
             components = mask.connected_components(minimum=18)
-            rects = [
-                rect
-                for component in components
-                for rect in component.get_bounding_rects()
-            ]
+            rects = [rect for component in components for rect in component.get_bounding_rects()]
             rects = [r for r in rects if r.width >= 2 and r.height >= 2]
-            # Algunas armas están formadas por varias piezas opacas que se
-            # superponen (o se tocan). Esas piezas pertenecen al mismo modelo.
-            changed = True
-            while changed:
-                changed = False
-                for i in range(len(rects)):
-                    a = rects[i]
-                    for j in range(i + 1, len(rects)):
-                        b = rects[j]
-                        overlap = a.colliderect(b)
-                        gap_x = max(b.left - a.right, a.left - b.right, 0)
-                        gap_y = max(b.top - a.bottom, a.top - b.bottom, 0)
-                        if overlap or (max(gap_x, gap_y) <= 2 and min(a.width * a.height, b.width * b.height) <= max(a.width * a.height, b.width * b.height) * 0.35):
-                            rects[i] = a.union(b)
-                            rects.pop(j)
-                            changed = True
-                            break
-                    if changed:
-                        break
             rects.sort(key=lambda r: (r.top, r.left))
             return [image.subsurface(r).copy() for r in rects]
         except (pygame.error, OSError, ValueError):
