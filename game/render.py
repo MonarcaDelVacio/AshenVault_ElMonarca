@@ -115,32 +115,43 @@ class Renderer:
         }
         for character_id, filename in player_sprite_files.items():
             character_path = character_dir / filename
-            frames = []
             if not character_path.is_file():
                 continue
+            frames = []
             try:
                 sheet = pygame.image.load(str(character_path)).convert_alpha()
-                frame_w = sheet.get_width() // 8
-                if frame_w <= 0:
+                frame_count = 8
+                frame_w = sheet.get_width() // frame_count
+                if frame_w <= 0 or sheet.get_width() < frame_count:
                     continue
-                for frame_index in range(8):
-                    source = pygame.Surface((frame_w, sheet.get_height()), pygame.SRCALPHA)
+
+                # Los seis sheets actuales son tiras horizontales de exactamente
+                # ocho celdas. Cada índice se conserva aunque una celda tenga muy
+                # poco alpha, evitando que un frame vacío desplace los siguientes.
+                for frame_index in range(frame_count):
+                    left = round(frame_index * sheet.get_width() / frame_count)
+                    right = round((frame_index + 1) * sheet.get_width() / frame_count)
+                    source = pygame.Surface(
+                        (max(1, right - left), sheet.get_height()), pygame.SRCALPHA
+                    )
                     source.blit(
                         sheet,
                         (0, 0),
-                        pygame.Rect(frame_index * frame_w, 0, frame_w, sheet.get_height()),
+                        pygame.Rect(left, 0, max(1, right - left), sheet.get_height()),
                     )
-                    # Ignorar residuos alpha casi transparentes de los bordes.
-                    bbox = source.get_bounding_rect(min_alpha=20)
+                    bbox = source.get_bounding_rect(min_alpha=8)
                     if bbox.width <= 0 or bbox.height <= 0:
+                        # Placeholder fijo: el frame sigue ocupando su índice.
+                        frames.append(pygame.Surface((48, 52), pygame.SRCALPHA))
                         continue
+
                     cropped = source.subsurface(bbox).copy()
                     scale = min(48 / cropped.get_width(), 52 / cropped.get_height())
                     target_size = (
                         max(1, round(cropped.get_width() * scale)),
                         max(1, round(cropped.get_height() * scale)),
                     )
-                    sprite = pygame.transform.scale(cropped, target_size)
+                    sprite = pygame.transform.smoothscale(cropped, target_size)
                     normalized = pygame.Surface((48, 52), pygame.SRCALPHA)
                     normalized.blit(
                         sprite,
@@ -152,7 +163,9 @@ class Renderer:
                     frames.append(normalized)
             except (pygame.error, OSError, ValueError):
                 frames = []
-            if frames:
+
+            # Solo publicamos la animación si quedaron los ocho índices.
+            if len(frames) == 8:
                 self.player_walk_frames[character_id] = frames
         self.asset_root = Path(__file__).resolve().parent.parent / "assets"
         # Sprites de cajas y barriles destructibles. Coloca los PNG en assets/props/.
