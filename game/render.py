@@ -726,31 +726,53 @@ class Renderer:
             return []
 
     def _load_melee_weapon_atlas(self, path):
-        """El atlas melee está organizado como una cuadrícula 6x6; cada celda es un arma."""
+        """Carga modelos melee desde la cuadrícula física 6x6 del atlas.
+
+        El índice del arma es el índice de celda, nunca el índice de un componente
+        detectado. Esto evita que una espada con hoja/mango separados o una celda
+        vacía desplace todos los modelos siguientes.
+        """
         try:
             image = pygame.image.load(str(path)).convert_alpha()
             cols, rows = 6, 6
-            cell_w = image.get_width() / cols
-            cell_h = image.get_height() / rows
+            expected = 36
+            if hasattr(self, "data") and getattr(self.data, "weapons", None):
+                indices = [
+                    int(getattr(w, "weapon_sprite_index"))
+                    for w in self.data.weapons.values()
+                    if getattr(w, "weapon_sprite_sheet", None) == "melee"
+                    and isinstance(getattr(w, "weapon_sprite_index", None), int)
+                ]
+                if indices:
+                    expected = max(36, max(indices) + 1)
+
+            # El atlas actual es aproximadamente cuadrado y contiene 36 celdas.
+            # Usamos coordenadas redondeadas para que un PNG de 1195/1197 px no
+            # acumule errores de división entre celdas.
             frames = []
-            for row in range(rows):
-                for col in range(cols):
-                    left = round(col * cell_w)
-                    top = round(row * cell_h)
-                    right = round((col + 1) * cell_w)
-                    bottom = round((row + 1) * cell_h)
-                    cell = image.subsurface(pygame.Rect(left, top, right - left, bottom - top)).copy()
-                    # Cada índice del atlas representa exactamente una celda.
-                    # El modelo se recorta al alpha real para que el espacio vacío
-                    # de la celda nunca se interprete como parte del arma.
-                    bbox = cell.get_bounding_rect(min_alpha=8)
-                    if bbox.width and bbox.height:
-                        cropped = cell.subsurface(bbox).copy()
-                        frames.append(cropped)
-                    else:
-                        # Conservamos la posición del índice aunque una celda esté
-                        # vacía; así los índices de weapons.json nunca se desplazan.
-                        frames.append(pygame.Surface((1, 1), pygame.SRCALPHA))
+            for index in range(expected):
+                row, col = divmod(index, cols)
+                if row >= rows:
+                    frames.append(pygame.Surface((1, 1), pygame.SRCALPHA))
+                    continue
+                left = round(col * image.get_width() / cols)
+                right = round((col + 1) * image.get_width() / cols)
+                top = round(row * image.get_height() / rows)
+                bottom = round((row + 1) * image.get_height() / rows)
+                cell = image.subsurface(
+                    pygame.Rect(left, top, max(1, right - left), max(1, bottom - top))
+                ).copy()
+
+                # Primero intentamos retirar únicamente un fondo claro conectado
+                # al borde. Si el PNG ya tiene transparencia, esto no altera el
+                # modelo; después el bbox alpha define su contorno real.
+                cell = self._trim_edge_background(cell, white_threshold=248)
+                bbox = cell.get_bounding_rect(min_alpha=8)
+                if bbox.width and bbox.height:
+                    frames.append(cell.subsurface(bbox).copy())
+                else:
+                    frames.append(pygame.Surface((1, 1), pygame.SRCALPHA))
+
             return frames
         except (pygame.error, OSError, ValueError):
             return []
@@ -1622,7 +1644,7 @@ class Renderer:
             if frames:
                 # Atlas: cada arma debe conservar exactamente el modelo asignado.
                 index = int(getattr(weapon_def, "weapon_sprite_index", 0))
-                weapon_image = self._fit_image(frames[index], self._weapon_max_dimension(getattr(weapon_def, "class", "pistol"))) if 0 <= index < len(frames) else None
+                weapon_image = (self._fit_image(frames[index], self._weapon_max_dimension(getattr(weapon_def, "class", "pistol")))\n                               if 0 <= index < len(frames) and frames[index].get_width() > 1 and frames[index].get_height() > 1\n                               else None)
             else:
                 weapon_image = self.weapon_scaled_images.get(weapon_id)
             if weapon_image is not None:
