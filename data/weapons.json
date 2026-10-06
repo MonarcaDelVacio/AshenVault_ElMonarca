@@ -2638,5 +2638,79 @@
     "melee_level": 5,
     "weapon_sprite_sheet": "melee",
     "weapon_sprite_index": 35
+  },
+  "throwing_dagger_atlas": {
+    "name": "Daga Arrojadiza del Atlas",
+    "class": "throwable",
+    "rarity": "common",
+    "damage": 15,
+    "fire_interval": 0.42,
+    "auto": false,
+    "magazine": 3,
+    "reload_time": 0,
+    "projectile_speed": 560,
+    "spread": 1.5,
+    "recoil": 8,
+    "damage_type": "physical",
+    "energy_cost": 0,
+    "range": 430,
+    "pellets": 1,
+    "pierce": 0,
+    "bounces": 0,
+    "projectile_radius": 4,
+    "max_magazines": 0,
+    "color": [
+      210,
+      220,
+      235
+    ],
+    "weapon_sprite_sheet": "melee",
+    "weapon_sprite_index": 3,
+    "projectile_sprite": "__weapon_sheet__:melee:3",
+    "projectile_visual_scale": 0.95,
+    "throwable": true,
+    "throwable_stack": 3,
+    "throwable_fan_angles": [
+      -12,
+      0,
+      12
+    ]
+  },
+  "throwing_blade_atlas": {
+    "name": "Cuchilla Arrojadiza del Atlas",
+    "class": "throwable",
+    "rarity": "uncommon",
+    "damage": 18,
+    "fire_interval": 0.38,
+    "auto": false,
+    "magazine": 3,
+    "reload_time": 0,
+    "projectile_speed": 590,
+    "spread": 1.2,
+    "recoil": 7,
+    "damage_type": "physical",
+    "energy_cost": 0,
+    "range": 450,
+    "pellets": 1,
+    "pierce": 0,
+    "bounces": 0,
+    "projectile_radius": 4,
+    "max_magazines": 0,
+    "color": [
+      220,
+      225,
+      240
+    ],
+    "weapon_sprite_sheet": "melee",
+    "weapon_sprite_index": 13,
+    "projectile_sprite": "__weapon_sheet__:melee:13",
+    "projectile_visual_scale": 0.9,
+    "throwable": true,
+    "throwable_stack": 3,
+    "throwable_fan_angles": [
+      -12,
+      0,
+      12
+    ]
   }
 }
