@@ -13,8 +13,16 @@ class WeaponState:
         self.ammo = wdef.magazine
         self.reserve_magazines = int(getattr(wdef, "max_magazines", 5))
         self.max_reserve_magazines = self.reserve_magazines
-        self.durability = int(getattr(wdef, "durability", max(int(wdef.magazine), 40) if getattr(wdef, "class", "") == "melee" else wdef.magazine))
-        self.max_durability = int(getattr(wdef, "durability", max(int(wdef.magazine), 40) if getattr(wdef, "class", "") == "melee" else wdef.magazine))
+        # Las armas cuerpo a cuerpo nunca pueden superar 30 usos.
+        # Esto también corrige definiciones antiguas que quedaron con valores
+        # como 999 en el JSON.
+        if getattr(wdef, "class", "") == "melee":
+            melee_uses = min(30, max(1, int(getattr(wdef, "durability", getattr(wdef, "magazine", 30)))))
+            self.durability = melee_uses
+            self.max_durability = melee_uses
+        else:
+            self.durability = int(getattr(wdef, "durability", wdef.magazine))
+            self.max_durability = int(getattr(wdef, "durability", wdef.magazine))
         self.cooldown = 0.0
         self.reload_left = 0.0
         self.charge_time = 0.0
