@@ -88,7 +88,17 @@ class GameData:
                 if getattr(weapon, "class", "") == "melee":
                     continue
                 raise ValueError(f"Arma {wid}: falta projectile_sprite")
-            if not os.path.isfile(os.path.join(root, projectile.replace("/", os.sep))):
+            if str(projectile).startswith("__weapon_sheet__:"):
+                parts = str(projectile).split(":")
+                if len(parts) != 3 or parts[1] not in weapon_sheet_assets:
+                    raise ValueError(f"Arma {wid}: referencia de proyectil por atlas inválida")
+                try:
+                    pindex = int(parts[2])
+                except ValueError:
+                    raise ValueError(f"Arma {wid}: índice de proyectil por atlas inválido")
+                if pindex < 0:
+                    raise ValueError(f"Arma {wid}: índice de proyectil por atlas inválido")
+            elif not os.path.isfile(os.path.join(root, projectile.replace("/", os.sep))):
                 raise ValueError(f"Arma {wid}: asset inexistente {projectile}")
             if getattr(weapon, "class", "") == "launcher" and int(getattr(weapon, "bounces", 0) or 0) != 0:
                 raise ValueError(f"Arma {wid}: los proyectiles de lanzador no pueden rebotar")
