@@ -773,14 +773,16 @@ class Sim:
                 self._chest_collision(x,y,radius))
 
     def move_actor(self, x, y, dx, dy, radius):
-        """Movimiento contra paredes y objetos físicos de una casilla, permitiendo deslizarse por sus lados."""
-        nx,ny=self.arena.move(x,y,dx,dy,radius)
+        """Movimiento contra paredes y objetos físicos, usando colisiones de PNG en gameplay."""
+        # Arena conserva su collider circular legacy para consumidores headless,
+        # pero durante gameplay Sim usa el alpha real de los modelos.
+        nx,ny=self.arena.move(x,y,dx,dy,radius,include_decorations=False)
         if not self._world_collision(nx,ny,radius):
             return nx,ny
-        xx,xy=self.arena.move(x,y,dx,0,radius)
+        xx,xy=self.arena.move(x,y,dx,0,radius,include_decorations=False)
         if self._world_collision(xx,xy,radius):
             xx,xy=x,y
-        yx,yy=self.arena.move(xx,xy,0,dy,radius)
+        yx,yy=self.arena.move(xx,xy,0,dy,radius,include_decorations=False)
         if self._world_collision(yx,yy,radius):
             yx,yy=xx,xy
         return yx,yy
