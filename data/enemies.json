@@ -822,8 +822,7 @@
     "melee_explosion": true,
     "melee_explosion_radius": 86,
     "is_elite_asset": true,
-    "boss_uses_supplied_model": true,
-    "sprite_mirror": true
+    "boss_uses_supplied_model": true
   },
   "stone_colossus": {
     "name": "Gólem Colosal",
