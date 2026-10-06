@@ -99,6 +99,10 @@ def _fire_projectiles(sim, p, w, charge_ratio=0.0):
         speed = d.projectile_speed * speed_mult
         projectile_range = d.range * range_mult
         sprite = getattr(d, "projectile_sprite", None)
+        # Las armas arrojadizas reutilizan directamente el modelo del atlas como
+        # proyectil; así no hace falta duplicar los PNG pequeños de cuchillos.
+        if not sprite and getattr(d, "projectile_sprite_sheet", None):
+            sprite = f"__weapon_sheet__:{d.projectile_sprite_sheet}:{int(getattr(d, 'projectile_sprite_index', 0))}"
         # The thrown spear/bow visual travels with the projectile, oriented along its trajectory.
         sim.spawn_projectile(
             0, mx, my, a, speed, dmg, d.projectile_radius,
@@ -159,6 +163,12 @@ def try_fire(sim, p, inp, dt):
     finished = w.update(dt)
     if finished:
         sim.emit("reload_done", p.x, p.y)
+    if getattr(d, "class", "") == "throwable":
+        # Las armas arrojadizas no recargan: cada pickup aporta exactamente
+        # tres unidades y el arma se consume al lanzar la última.
+        if inp.reload_pressed:
+            return False
+
     if inp.reload_pressed and w.start_reload():
         w.charge_time = 0.0
         sim.emit("reload_start", p.x, p.y)
@@ -211,4 +221,7 @@ def try_fire(sim, p, inp, dt):
         sim.emit("melee_swing", p.x, p.y, p.aim, d.color, d.range)
         return True
     p.fire_buffer = 0.0
-    return _fire_projectiles(sim, p, w, 0.0)
+    fired = _fire_projectiles(sim, p, w, 0.0)
+    if fired and getattr(d, "class", "") == "throwable" and w.ammo <= 0 and getattr(p, "weapon", None) is w:
+        sim.break_weapon(p, w)
+    return fired
