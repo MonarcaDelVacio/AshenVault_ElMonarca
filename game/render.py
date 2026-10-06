@@ -2052,8 +2052,12 @@ class Renderer:
         for d in arena.doors.values():
             horizontal=d.side in ("N","S")
             if horizontal:
-                x=(d.x-1)*TILE+int(ox); y=d.y*TILE+int(oy)
-                span=pygame.Rect(x,y,TILE*2,TILE); cx,cy=span.center
+                x=(d.x-1)*TILE+int(ox)
+                # La puerta inferior conserva 1 bloque de altura. La superior
+                # ocupa toda la altura visual de la muralla: 2 bloques.
+                door_h = TILE*2 if d.side=="N" else TILE
+                y=(d.y-door_h//TILE+1)*TILE+int(oy) if d.side=="N" else d.y*TILE+int(oy)
+                span=pygame.Rect(x,y,TILE*2,door_h); cx,cy=span.center
             else:
                 x=d.x*TILE+int(ox); y=(d.y-1)*TILE+int(oy)
                 span=pygame.Rect(x,y,TILE,TILE*2); cx,cy=span.center
@@ -2069,10 +2073,13 @@ class Renderer:
                 if lintel is None:
                     lintel=pygame.transform.smoothscale(pygame.transform.rotate(frame,90),(32,8)); self._fit_cache[("door_lintel",id(frame))]=lintel
                 for fy in (span.top,span.bottom-8): screen.blit(lintel,(span.x,fy))
-            door_frames = self.door_front_frames if horizontal else self.door_side_frames
+            door_frames = self.door_front_frames
             if door_frames:
                 state_index = 1 if d.open and len(door_frames) > 1 else 0
-                door_img = pygame.transform.scale(door_frames[state_index], span.size)
+                door_img = door_frames[state_index]
+                if not horizontal:
+                    door_img = pygame.transform.rotate(door_img, 90)
+                door_img = pygame.transform.scale(door_img, span.size)
                 # El modelo de puerta se apoya sobre un respaldo opaco de pared.
                 # Así ningún píxel transparente del PNG deja ver el vacío/fondo.
                 backing = pygame.Surface(span.size, pygame.SRCALPHA)
@@ -2081,8 +2088,8 @@ class Renderer:
                 backing.fill((*wall_color, 255))
                 pygame.draw.rect(backing, (*wall_top, 255), (0, 0, span.w, max(3, TILE // 6)))
                 screen.blit(backing, span.topleft)
-                # La puerta lateral tiene una orientación canónica hacia la derecha.
-                # En el lado oeste se espeja horizontalmente para mirar hacia fuera.
+                # Las puertas laterales usan el mismo modelo, girado 90°.
+                # En el lado oeste se espeja para mantener la orientación exterior.
                 if d.side == "W":
                     door_img = pygame.transform.flip(door_img, True, False)
                 screen.blit(door_img, span.topleft)
