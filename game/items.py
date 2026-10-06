@@ -16,7 +16,14 @@ def _apply_effects(player, effects):
         elif key=='coin_radius': player.coin_radius=getattr(player,'coin_radius',0)+int(val)
 
 def apply_item_bonuses(player, item, synergy_data=None):
-    effects=item.effects if hasattr(item,'effects') else item.get('effects',{})
+    # Algunos pickups son objetos de gameplay (p. ej. AmmoLoot) y no tienen
+    # diccionario de efectos. Nunca deben tratarse como mappings.
+    if hasattr(item, 'effects'):
+        effects = getattr(item, 'effects', {}) or {}
+    elif isinstance(item, dict):
+        effects = item.get('effects', {}) or {}
+    else:
+        effects = {}
     _apply_effects(player,effects)
     player.items.append(item)
     if synergy_data:
