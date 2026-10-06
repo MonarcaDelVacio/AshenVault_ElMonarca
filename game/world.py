@@ -330,9 +330,15 @@ class Dungeon:
         else:
             self.biome=self.BIOME_ORDER[abs(int(self.seed)) % len(self.BIOME_ORDER)]
         self.name={
-            "ruins":"Ruinas Antiguas","forest":"Bosque Umbrío","dungeon":"Mazmorra Profunda",
-            "laboratory":"Laboratorio Helix","volcanic":"Falla Ígnea","final":"Núcleo del Vacío"
-        }.get(self.biome,self.biome.title())
+            "ruins":"Cripta de las Ruinas",
+            "forest":"Bosque de las Raíces",
+            "dungeon":"Abismo de Piedra",
+            "laboratory":"Santuario Helix",
+            "volcanic":"Falla Ígnea",
+            "desert":"Cañón de las Arenas",
+            "swamp":"Pantano de las Sombras",
+            "final":"Núcleo del Vacío"
+        }.get(self.biome,"Dominio de "+self.biome.title())
         self.layout=generate_layout(self.seed)
         self.rooms={}
         path_set={tuple(x) for x in self.layout["path"]}; rng=random.Random(self.seed+7919)
