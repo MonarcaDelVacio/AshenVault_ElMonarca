@@ -1,5 +1,6 @@
 """Ashen Vault - roguelike de acción 2D. Ejecutar: python main.py"""
 import sys
+import math
 from pathlib import Path
 import pygame
 
