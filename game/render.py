@@ -1117,7 +1117,7 @@ class Renderer:
         return {
             "pistol": 29, "smg": 32, "shotgun": 34, "rifle": 38,
             "precision": 42, "machinegun": 39, "launcher": 37,
-            "magic": 35, "special": 38, "experimental": 34, "melee": 37,
+            "magic": 35, "special": 38, "experimental": 34, "melee": 37, "throwable": 24,
         }.get(weapon_class, 32)
 
     def text(self, surf, s, pos, color=(235, 235, 240), font=None, center=False, right=False):
@@ -1623,7 +1623,7 @@ class Renderer:
             if weapon_image is not None:
                 weapon_class = getattr(weapon_def, "class", "")
                 sprite_path = str(getattr(weapon_def, "weapon_sprite", "")).lower()
-                is_melee_asset = weapon_class == "melee" or "/melee/" in sprite_path
+                is_melee_asset = weapon_class == "melee" or weapon_class == "throwable" or "/melee/" in sprite_path
                 base_angle = 0.0 if is_melee_asset and "lanza" in sprite_path else (-35.0 if is_melee_asset else {"magic": -32, "special": -25}.get(weapon_class, 0))
                 if math.cos(p.aim) < 0:
                     weapon_image = pygame.transform.flip(weapon_image, True, False)
@@ -1631,13 +1631,30 @@ class Renderer:
                 else:
                     rotation = base_angle - math.degrees(p.aim)
                 hand_offset = (p.radius + 1 - kick) if is_melee_asset else (p.radius - 1 - kick)
-                rot_key=(weapon_id, bool(is_melee_asset), int(round(rotation/5.0))*5)
-                rotated=self._weapon_rotation_cache.get(rot_key)
-                if rotated is None:
-                    rotated=self._rotate_weapon_from_grip(weapon_image, weapon_def, rotation) if is_melee_asset else pygame.transform.rotate(weapon_image, rotation)
-                    self._weapon_rotation_cache[rot_key]=rotated
-                center = (int(x + ax * hand_offset), int(y + ay * hand_offset))
-                screen.blit(rotated, rotated.get_rect(center=center))
+                if weapon_class == "throwable":
+                    fan = getattr(weapon_def, "throwable_fan_angles", [-12, 0, 12])
+                    fan = [float(v) for v in fan[:3]] or [-12.0, 0.0, 12.0]
+                    for fan_index, fan_angle in enumerate(fan):
+                        fan_rotation = rotation + fan_angle
+                        side_offset = (fan_index - (len(fan) - 1) / 2.0) * 3.0
+                        center = (
+                            int(x + ax * hand_offset - ay * side_offset),
+                            int(y + ay * hand_offset + ax * side_offset),
+                        )
+                        rot_key=(weapon_id, "throwable", fan_index, int(round(fan_rotation/5.0))*5)
+                        rotated=self._weapon_rotation_cache.get(rot_key)
+                        if rotated is None:
+                            rotated=pygame.transform.rotate(weapon_image, fan_rotation)
+                            self._weapon_rotation_cache[rot_key]=rotated
+                        screen.blit(rotated, rotated.get_rect(center=center))
+                else:
+                    rot_key=(weapon_id, bool(is_melee_asset), int(round(rotation/5.0))*5)
+                    rotated=self._weapon_rotation_cache.get(rot_key)
+                    if rotated is None:
+                        rotated=self._rotate_weapon_from_grip(weapon_image, weapon_def, rotation) if is_melee_asset else pygame.transform.rotate(weapon_image, rotation)
+                        self._weapon_rotation_cache[rot_key]=rotated
+                    center = (int(x + ax * hand_offset), int(y + ay * hand_offset))
+                    screen.blit(rotated, rotated.get_rect(center=center))
             else:
                 x0, y0 = x + ax * (p.radius - 2 - kick), y + ay * (p.radius - 2 - kick)
                 x1, y1 = x + ax * (p.radius + 12 - kick), y + ay * (p.radius + 12 - kick)
@@ -2333,6 +2350,29 @@ class Renderer:
                     loop=True, duration=0.30
                 )
                 continue
+            if isinstance(getattr(pr, "sprite_key", None), str) and pr.sprite_key.startswith("__weapon_sheet__:"):
+                parts = pr.sprite_key.split(":")
+                if len(parts) == 3:
+                    sheet_key = parts[1]
+                    try:
+                        index = int(parts[2])
+                    except ValueError:
+                        index = -1
+                    frames = self.weapon_variant_frames.get(sheet_key, [])
+                    if 0 <= index < len(frames):
+                        scaled = self._fit_image(frames[index], 16.0 * getattr(pr, "visual_scale", 1.0))
+                        if scaled is not None:
+                            angle = math.degrees(math.atan2(pr.vy, pr.vx)) if not pr.stuck else math.degrees(pr.stuck_angle)
+                            rot_key=("weapon_projectile", sheet_key, index, round(float(getattr(pr, "visual_scale", 1.0)),2), int(round(angle/8.0))*8)
+                            rotated=self._rotation_cache.get(rot_key)
+                            if rotated is None:
+                                rotated=pygame.transform.rotate(scaled, -angle)
+                                self._rotation_cache[rot_key]=rotated
+                            if pr.stuck and pr.stuck_timer < 1.0:
+                                rotated=rotated.copy()
+                                rotated.set_alpha(max(0, int(255 * pr.stuck_timer)))
+                            screen.blit(rotated, rotated.get_rect(center=pos))
+                            continue
             if isinstance(getattr(pr, "sprite_key", None), str) and pr.sprite_key.startswith("__sheet__:"):
                 sheet_key=pr.sprite_key.split(":",1)[1]
                 if sheet_key == "minigolem_rock":
