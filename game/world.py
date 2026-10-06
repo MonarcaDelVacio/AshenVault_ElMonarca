@@ -261,15 +261,20 @@ class Arena:
     def box_hits(self,x,y,h):
         x0,x1=int((x-h)//TILE),int((x+h)//TILE); y0,y1=int((y-h)//TILE),int((y+h)//TILE)
         return any(self.solid_tile(tx,ty) for ty in range(y0,y1+1) for tx in range(x0,x1+1))
-    def move(self,x,y,dx,dy,r):
+    def move(self,x,y,dx,dy,r,include_decorations=True):
+        """Mueve contra la geometría de la sala.
+
+        En gameplay, Sim desactiva el fallback circular de decoración porque
+        usa el collider derivado del alpha real del PNG.
+        """
         h=r*.85; x+=dx
         if dx and self.box_hits(x,y,h):
             x=(int((x+h)//TILE)*TILE-h-.001) if dx>0 else ((int((x-h)//TILE)+1)*TILE+h+.001)
         y+=dy
         if dy and self.box_hits(x,y,h):
             y=(int((y+h)//TILE)*TILE-h-.001) if dy>0 else ((int((y-h)//TILE)+1)*TILE+h+.001)
-        # Las decoraciones tienen volumen: expulsamos al actor suavemente hasta
-        # quedar fuera de su huella, manteniendo el movimiento fluido.
+        if not include_decorations:
+            return x,y
         for _ in range(3):
             hit=self.decoration_hits(x,y,r*.86)
             if not hit: break
@@ -282,13 +287,12 @@ class Arena:
             x += vx/dist*push
             y += vy/dist*push
             if self.box_hits(x,y,h):
-                # Si el empujón cae contra una pared, conserva la coordenada que
-                # no estaba bloqueada para evitar atascar al jugador.
                 tx,ty=x,y
                 if self.box_hits(tx,y,h): tx=x-dx
                 if self.box_hits(x,ty,h): ty=y-dy
                 x,y=tx,ty
         return x,y
+
     def line_of_sight(self,x0,y0,x1,y1):
         d=math.hypot(x1-x0,y1-y0); n=int(d//8)+1
         return not any(self.point_solid(x0+(x1-x0)*i/n,y0+(y1-y0)*i/n) for i in range(1,n))
