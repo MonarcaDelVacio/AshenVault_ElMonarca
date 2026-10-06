@@ -1502,7 +1502,7 @@ class App:
 
     def run(self):
         while self.running:
-            dt = self.clock.tick(120) / 1000.0
+            dt = self.clock.tick(60) / 1000.0
             self.t += dt
             self.poll()
             if self.state == PLAY:
