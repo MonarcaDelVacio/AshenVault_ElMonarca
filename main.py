@@ -543,11 +543,8 @@ class App:
         return pygame.key.key_code(name)
 
     def confirm_character_selection(self):
-        """Confirma el personaje y continúa el flujo que abrió la selección."""
-        if self.back_state == "start_run":
-            self.new_run()
-        else:
-            self.go(HUB if self.back_state == HUB else MENU)
+        """Seleccionar un personaje desde esta pantalla inicia la partida."""
+        self.new_run()
 
     def new_run(self):
         self.sim = Sim(self.data, self.char_id, meta_upgrades=self.save.data.get("upgrades", {}), character_progress=self.save.data.get("character_progress", {}).get(self.char_id, {}))
@@ -1242,7 +1239,11 @@ class App:
             self.r.text(self.screen,price,(x+w//2,y+h-15),color,self.r.menu_small,True)
         upgrade_back_label = "Volver" if self.back_state == CHAR_SELECT else "Volver al menu"
         for n,item in enumerate(("Personajes",upgrade_back_label)):
-            self.draw_option_card((250+n*240,438,220,44),item,self.hub_sel==HUB_ITEMS.index("Volver al menu") if item == "Volver al menu" else False)
+            rect=pygame.Rect(250+n*240,438,220,44)
+            selected=(item=="Personajes" and self.hub_dropdown_open)
+            if item=="Volver al menu":
+                selected=(self.hub_sel==HUB_ITEMS.index("Volver al menu"))
+            self.draw_option_card(rect,item,selected)
         self.r.text(self.screen,"Las mejoras son exclusivas de %s y afectan sus partidas."%c.name.split(",")[0],(VIEW_W//2,518),(150,165,180),self.r.menu_small,True)
         if self.hub_dropdown_open:
             panel=pygame.Rect(120,250,720,176)
