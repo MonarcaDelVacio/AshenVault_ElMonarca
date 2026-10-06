@@ -1657,7 +1657,16 @@ class Renderer:
             if frames:
                 # Atlas: cada arma debe conservar exactamente el modelo asignado.
                 index = int(getattr(weapon_def, "weapon_sprite_index", 0))
-                weapon_image = (self._fit_image(frames[index], self._weapon_max_dimension(getattr(weapon_def, "class", "pistol")))\n                               if 0 <= index < len(frames) and frames[index].get_width() > 1 and frames[index].get_height() > 1\n                               else None)
+                weapon_image = (
+                    self._fit_image(
+                        frames[index],
+                        self._weapon_max_dimension(getattr(weapon_def, "class", "pistol")),
+                    )
+                    if 0 <= index < len(frames)
+                    and frames[index].get_width() > 1
+                    and frames[index].get_height() > 1
+                    else None
+                )
             else:
                 weapon_image = self.weapon_scaled_images.get(weapon_id)
             if weapon_image is not None:
