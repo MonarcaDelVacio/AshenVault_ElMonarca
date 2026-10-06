@@ -39,6 +39,32 @@ def bonfire_positions(arena):
             continue
         if any(math.hypot(x-xx,y-yy) < TILE*2.5 for xx,yy in torch_positions):
             continue
+        # Las hogueras se consideran decoración física a efectos de separación.
+        # Nunca se colocan detrás/dentro de una fuente, pozo, estatua u otro PNG.
+        decoration_clearance = {
+            "fountain_active": 2.0, "fountain_inactive": 2.0, "fountain_small": 1.35,
+            "well_empty": 2.0,
+            "statue_goddess": 2.0, "statue_archer": 2.0, "statue_assassin": 2.0,
+            "statue_knight": 2.0, "statue_mage": 2.0,
+            "bench_large": 1.35, "bench_small": 1.15, "barrel_large": 1.0,
+            "signpost": 1.15, "table": 1.2, "counter": 1.4,
+            "crate_stack": 1.25, "crate_pair": 1.15, "wood_chest_decor": 1.15,
+            "rock": 1.0, "bush": 1.0, "biome_red_bush": 1.45,
+            "biome_lava_rock": 1.5, "biome_lava_rock_purple": 1.4,
+            "biome_shared_rock": 1.5,
+        }
+        blocked_by_deco=False
+        for deco in getattr(arena, "decorations", []):
+            radius=decoration_clearance.get(str(deco.get("kind")),1.0)
+            dx=float(deco.get("x",0))*TILE+TILE/2
+            dy=float(deco.get("y",0))*TILE+TILE/2
+            if math.hypot(x-dx,y-dy) < TILE*(1.0+radius):
+                blocked_by_deco=True
+                break
+        if blocked_by_deco:
+            continue
+        if any(math.hypot(x-xx,y-yy) < TILE*2.2 for xx,yy in chosen):
+            continue
         chosen.append((x,y))
         if len(chosen) >= desired:
             break
