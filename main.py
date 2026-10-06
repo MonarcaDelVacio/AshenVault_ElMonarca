@@ -1032,7 +1032,10 @@ class App:
     def update_score(self, dt):
         # La pantalla de EXP anima únicamente la experiencia obtenida en esta run.
         if self.score_phase == "xp":
-            duration = 1.15
+            # La EXP debe verse avanzar de forma deliberada, no resolverse en un
+            # solo salto. La duración permite apreciar tanto la subida como los
+            # reinicios de la barra cuando se cruza un nivel.
+            duration = 2.80
             self.score_timer = min(duration, self.score_timer + max(0.0, dt))
             progress = min(1.0, self.score_timer / duration)
             eased = progress * progress * (3.0 - 2.0 * progress)
@@ -1061,30 +1064,29 @@ class App:
         self.r.text(scr,"SCORE",(VIEW_W//2,48),(240,195,105),self.r.menu_title,True)
         self.r.text(scr,cname.upper(),(VIEW_W//2,84),(105,230,218),self.r.menu_font,True)
 
-        # El Score muestra el PNG de retrato del personaje.
-        portrait = self.character_portraits.get(self.char_id)
-        if portrait is not None:
-            bbox = portrait.get_bounding_rect(min_alpha=8)
-            if bbox.width > 0 and bbox.height > 0:
-                portrait = portrait.subsurface(bbox).copy()
-            max_w, max_h = 112, 150
-            scale = min(max_w / max(1, portrait.get_width()), max_h / max(1, portrait.get_height()))
-            portrait_size = (max(1, int(portrait.get_width() * scale)), max(1, int(portrait.get_height() * scale)))
-            portrait = pygame.transform.smoothscale(portrait, portrait_size)
-            scr.blit(portrait, portrait.get_rect(center=(170, 280)))
-        else:
-            # Respaldo para instalaciones sin retratos.
-            score_frames = self.r.player_walk_frames.get(self.char_id, [])
-            if score_frames:
-                score_frame = score_frames[int(self.t * 6.0) % len(score_frames)]
-                bbox = score_frame.get_bounding_rect(min_alpha=8)
-                if bbox.width and bbox.height:
-                    score_frame = score_frame.subsurface(bbox).copy()
-                max_size = 86
-                scale = min(max_size / max(1, score_frame.get_width()), max_size / max(1, score_frame.get_height()))
-                score_size = (max(1, int(score_frame.get_width() * scale)), max(1, int(score_frame.get_height() * scale)))
-                score_frame = pygame.transform.scale(score_frame, score_size)
-                scr.blit(score_frame, score_frame.get_rect(center=(170, 280)))
+        # En la pantalla de EXP se muestra el frame del spritesheet del
+        # personaje usado. No usamos el retrato estático: así queda garantizado
+        # que el recurso corresponde al mismo personaje jugado y que el sheet
+        # se está separando por sus ocho índices correctamente.
+        score_frames = self.r.player_walk_frames.get(self.char_id, [])
+        if score_frames:
+            frame_index = int(self.t * 7.0) % len(score_frames)
+            score_frame = score_frames[frame_index]
+            bbox = score_frame.get_bounding_rect(min_alpha=8)
+            if bbox.width and bbox.height:
+                score_frame = score_frame.subsurface(bbox).copy()
+            max_w, max_h = 94, 112
+            scale = min(
+                max_w / max(1, score_frame.get_width()),
+                max_h / max(1, score_frame.get_height()),
+            )
+            score_size = (
+                max(1, int(score_frame.get_width() * scale)),
+                max(1, int(score_frame.get_height() * scale)),
+            )
+            score_frame = pygame.transform.smoothscale(score_frame, score_size)
+            # Encima de la barra, dentro del panel de EXP.
+            scr.blit(score_frame, score_frame.get_rect(center=(VIEW_W // 2, 202)))
 
         if self.score_phase in ("stats","fade"):
             st=self.sim.stats if self.sim else {}
@@ -1143,18 +1145,31 @@ class App:
                 else:
                     remaining += gained
                     gained = 0.0
+
+            # El último frame siempre coincide exactamente con el progreso guardado.
             if self.score_continue_ready:
                 lvl = self.score_level_end
                 remaining = self.score_xp_end
+
             need = xp_to_next(lvl)
             ratio = max(0.0, min(1.0, remaining / max(1, need)))
-            self.r.text(scr,"NIVEL %d"%lvl,(VIEW_W//2,268),(105,230,218),self.r.menu_font,True)
-            bar=pygame.Rect(240,296,480,24)
-            pygame.draw.rect(scr,(18,24,36),bar,border_radius=8)
-            pygame.draw.rect(scr,(88,222,205),(bar.x,bar.y,int(bar.w*ratio),bar.h),border_radius=8)
-            pygame.draw.rect(scr,(105,125,145),bar,1,border_radius=8)
-            self.r.text(scr,"%d / %d XP"%(int(remaining),need),(VIEW_W//2,336),(220,226,236),self.r.menu_small,True)
-            self.r.text(scr,"+%d XP"%self.score_xp_total,(VIEW_W//2,366),(245,220,145),self.r.menu_small,True)
+            self.r.text(scr,"NIVEL %d"%lvl,(VIEW_W//2,258),(105,230,218),self.r.menu_font,True)
+
+            bar=pygame.Rect(220,286,520,30)
+            pygame.draw.rect(scr,(18,24,36),bar,border_radius=9)
+            fill_w=int(bar.w*ratio)
+            if fill_w > 0:
+                pygame.draw.rect(scr,(88,222,205),(bar.x,bar.y,fill_w,bar.h),border_radius=9)
+                # Brillo móvil en el extremo del progreso para que el incremento
+                # sea perceptible incluso cuando la barra cambia poco.
+                pulse=0.55+0.45*math.sin(self.t*12.0)
+                glow_x=bar.x+fill_w
+                pygame.draw.circle(scr,(150,255,235), (glow_x,bar.centery), max(3,int(3+2*pulse)))
+            pygame.draw.rect(scr,(105,125,145),bar,1,border_radius=9)
+
+            # Contador animado: muestra la misma cantidad que está moviendo la barra.
+            self.r.text(scr,"%d / %d XP"%(int(remaining),need),(VIEW_W//2,326),(220,226,236),self.r.menu_small,True)
+            self.r.text(scr,"+%d XP"%int(self.score_xp_display),(VIEW_W//2,355),(245,220,145),self.r.menu_font,True)
             if self.score_continue_ready:
                 self.draw_option_card((VIEW_W-180,VIEW_H-58,150,40),"Continuar",True)
 
