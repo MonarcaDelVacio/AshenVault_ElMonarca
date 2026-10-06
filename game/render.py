@@ -1140,10 +1140,13 @@ class Renderer:
         if "espada" in path: return (0.18,0.79)
         return (0.18,0.78)
 
-    def _rotate_weapon_from_grip(self, image, weapon_def, rotation):
+    def _rotate_weapon_from_grip(self, image, weapon_def, rotation, flipped=False):
         image=self._fit_image(image,self._weapon_max_dimension(getattr(weapon_def,"class","pistol")))
         if image is None: return None
         gx,gy=self._melee_grip_anchor(weapon_def)
+        # Al espejar el arma, el punto de agarre también se espeja.
+        if flipped:
+            gx=1.0-gx
         grip=(image.get_width()*gx,image.get_height()*gy)
         pad=max(image.get_width(),image.get_height())+12
         canvas=pygame.Surface((image.get_width()+pad*2,image.get_height()+pad*2),pygame.SRCALPHA)
@@ -1674,7 +1677,10 @@ class Renderer:
                 sprite_path = str(getattr(weapon_def, "weapon_sprite", "")).lower()
                 is_melee_asset = weapon_class == "melee" or weapon_class == "throwable" or "/melee/" in sprite_path
                 base_angle = 0.0 if is_melee_asset and "lanza" in sprite_path else (-35.0 if is_melee_asset else {"magic": -32, "special": -25}.get(weapon_class, 0))
-                if math.cos(p.aim) < 0:
+                flipped = math.cos(p.aim) < 0
+                if flipped:
+                    # El PNG se dibuja mirando al lado opuesto cuando el cursor
+                    # cruza al lado izquierdo del jugador.
                     weapon_image = pygame.transform.flip(weapon_image, True, False)
                     rotation = base_angle + 180 - math.degrees(p.aim)
                 else:
@@ -1690,17 +1696,20 @@ class Renderer:
                             int(x + ax * hand_offset - ay * side_offset),
                             int(y + ay * hand_offset + ax * side_offset),
                         )
-                        rot_key=(weapon_id, "throwable", fan_index, int(round(fan_rotation/5.0))*5)
+                        rot_key=(weapon_id, "throwable", flipped, fan_index, int(round(fan_rotation/5.0))*5)
                         rotated=self._weapon_rotation_cache.get(rot_key)
                         if rotated is None:
                             rotated=pygame.transform.rotate(weapon_image, fan_rotation)
                             self._weapon_rotation_cache[rot_key]=rotated
                         screen.blit(rotated, rotated.get_rect(center=center))
                 else:
-                    rot_key=(weapon_id, bool(is_melee_asset), int(round(rotation/5.0))*5)
+                    # La dirección izquierda/derecha forma parte de la clave.
+                    # Sin esto, apuntar a 0° y después a 180° podía reutilizar el
+                    # mismo sprite cacheado sin el espejo correspondiente.
+                    rot_key=(weapon_id, bool(is_melee_asset), flipped, int(round(rotation/5.0))*5)
                     rotated=self._weapon_rotation_cache.get(rot_key)
                     if rotated is None:
-                        rotated=self._rotate_weapon_from_grip(weapon_image, weapon_def, rotation) if is_melee_asset else pygame.transform.rotate(weapon_image, rotation)
+                        rotated=self._rotate_weapon_from_grip(weapon_image, weapon_def, rotation, flipped=flipped) if is_melee_asset else pygame.transform.rotate(weapon_image, rotation)
                         self._weapon_rotation_cache[rot_key]=rotated
                     center = (int(x + ax * hand_offset), int(y + ay * hand_offset))
                     screen.blit(rotated, rotated.get_rect(center=center))
