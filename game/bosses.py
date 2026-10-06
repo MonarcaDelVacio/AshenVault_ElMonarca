@@ -215,7 +215,9 @@ class Boss(Enemy):
                 self, self.facing,
                 duration=1.8 + 0.25*self.phase,
                 color=tuple(getattr(self.d,"laser_color",getattr(self.d,"color",(255,100,100)))),
-                damage=float(getattr(self.d,"laser_damage",10.0)) + 2.5*self.phase,
+                # El rayo es una amenaza sostenida, no un ataque capaz de
+                # eliminar al jugador en una sola exposición.
+                damage=float(getattr(self.d,"laser_damage",3.0)) + 0.75*self.phase,
                 width=1.5 + 0.5*self.phase,
                 max_width=8.0 + 2.5*self.phase,
                 range_=float(getattr(self.d,"laser_range",820.0)),
