@@ -265,7 +265,7 @@
     "pellets": 1,
     "bounces": 0,
     "projectile_rotation_offset": 0,
-    "projectile_visual_scale": 1.65
+    "projectile_visual_scale": 0.65
   },
   "ricochet_disc": {
     "name": "Disco Rebote",
@@ -345,7 +345,7 @@
     "pellets": 1,
     "bounces": 0,
     "projectile_rotation_offset": 0,
-    "projectile_visual_scale": 1.65
+    "projectile_visual_scale": 0.65
   },
   "ember_greatsword": {
     "name": "Mandoble Incandescente",
@@ -1252,7 +1252,7 @@
     "charge_damage_mult": 2.2,
     "stick_on_hit": true,
     "projectile_rotation_offset": 0,
-    "projectile_visual_scale": 1.65
+    "projectile_visual_scale": 0.65
   },
   "prism_beam": {
     "name": "Rayo Prisma",
@@ -1467,7 +1467,7 @@
     "projectile_sprite": "assets/weapons/melee/lanza2.png",
     "stick_on_hit": true,
     "projectile_rotation_offset": 0,
-    "projectile_visual_scale": 1.65
+    "projectile_visual_scale": 0.65
   },
   "void_hammer": {
     "name": "Martillo del Vacío",
