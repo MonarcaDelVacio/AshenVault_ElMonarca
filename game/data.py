@@ -62,7 +62,6 @@ class GameData:
         root = os.path.dirname(data_dir())
         weapon_sheet_assets = {
             "ranged": "assets/weapons/new/modelosarmas.png",
-            "melee": "assets/weapons/new/modelosarmasmelee.png",
         }
         for wid, weapon in self.weapons.items():
             # Las armas nuevas pueden obtener su modelo desde una hoja compartida
