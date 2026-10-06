@@ -688,26 +688,31 @@ class Renderer:
                             cells.append((rect, bbox))
                     # Debe haber exactamente los modelos esperados. Si la
                     # hoja contiene una celda vacía, total puede ser expected+1.
-                    if nonempty != expected:
+                    if nonempty < expected:
                         continue
                     grid_ratio = cols / rows
                     ratio_error = abs(grid_ratio - image_ratio)
-                    # Penaliza hojas con demasiadas celdas vacías aunque el
-                    # número de modelos coincida.
-                    empty_penalty = (total - expected) * 0.15
-                    candidates.append((ratio_error + empty_penalty, cols, rows, cells))
+                    # Los modelos de munición/dardos están al final de la hoja,
+                    # en la esquina inferior derecha. Penalizamos extras, pero
+                    # no dejamos que esos extras desplacen el índice de las armas.
+                    extra_penalty = max(0, nonempty - expected) * 0.55
+                    empty_penalty = (total - nonempty) * 0.08
+                    candidates.append((ratio_error + extra_penalty + empty_penalty, cols, rows, cells, nonempty))
 
             if candidates:
-                _, cols, rows, cells = min(candidates, key=lambda x: x[0])
+                _, cols, rows, cells, nonempty = min(candidates, key=lambda x: x[0])
                 frames = []
+                accepted = 0
                 for rect, bbox in cells:
                     cell = image.subsurface(rect).copy()
-                    if bbox.width and bbox.height:
+                    if bbox.width and bbox.height and accepted < expected:
                         frames.append(cell.subsurface(bbox).copy())
+                        accepted += 1
                     else:
+                        # Las celdas posteriores al número real de armas son
+                        # municiones/dardos u otros modelos auxiliares: se
+                        # mantienen transparentes para que jamás se asignen a un arma.
                         frames.append(pygame.Surface((1, 1), pygame.SRCALPHA))
-                # El índice es la posición row-major de la celda. Conservamos
-                # también las celdas vacías para que nunca se corran los IDs.
                 return frames
 
             # Compatibilidad con hojas antiguas/no regulares.
