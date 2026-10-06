@@ -427,10 +427,22 @@ class App:
                 self.go(CHAR_SELECT)
             return
         if self.state == HUB and not self.info:
-            # El botón inferior de Mejoras conserva el origen de navegación.
+            # Estos botones tienen prioridad sobre cualquier fallback del menú HUB.
+            # "Personajes" abre el selector dentro de Mejoras; nunca navega al menú principal.
+            characters_rect = pygame.Rect(250,438,220,44)
             back_rect = pygame.Rect(490,438,220,44)
-            if click and back_rect.collidepoint(pos) and self.back_state == CHAR_SELECT:
-                self.go(CHAR_SELECT)
+            if characters_rect.collidepoint(pos):
+                if click:
+                    self.hub_dropdown_open = True
+                    self.hub_dropdown_sel = self.char_ids.index(self.char_id)
+                    self.hub_sel = 1
+                    self.audio.play("ui", self.t)
+                return
+            if click and back_rect.collidepoint(pos):
+                if self.back_state == CHAR_SELECT:
+                    self.go(CHAR_SELECT)
+                else:
+                    self.go(MENU)
                 return
             from game.save import CHARACTER_UPGRADES
             if self.hub_dropdown_open:
@@ -458,18 +470,8 @@ class App:
                     self.hub_sel=n+3
                     if click: self.activate_hub("UPGRADE:"+kind)
                     return
-            back_label = "Volver" if self.back_state == CHAR_SELECT else "Volver al menu"
-            actions=["Personajes",back_label]
-            for n,item in enumerate(actions):
-                rect=pygame.Rect(250+n*240,438,220,44)
-                if rect.collidepoint(pos):
-                    if click:
-                        if item == "Volver" and self.back_state == CHAR_SELECT:
-                            self.go(CHAR_SELECT)
-                        else:
-                            self.hub_sel=HUB_ITEMS.index("Volver al menu")
-                            self.activate_hub("Volver al menu")
-                    return
+            # Los botones inferiores ya se resuelven arriba para evitar que
+            # el fallback de HUB pueda interpretar "Personajes" como otra acción.
             return
         if self.state == SETTINGS:
             # Las zonas clicables coinciden exactamente con los elementos dibujados.
