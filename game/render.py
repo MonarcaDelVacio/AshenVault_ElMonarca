@@ -684,9 +684,17 @@ class Renderer:
                     right = round((col + 1) * cell_w)
                     bottom = round((row + 1) * cell_h)
                     cell = image.subsurface(pygame.Rect(left, top, right - left, bottom - top)).copy()
+                    # Cada índice del atlas representa exactamente una celda.
+                    # El modelo se recorta al alpha real para que el espacio vacío
+                    # de la celda nunca se interprete como parte del arma.
                     bbox = cell.get_bounding_rect(min_alpha=8)
                     if bbox.width and bbox.height:
-                        frames.append(cell.subsurface(bbox).copy())
+                        cropped = cell.subsurface(bbox).copy()
+                        frames.append(cropped)
+                    else:
+                        # Conservamos la posición del índice aunque una celda esté
+                        # vacía; así los índices de weapons.json nunca se desplazan.
+                        frames.append(pygame.Surface((1, 1), pygame.SRCALPHA))
             return frames
         except (pygame.error, OSError, ValueError):
             return []
