@@ -1254,7 +1254,7 @@ class Sim:
                     if target is not None:
                         target.reserve_magazines=min(target.max_reserve_magazines,target.reserve_magazines+magazines)
                         self.items.remove(item); self.emit('ammo_pickup',p.x,p.y,magazines); return
-                apply_item_bonuses(p,item); self.items.remove(item); self.emit('item_pickup',p.x,p.y,item.id); return
+                apply_item_bonuses(p,item); self.items.remove(item); self.emit('item_pickup',p.x,p.y,getattr(item,'id',getattr(item,'kind','item'))); return
     def _enter_next_dungeon(self):
         """Usa el portal de la sala final y encadena otra dungeon mas dificil."""
         self.room.items=self.items; self.room.pickups=self.pickups
