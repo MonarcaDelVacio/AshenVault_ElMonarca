@@ -599,15 +599,12 @@ class Renderer:
                     self.projectile_images[projectile_path] = image
         new_weapon_dir = self.asset_root / "weapons" / "new"
         ranged_atlas = new_weapon_dir / "modelosarmas.png"
-        melee_atlas = new_weapon_dir / "modelosarmasmelee.png"
+        # El atlas melee fue retirado porque su mapeado no era fiable.
+        # Las armas cuerpo a cuerpo usan únicamente sus PNG individuales.
         if ranged_atlas.is_file():
             frames = self._load_ranged_weapon_atlas(ranged_atlas)
             if frames:
                 self.weapon_variant_frames["ranged"] = frames
-        if melee_atlas.is_file():
-            frames = self._load_melee_weapon_atlas(melee_atlas)
-            if frames:
-                self.weapon_variant_frames["melee"] = frames
 
         self.default_projectiles = {
             "physical": "assets/projectiles/projectile_06.png",
