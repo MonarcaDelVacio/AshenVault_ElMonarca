@@ -114,17 +114,42 @@ def _generate_decorations(rng, room_type, biome, floor, reserved, seed_value=0):
     rng.shuffle(candidates)
     result = []
 
+    # Radio visual conservador en bloques. Se basa en el tamaño máximo con que
+    # Renderer dibuja cada familia de decoración, no solo en la casilla central.
+    # Así una fuente grande no puede quedar detrás de una hoguera, roca o banco.
+    decor_radius_tiles = {
+        "fountain_active": 1.75, "fountain_inactive": 1.75, "fountain_small": 1.15,
+        "well_empty": 1.75,
+        "statue_goddess": 1.75, "statue_archer": 1.75, "statue_assassin": 1.75,
+        "statue_knight": 1.75, "statue_mage": 1.75,
+        "bench_large": 1.25, "bench_small": 1.05, "barrel_large": 0.95,
+        "signpost": 1.05, "table": 1.15, "counter": 1.35,
+        "crate_stack": 1.20, "crate_pair": 1.10, "wood_chest_decor": 1.10,
+        "rock": 0.95, "bush": 0.95, "biome_red_bush": 1.35,
+        "biome_lava_rock": 1.40, "biome_lava_rock_purple": 1.30,
+        "biome_shared_rock": 1.40,
+    }
+
     def take(kind, count, min_center=4):
-        used={(int(d["x"]),int(d["y"])) for d in result}
         picked=0
+        candidate_radius=decor_radius_tiles.get(kind, 1.0)
         for tx,ty in candidates:
             if picked >= count: break
-            if (tx,ty) in used: continue
             if abs(tx-ROOM_W//2)+abs(ty-ROOM_H//2) < min_center: continue
-            if any(abs(tx-x)<=1 and abs(ty-y)<=1 for x,y in used): continue
+            # Comprobación de distancia real entre huellas, no solo de casillas.
+            # El pequeño margen evita que dos PNG anti-aliasados se toquen.
+            clear=True
+            for existing in result:
+                ex,ey=int(existing["x"]),int(existing["y"])
+                er=decor_radius_tiles.get(existing["kind"],1.0)
+                if ((tx-ex)**2 + (ty-ey)**2) ** 0.5 < candidate_radius + er + 0.25:
+                    clear=False
+                    break
+            if not clear:
+                continue
             variant = rng.random() if kind.startswith("biome_") else rng.randrange(6)
             result.append({"kind":kind,"x":tx,"y":ty,"variant":variant})
-            used.add((tx,ty)); picked+=1
+            picked+=1
 
     # Salas especiales: la estatua representa un punto de interés, no relleno.
     # Nunca se usan estatuas como decoración aleatoria en combate o jefes.
