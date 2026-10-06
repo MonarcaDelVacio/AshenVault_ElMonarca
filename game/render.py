@@ -438,7 +438,15 @@ class Renderer:
         for index in range(1, 4):
             path = merchant_dir / f"merchant{index}.png"
             if path.is_file():
-                frames = self._load_component_frames(path, minimum=30, merge_gap=5, exclude_large=(index == 1))
+                # Los merchants son spritesheets regulares: merchant1/2 = 4x4 y merchant3 = 6x4.
+                # No usar connected-components aqui porque puede confundir partes internas del sprite
+                # con modelos separados. merchant3 necesita conservar sus 24 celdas en orden fila/columna.
+                if index == 3:
+                    frames = self._load_merchant_sheet_frames(path, cols=6, rows=4)
+                else:
+                    frames = self._load_merchant_sheet_frames(path, cols=4, rows=4)
+                    if not frames:
+                        frames = self._load_component_frames(path, minimum=30, merge_gap=5, exclude_large=(index == 1))
                 if not frames:
                     frames = self._load_sheet_frames(path)
                 if frames:
@@ -845,6 +853,36 @@ class Renderer:
                     bbox = cell.get_bounding_rect(min_alpha=8)
                     if bbox.width and bbox.height:
                         frames.append(cell.subsurface(bbox).copy())
+            return frames
+        except (pygame.error, OSError, ValueError):
+            return []
+
+    def _load_merchant_sheet_frames(self, path, cols, rows):
+        """Extrae celdas de los spritesheets regulares de merchants y recorta transparencia."""
+        try:
+            image = pygame.image.load(str(path)).convert_alpha()
+            alpha = pygame.surfarray.array_alpha(image)
+            # Detectar los limites reales de columnas/filas mediante proyecciones de alpha.
+            col_runs = self._alpha_runs(alpha.max(axis=0) > 8)
+            row_runs = self._alpha_runs(alpha.max(axis=1) > 8)
+            if len(col_runs) != cols or len(row_runs) != rows:
+                # Fallback a una rejilla uniforme si el margen transparente hace ambiguas
+                # las proyecciones. Esto mantiene el orden esperado del spritesheet.
+                cell_w = image.get_width() // cols
+                cell_h = image.get_height() // rows
+                col_runs = [(i * cell_w, (i + 1) * cell_w - 1) for i in range(cols)]
+                row_runs = [(i * cell_h, min(image.get_height() - 1, (i + 1) * cell_h - 1)) for i in range(rows)]
+            frames = []
+            for y0, y1 in row_runs:
+                for x0, x1 in col_runs:
+                    rect = pygame.Rect(int(x0), int(y0), int(x1 - x0 + 1), int(y1 - y0 + 1))
+                    if rect.width < 2 or rect.height < 2:
+                        continue
+                    cell = image.subsurface(rect).copy()
+                    bounds = cell.get_bounding_rect(min_alpha=8)
+                    if bounds.width >= 2 and bounds.height >= 2:
+                        cell = cell.subsurface(bounds).copy()
+                    frames.append(cell)
             return frames
         except (pygame.error, OSError, ValueError):
             return []
