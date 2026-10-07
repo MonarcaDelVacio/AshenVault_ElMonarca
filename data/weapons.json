@@ -206,7 +206,8 @@
       255
     ],
     "weapon_sprite": "assets/weapons/magic/magicice2.png",
-    "projectile_sprite": "assets/projectiles/projectile_02.png"
+    "projectile_sprite": "assets/projectiles/projectile_02.png",
+    "durability": 30
   },
   "arc_blade": {
     "name": "Hoja de Arco",
@@ -232,7 +233,8 @@
     "weapon_sprite": "assets/weapons/melee/espada3.png",
     "pellets": 1,
     "bounces": 0,
-    "melee_level": 4
+    "melee_level": 4,
+    "durability": 30
   },
   "sun_lance": {
     "name": "Lanza Solar",
@@ -1585,11 +1587,11 @@
     "name": "Pistola de Dardos Médicos",
     "class": "pistol",
     "rarity": "common",
-    "damage": 5,
-    "fire_interval": 0.34,
+    "damage": 7,
+    "fire_interval": 0.23,
     "auto": false,
-    "magazine": 8,
-    "reload_time": 1.25,
+    "magazine": 10,
+    "reload_time": 1.1,
     "projectile_speed": 560,
     "spread": 1.5,
     "recoil": 25,
@@ -1605,7 +1607,7 @@
       235,
       155
     ],
-    "weapon_sprite": "assets/weapons/pistols/pistol2.png",
+    "weapon_sprite": "assets/weapons/pistols/pistol7.png",
     "projectile_sprite": "assets/projectiles/projectile_02.png",
     "ally_heal": 3
   },
