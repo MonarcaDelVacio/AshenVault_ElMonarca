@@ -78,6 +78,9 @@ def _fire_projectiles(sim, p, w, charge_ratio=0.0):
     range_mult = 1.0 + (getattr(d, "charge_range_mult", 2.0) - 1.0) * charge_ratio
     damage_mult = 1.0 + (getattr(d, "charge_damage_mult", 2.2) - 1.0) * charge_ratio
     if uses_weapon:
+        if not w.unlimited_ammo:
+            w.durability = max(0, w.durability - 1)
+            w.ammo = w.durability
     else:
         if not w.unlimited_ammo:
             w.ammo -= 1
