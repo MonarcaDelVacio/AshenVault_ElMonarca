@@ -322,7 +322,7 @@ class Renderer:
         self.wall_piece_images = {}
         self.wall_models = {}
         wall_dir = self.asset_root / "walls"
-        new_wall_path = self.asset_root / "walls.png"
+        new_wall_path = self.asset_root / "walls" / "walls.png"
         if new_wall_path.is_file():
             try:
                 atlas = pygame.image.load(str(new_wall_path)).convert_alpha()
