@@ -80,3 +80,16 @@ def test_data_graph_rejects_invalid_weapon_contract():
     errors = validate_data_graph(graph)
     assert any("magazine inválido" in error for error in errors)
     assert any("fire_interval inválido" in error for error in errors)
+
+
+def test_data_graph_rejects_invalid_enemy_sprite_set():
+    graph = {
+        "weapons": {},
+        "enemies": {"bad": {"sprite_set": 123}},
+        "characters": {},
+        "bosses": {},
+        "biomes": {},
+        "biome_bosses": {},
+    }
+    errors = validate_data_graph(graph)
+    assert any("sprite_set inválido" in error for error in errors)
