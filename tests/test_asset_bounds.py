@@ -1,4 +1,4 @@
-from game.assets.bounds import DECORATION_MAX_SIZE, decoration_max_size
+from game.assets.bounds import DECORATION_MAX_SIZE, DECORATION_COLLISION_RADII, decoration_max_size, decoration_collision_radius
 
 
 def test_decoration_size_has_single_source():
@@ -9,3 +9,9 @@ def test_decoration_size_has_single_source():
         "statue_goddess", "statue_archer", "statue_assassin",
         "statue_knight", "statue_mage",
     }
+
+
+def test_legacy_collision_radius_is_centralized():
+    assert decoration_collision_radius("rock") == 18.0
+    assert decoration_collision_radius("statue_goddess") is None
+    assert set(DECORATION_COLLISION_RADII) >= {"rock", "bush", "biome_shared_rock"}
