@@ -1,5 +1,3 @@
-from itertools import combinations
-
 from game.gen import generate_layout, generate_room
 from game.generation_validation import validate_layout, validate_room, validate_dungeon
 from game.world import Dungeon
@@ -41,3 +39,23 @@ def test_room_validation_rejects_extra_perimeter_opening():
     room = generate_room(7, "combat", "ruins", ("N",))
     room["grid"][0][0] = 0
     assert "aberturas de perímetro no coinciden con las puertas" in validate_room(room)
+
+def test_dungeon_bosses_are_not_spatially_adjacent():
+    for seed in range(128):
+        dungeon = Dungeon(seed)
+        bosses = [rid for rid, room in dungeon.rooms.items() if room.room_type == "boss"]
+        assert len(bosses) == 6
+        for i, rid in enumerate(bosses):
+            for other in bosses[i + 1:]:
+                assert abs(rid[0] - other[0]) + abs(rid[1] - other[1]) > 1
+
+
+def test_generation_validator_treats_pillars_as_solid():
+    room = generate_room(3, "combat", "ruins", ("N",))
+    pillar = next(
+        ((x, y) for y, row in enumerate(room["grid"]) for x, value in enumerate(row) if value in (2, 4)),
+        None,
+    )
+    assert pillar is not None
+    from game.generation_validation import _walkable_tiles
+    assert pillar not in _walkable_tiles(room)
