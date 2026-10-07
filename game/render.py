@@ -2828,7 +2828,20 @@ class Renderer:
                 panel(rect, fill=fill, border=border)
             if occupied:
                 weapon_state = p.inventory[slot_index]
-                icon = self._fit_image(self.weapon_scaled_images.get(getattr(weapon_state.d, "id", "")), 31)
+                weapon_def = getattr(weapon_state, "d", None)
+                weapon_id = getattr(weapon_def, "id", "")
+                sheet_key = getattr(weapon_def, "weapon_sprite_sheet", None)
+                atlas_frames = self.weapon_variant_frames.get(sheet_key, [])
+                icon = None
+                if atlas_frames:
+                    try:
+                        atlas_index = int(getattr(weapon_def, "weapon_sprite_index", -1))
+                    except (TypeError, ValueError):
+                        atlas_index = -1
+                    if 0 <= atlas_index < len(atlas_frames):
+                        icon = self._fit_image(atlas_frames[atlas_index], 31)
+                if icon is None:
+                    icon = self._fit_image(self.weapon_scaled_images.get(weapon_id), 31)
                 if icon is not None:
                     screen.blit(icon, icon.get_rect(center=(rect.centerx, rect.centery - 3)))
                 self.text(screen, str(slot_index + 1), (rect.centerx, rect.bottom - 9), (255, 221, 150) if selected else (176, 191, 205), self.small, center=True)
