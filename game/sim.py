@@ -347,11 +347,11 @@ class Sim:
         protected=[self.arena.player_spawn, *self.arena.enemy_spawns]
         door_lanes=[]
         for d in self.arena.doors.values():
-            door_lanes.append((d.x, d.y))
-            if d.side == "N": door_lanes.extend((d.x, yy) for yy in (1,2,3))
-            elif d.side == "S": door_lanes.extend((d.x, yy) for yy in (self.arena.rows-2,self.arena.rows-3,self.arena.rows-4))
-            elif d.side == "W": door_lanes.extend((xx, d.y) for xx in (1,2,3))
-            elif d.side == "E": door_lanes.extend((xx, d.y) for xx in (self.arena.cols-2,self.arena.cols-3,self.arena.cols-4))
+            door_lanes.extend(d.tiles())
+            if d.side == "N": door_lanes.extend((xx, yy) for xx in range(max(1,d.x-1), min(self.arena.cols-1,d.x+2)) for yy in (1,2,3))
+            elif d.side == "S": door_lanes.extend((xx, yy) for xx in range(max(1,d.x-1), min(self.arena.cols-1,d.x+2)) for yy in (self.arena.rows-2,self.arena.rows-3,self.arena.rows-4))
+            elif d.side == "W": door_lanes.extend((xx, yy) for yy in range(max(1,d.y-1), min(self.arena.rows-1,d.y+2)) for xx in (1,2,3))
+            elif d.side == "E": door_lanes.extend((xx, yy) for yy in range(max(1,d.y-1), min(self.arena.rows-1,d.y+2)) for xx in (self.arena.cols-2,self.arena.cols-3,self.arena.cols-4))
         protected_tiles=set(door_lanes)
         protected_tiles.update(self.arena.tile_of(x,y) for x,y in protected)
         # La decoración también ocupa espacio físico: cajas/barriles no pueden
