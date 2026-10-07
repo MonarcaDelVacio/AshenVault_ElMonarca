@@ -1,4 +1,11 @@
-"""Mira drone combat/support system extracted from Sim.\n\nSim remains the owner of world state; these helpers receive the facade so\nexisting collision, projectile and event contracts remain unchanged.\n"""\nimport math\n\ndef spawn_drone(sim, angle=0.0):
+"""Mira drone combat/support system extracted from Sim.
+
+Sim remains the owner of world state; these helpers receive the facade so
+existing collision, projectile and event contracts remain unchanged.
+"""
+import math
+
+def spawn_drone(sim, angle=0.0):
     a=sim.player.ability
     radius=10.0
     desired_x=sim.player.x+math.cos(angle)*62.0
