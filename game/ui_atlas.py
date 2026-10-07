@@ -263,7 +263,50 @@ class UIAtlas:
             # desplazamiento pequeño, no debemos capturar arte del botón vecino.
             # Buscamos la región visible más grande y cercana al centro esperado.
             button_names = set(self.BUTTONS.values())
-            if name in button_names:
+            # Los iconos del HUD son modelos independientes dentro del atlas.
+            # Algunas exportaciones dejan unos píxeles de margen respecto a la
+            # coordenada nominal; detectamos únicamente el componente cercano al
+            # centro esperado para evitar cortar el modelo o capturar el vecino.
+            hud_icon_names = {
+                key for key in self.regions
+                if key.startswith("icon_") or key == "equipment_slot"
+            }
+            if name in hud_icon_names:
+                margin = 10
+                search = base_rect.inflate(margin * 2, margin * 2).clip(self.atlas.get_rect())
+                probe = self.atlas.subsurface(search).copy()
+                mask = pygame.mask.from_surface(probe, 8)
+                candidates = []
+                for component in mask.connected_components(minimum=4):
+                    boxes = component.get_bounding_rects()
+                    if not boxes:
+                        continue
+                    bbox = boxes[0].copy()
+                    for part in boxes[1:]:
+                        bbox.union_ip(part)
+                    if bbox.width < 5 or bbox.height < 5:
+                        continue
+                    cx = search.x + bbox.centerx
+                    cy = search.y + bbox.centery
+                    distance = math.hypot(cx - base_rect.centerx, cy - base_rect.centery)
+                    expected_area = max(1, base_rect.width * base_rect.height)
+                    area = bbox.width * bbox.height
+                    size_score = min(area, expected_area) / max(area, expected_area)
+                    score = (size_score * 4.0) / (1.0 + distance)
+                    candidates.append((score, bbox.move(search.x, search.y)))
+                rect = base_rect
+                if candidates:
+                    _, detected = max(candidates, key=lambda item: item[0])
+                    # Solo aceptamos una detección que siga dentro de un margen
+                    # razonable del tamaño/posición authored del icono.
+                    if (
+                        detected.width >= max(5, base_rect.width * 0.55)
+                        and detected.height >= max(5, base_rect.height * 0.55)
+                        and detected.width <= base_rect.width * 1.35
+                        and detected.height <= base_rect.height * 1.35
+                    ):
+                        rect = detected.clip(self.atlas.get_rect())
+            elif name in button_names:
                 margin = 28
                 search = base_rect.inflate(margin * 2, margin * 2).clip(self.atlas.get_rect())
                 probe = self.atlas.subsurface(search).copy()
