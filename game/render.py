@@ -327,26 +327,106 @@ class Renderer:
             try:
                 atlas = pygame.image.load(str(new_wall_path)).convert_alpha()
                 atlas = make_background_transparent(atlas, (255, 255, 255), 18)
-                mask = pygame.mask.from_surface(atlas, threshold=8)
-                components = mask.connected_components(minimum=120)
+                # IMPORTANTE: walls.png es un atlas horizontal de tres modelos
+                # completos. No usamos connected_components como detector principal:
+                # una pared puede tener varias piezas desconectadas (techo, columnas,
+                # sombras, etc.) y entonces ese método puede devolver más de 3
+                # componentes, haciendo que el loader descarte TODOS los modelos.
+                #
+                # La separación correcta se obtiene por la proyección alpha sobre X:
+                # cada modelo ocupa una zona horizontal distinta del atlas. Primero
+                # unimos pequeños huecos internos y después usamos los dos huecos
+                # espaciales más grandes para separar izquierda/frente/derecha.
+                alpha = pygame.surfarray.array_alpha(atlas)
+                occupied = alpha.max(axis=0) > 8
+                runs = self._alpha_runs(occupied)
+                runs = [
+                    (int(x0), int(x1))
+                    for x0, x1 in runs
+                    if int(x1) - int(x0) + 1 >= 4
+                ]
+
+                # Los huecos pequeños forman parte del mismo modelo. El umbral es
+                # proporcional al ancho para que funcione aunque el atlas cambie
+                # de resolución.
+                merge_gap = max(12, int(atlas.get_width() * 0.03))
+                merged = []
+                for x0, x1 in runs:
+                    if merged and x0 - merged[-1][1] - 1 <= merge_gap:
+                        merged[-1] = (merged[-1][0], x1)
+                    else:
+                        merged.append((x0, x1))
+
+                # Si todavía hay varias regiones por modelo, cortar por los dos
+                # huecos horizontales más grandes. Esto conserva el orden físico
+                # del PNG y no depende del tamaño/área de cada pared.
+                if len(merged) >= 3:
+                    gaps = [
+                        (merged[i + 1][0] - merged[i][1] - 1, i)
+                        for i in range(len(merged) - 1)
+                    ]
+                    split_indices = sorted((idx for _, idx in gaps), key=lambda idx: gaps[idx][0], reverse=True)[:2]
+                    split_indices.sort()
+                    groups = []
+                    start = 0
+                    for split_idx in split_indices:
+                        groups.append(merged[start:split_idx + 1])
+                        start = split_idx + 1
+                    groups.append(merged[start:])
+                    if len(groups) > 3:
+                        # Los grupos intermedios extremadamente pequeños son
+                        # separadores residuales; se absorben en el grupo vecino.
+                        groups = groups[:3]
+                else:
+                    groups = []
+
                 rects = []
-                for component in components:
-                    # pygame-ce 2.5.x devuelve objetos Mask en connected_components().
-                    # Mask no expone get_bounding_rect(); la API compatible es
-                    # get_bounding_rects(), que devuelve los rectángulos de sus regiones.
-                    component_rects = component.get_bounding_rects()
-                    if not component_rects:
-                        continue
-                    rect = component_rects[0]
-                    if rect.width >= 30 and rect.height >= 30:
-                        rects.append(rect)
-                # walls.png contains exactly three architectural wall models,
-                # ordered left -> front -> right in the PNG. They are complete models,
-                # not three arbitrary orientations detected from their dimensions.
-                # Keep the atlas order and never infer the model type from area.
-                rects.sort(key=lambda rr: (rr.centerx, rr.centery))
+                if len(groups) == 3:
+                    for group in groups:
+                        x0 = min(run[0] for run in group)
+                        x1 = max(run[1] for run in group)
+                        # Recortar también verticalmente al alpha real de ese modelo.
+                        group_alpha = alpha[:, x0:x1 + 1]
+                        y_mask = group_alpha.max(axis=1) > 8
+                        y_runs = self._alpha_runs(y_mask)
+                        if not y_runs:
+                            continue
+                        y0 = int(y_runs[0][0])
+                        y1 = int(y_runs[-1][1])
+                        rects.append(pygame.Rect(x0, y0, x1 - x0 + 1, y1 - y0 + 1))
+
+                # Último fallback: si el PNG está claramente compuesto por tres
+                # columnas pero la proyección quedó fragmentada, usamos sus tres
+                # tercios y recortamos el alpha real dentro de cada tercio.
                 if len(rects) != 3:
-                    raise ValueError(f"walls.png debe contener exactamente 3 modelos separados; encontrados: {len(rects)}")
+                    rects = []
+                    third = atlas.get_width() / 3.0
+                    for index in range(3):
+                        x0 = int(round(index * third))
+                        x1 = int(round((index + 1) * third)) - 1
+                        cell_alpha = alpha[:, x0:x1 + 1]
+                        bbox_mask = cell_alpha > 8
+                        if not bbox_mask.any():
+                            rects = []
+                            break
+                        yy, xx = bbox_mask.nonzero()
+                        if len(xx) == 0 or len(yy) == 0:
+                            rects = []
+                            break
+                        left = x0 + int(xx.min())
+                        right = x0 + int(xx.max())
+                        top = int(yy.min())
+                        bottom = int(yy.max())
+                        if right - left + 1 < 4 or bottom - top + 1 < 4:
+                            rects = []
+                            break
+                        rects.append(pygame.Rect(left, top, right - left + 1, bottom - top + 1))
+
+                if len(rects) != 3:
+                    raise ValueError(
+                        f"walls.png no pudo separarse en los 3 modelos esperados; regiones detectadas: {len(rects)}"
+                    )
+
                 for name, rect in zip(("left", "front", "right"), rects):
                     frame = atlas.subsurface(rect).copy()
                     if frame.get_width() > 0 and frame.get_height() > 0:
