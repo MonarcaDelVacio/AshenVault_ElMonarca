@@ -27,3 +27,18 @@ def test_arena_legacy_decoration_fallback_remains_available():
     x,y=arena.tile_center(3,3)
     moved_x,moved_y=arena.move(x,y,0,0,10,include_decorations=True)
     assert (moved_x,moved_y)!=(x,y)
+
+
+def test_reward_chest_is_not_a_world_collision():
+    from types import SimpleNamespace
+    from game.sim import Sim
+
+    sim = object.__new__(Sim)
+    sim.props = []
+    sim.decoration_collider_provider = None
+    sim.chest = SimpleNamespace(x=3.5 * 32, y=3.5 * 32)
+    sim.arena = SimpleNamespace(decoration_hits=lambda x, y, radius: None)
+
+    # Los cofres se interactúan por distancia; nunca forman parte de la
+    # colisión física del actor aunque exista un cofre exactamente en la posición.
+    assert sim._world_collision(sim.chest.x, sim.chest.y, 10.0) is False
