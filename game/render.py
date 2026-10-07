@@ -2885,6 +2885,7 @@ class Renderer:
                 nearest_item = item
                 nearest_item_dist = dist
 
+        shown_interaction = False
         if getattr(sim, "portal", False):
             px, py = sim.portal_position
             if math.hypot(px - p.x, py - p.y) < 78:
