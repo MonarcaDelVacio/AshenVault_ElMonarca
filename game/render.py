@@ -1332,6 +1332,29 @@ class Renderer:
         self._fit_cache[key] = models
         return models
 
+    def _tiled_wall_strip(self, image, horizontal, length):
+        key = ("wall_strip", id(image), bool(horizontal), int(length))
+        cached = self._fit_cache.get(key)
+        if cached is not None:
+            return cached
+        length = max(1, int(length))
+        if horizontal:
+            target_h = TILE * 2
+            target_w = max(1, int(round(image.get_width() * target_h / max(1, image.get_height()))))
+            scaled = pygame.transform.smoothscale(image, (target_w, target_h))
+            strip = pygame.Surface((length, target_h), pygame.SRCALPHA)
+            for x in range(0, length, target_w):
+                strip.blit(scaled, (x, 0))
+        else:
+            target_w = TILE * 2
+            target_h = max(1, int(round(image.get_height() * target_w / max(1, image.get_width()))))
+            scaled = pygame.transform.smoothscale(image, (target_w, target_h))
+            strip = pygame.Surface((target_w, length), pygame.SRCALPHA)
+            for y in range(0, length, target_h):
+                strip.blit(scaled, (0, y))
+        self._fit_cache[key] = strip
+        return strip
+
     def _background(self, arena):
         key = (arena.biome, arena.room_id, arena.cols, arena.rows, getattr(arena, "floor_surface", None))
         if self._bg_key == key:
@@ -1399,14 +1422,14 @@ class Renderer:
         # Perímetro principal: un modelo horizontal y dos laterales forman
         # toda la envolvente de la sala. Se escala a la dimensión real del room.
         if wall_models.get("front") is not None:
-            front = pygame.transform.smoothscale(wall_models["front"], (arena.width, TILE * 2))
+            front = self._tiled_wall_strip(wall_models["front"], True, arena.width)
             surf.blit(front, (0, -TILE))
             surf.blit(front, (0, arena.height - TILE * 2))
         if wall_models.get("left") is not None:
-            left = pygame.transform.smoothscale(wall_models["left"], (TILE * 2, arena.height))
+            left = self._tiled_wall_strip(wall_models["left"], False, arena.height)
             surf.blit(left, (-TILE, 0))
         if wall_models.get("right") is not None:
-            right = pygame.transform.smoothscale(wall_models["right"], (TILE * 2, arena.height))
+            right = self._tiled_wall_strip(wall_models["right"], False, arena.height)
             surf.blit(right, (arena.width - TILE, 0))
 
         # Dibuja las paredes altas en una segunda pasada para que el suelo no tape
@@ -1463,16 +1486,16 @@ class Renderer:
                 elif tile == WALL:
                     wall_models = self._wall_models_for_biome(arena.biome)
                     if ty == 0 and player_y < TILE * 1.5 and wall_models.get("front") is not None:
-                        top = pygame.transform.smoothscale(wall_models["front"], (arena.width, TILE * 2))
+                        top = self._tiled_wall_strip(wall_models["front"], True, arena.width)
                         screen.blit(top, (int(ox), int(oy - TILE)))
                     elif ty == arena.rows - 1 and player_y > arena.height - TILE * 1.5 and wall_models.get("front") is not None:
-                        bottom = pygame.transform.smoothscale(wall_models["front"], (arena.width, TILE * 2))
+                        bottom = self._tiled_wall_strip(wall_models["front"], True, arena.width)
                         screen.blit(bottom, (int(ox), int(oy + arena.height - TILE * 2)))
                     elif tx == 0 and sim.player.x < TILE * 1.5 and wall_models.get("left") is not None:
-                        left = pygame.transform.smoothscale(wall_models["left"], (TILE * 2, arena.height))
+                        left = self._tiled_wall_strip(wall_models["left"], False, arena.height)
                         screen.blit(left, (int(ox - TILE), int(oy)))
                     elif tx == arena.cols - 1 and sim.player.x > arena.width - TILE * 1.5 and wall_models.get("right") is not None:
-                        right = pygame.transform.smoothscale(wall_models["right"], (TILE * 2, arena.height))
+                        right = self._tiled_wall_strip(wall_models["right"], False, arena.height)
                         screen.blit(right, (int(ox + arena.width - TILE), int(oy)))
 
     def _draw_dynamic_shadows(self, screen, arena, sim, ox, oy):
