@@ -629,3 +629,11 @@ Phase 7 movement hardening now also covers enemy congestion and physical clearan
 
 
 This slice also corrected enemy separation in the extracted chase helper and completed the confusion contract: confused enemies retreat/disorient instead of initiating attacks, while stun/freeze remain immobilizing statuses. A regression test now covers separation with another enemy present.
+
+## Phase 8 status — Procedural generation
+
+Phase 8 begins with a non-invasive validation layer in `game/generation_validation.py`. It validates dungeon-layout invariants (start/boss presence, orthogonal main path, connectivity and duplicate rooms) and room-generation invariants (grid dimensions, valid door anchors, exact perimeter openings, player spawn and required room metadata) without loading the renderer.
+
+Regression coverage in `tests/test_generation_validation.py` audits a seed batch across the main room types and explicitly rejects an extra perimeter opening. The generator itself remains unchanged in this slice; the goal is to establish an executable contract before modifying procedural generation behavior.
+
+The next Phase 8 slice should use this validation layer to audit larger seed batches and then address any generation edge cases found, especially room accessibility, decoration clearance, spawn safety and special-room spacing.
