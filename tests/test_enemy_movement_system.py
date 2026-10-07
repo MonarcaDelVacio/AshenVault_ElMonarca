@@ -119,3 +119,18 @@ def test_enemy_step_ignores_escape_candidate_blocked_by_physical_obstacle():
     step(enemy,sim,1,0,100,0.2)
     assert calls
 
+def test_chase_strengthens_separation_when_enemies_overlap():
+    enemy=SimpleNamespace(x=100.0,y=100.0,radius=10.0,d=SimpleNamespace(ai="melee"),strafe=1)
+    other=SimpleNamespace(x=104.0,y=100.0,radius=10.0,alive=True)
+    player=SimpleNamespace(x=220.0,y=100.0)
+    moved=[]
+    sim=SimpleNamespace(
+        player=player,
+        enemies=[enemy,other],
+        arena=SimpleNamespace(line_of_sight=lambda *a: True),
+        move_actor=lambda x,y,dx,dy,r:(moved.append((dx,dy)) or (x+dx,y+dy)),
+    )
+    chase(enemy,sim,0.1,50)
+    assert moved
+    assert moved[0][1] != 0.0
+
