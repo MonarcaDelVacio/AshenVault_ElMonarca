@@ -584,5 +584,104 @@
     "boss_uses_supplied_model": true,
     "ranged_melee_profile": true,
     "ranged_melee_threshold": 155
+  },
+  "stone_colossus": {
+    "name": "El Coloso de Escarcha",
+    "hp": 1100,
+    "speed": 46,
+    "radius": 38,
+    "ai": "ranged",
+    "detect_range": 1300,
+    "preferred_distance": 260,
+    "attack_range": 950,
+    "windup": 0.8,
+    "recover": 0.4,
+    "cooldown": 1.35,
+    "damage": 5,
+    "projectile_speed": 220,
+    "projectile_radius": 8,
+    "pellets": 6,
+    "fan_angle": 90,
+    "coins": 45,
+    "color": [
+      175,
+      215,
+      240
+    ],
+    "phases": [
+      {
+        "cooldown": 1.35,
+        "speed": 46,
+        "pellets": 6,
+        "fan_angle": 90,
+        "projectile_pattern": "fan",
+        "summon_ids": [
+          "grunt",
+          "gunner",
+          "runner",
+          "spreader",
+          "melee_guard",
+          "blade_stalker"
+        ],
+        "summon_count": 2,
+        "max_summons": 6
+      },
+      {
+        "cooldown": 1,
+        "speed": 60,
+        "pellets": 8,
+        "fan_angle": 125,
+        "projectile_pattern": "burst",
+        "burst_ring": true,
+        "summon_interval": 5.3,
+        "summon_ids": [
+          "grunt",
+          "gunner",
+          "runner",
+          "spreader",
+          "melee_guard",
+          "blade_stalker"
+        ],
+        "summon_count": 2,
+        "max_summons": 6
+      },
+      {
+        "cooldown": 0.62,
+        "speed": 82,
+        "pellets": 10,
+        "fan_angle": 165,
+        "projectile_pattern": "circle",
+        "summon_interval": 4.1,
+        "summon_ids": [
+          "grunt",
+          "gunner",
+          "runner",
+          "spreader",
+          "melee_guard",
+          "blade_stalker",
+          "mini_colossus",
+          "shield_guard"
+        ],
+        "summon_count": 3,
+        "max_summons": 7
+      }
+    ],
+    "boss_style": "colossus",
+    "summon_interval": 5,
+    "summon_ids": [
+      "grunt",
+      "gunner",
+      "runner",
+      "spreader"
+    ],
+    "summon_count": 2,
+    "max_summons": 6,
+    "stomp_interval": 4.5,
+    "sprite_set": "minotaurogigante",
+    "sprite_scale": 5.2,
+    "visual_has_weapon": true,
+    "boss_uses_supplied_model": true,
+    "ranged_melee_profile": true,
+    "ranged_melee_threshold": 155
   }
 }
