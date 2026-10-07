@@ -528,5 +528,10 @@ aspect-ratio sizing helper used by the legacy renderer. The renderer remains the
 compatibility facade; only the sizing arithmetic moved, with no change to sprite
 selection, trimming, scaling policy, or cache behavior.
 
+The third extraction is `game/rendering/weapon_geometry.py`, which now owns the
+existing melee grip-anchor policy and weapon maximum-dimension table. The legacy
+Renderer methods remain as compatibility wrappers, so weapon selection and visual
+placement behavior are unchanged. Regression tests cover the established values.
+
 Next renderer extractions will continue to target small dependency-safe helpers
 before moving any world-rendering or actor-rendering blocks.
