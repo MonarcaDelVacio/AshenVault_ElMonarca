@@ -470,9 +470,10 @@ class App:
         if self.state == SETTINGS:
             # Las zonas clicables coinciden exactamente con los elementos dibujados.
             for idx in (0, 1):
-                y = 157 + idx * 57
-                bar = pygame.Rect(244, y + 17, 120, 8)
-                row_rect = pygame.Rect(126, y, 266, 45)
+                from game.ui_layout import settings_volume_rect
+                row_tuple, bar_tuple = settings_volume_rect(idx)
+                row_rect = pygame.Rect(row_tuple)
+                bar = pygame.Rect(bar_tuple)
                 if row_rect.collidepoint(pos):
                     self.settings_sel = idx
                     if (click or pygame.mouse.get_pressed()[0]) and bar.collidepoint(pos):
@@ -483,10 +484,12 @@ class App:
                         else: self.audio.set_music_volume(value)
                         self.save.save()
                     return
-            sens_rect = pygame.Rect(126, 257, 266, 74)
+            from game.ui_layout import settings_sensitivity_rect, settings_binding_rect
+            sens_tuple, sens_bar_tuple = settings_sensitivity_rect()
+            sens_rect = pygame.Rect(sens_tuple)
             if sens_rect.collidepoint(pos):
                 self.settings_sel = 2
-                bar=pygame.Rect(145,307,228,8)
+                bar=pygame.Rect(sens_bar_tuple)
                 if (click or pygame.mouse.get_pressed()[0]) and bar.collidepoint(pos):
                     v=max(0.25,min(2.0,(pos[0]-bar.x)/bar.width*1.75+0.25))
                     self.save.data["settings"]["mouse_sensitivity"]=round(v,2)
@@ -494,25 +497,26 @@ class App:
                 return
             for offset in range(9):
                 idx = offset + 3
-                rect = pygame.Rect(438, 153 + offset * 29, 392, 26)
+                rect = pygame.Rect(settings_binding_rect(offset))
                 if rect.collidepoint(pos):
                     self.settings_sel = idx
                     if click:
                         self.rebind_action = SETTING_KEYS[SETTINGS_ITEMS[idx]]
                     return
-            fullscreen_rect = pygame.Rect(126, 338, 266, 32)
+            from game.ui_layout import settings_fullscreen_rect, settings_reset_rect, settings_back_rect
+            fullscreen_rect = pygame.Rect(settings_fullscreen_rect())
             if fullscreen_rect.collidepoint(pos):
                 self.settings_sel = 12
                 if click:
                     self._apply_fullscreen(not self.save.data["settings"].get("fullscreen", False))
                 return
-            reset_rect = pygame.Rect(126, 383, 266, 32)
+            reset_rect = pygame.Rect(settings_reset_rect())
             if reset_rect.collidepoint(pos):
                 self.settings_sel = 13
                 if click:
                     self._reset_settings()
                 return
-            back = pygame.Rect(VIEW_W // 2 - 82, 462, 164, 29)
+            back = pygame.Rect(settings_back_rect())
             if back.collidepoint(pos) and click:
                 self.go(self.back_state)
             return
