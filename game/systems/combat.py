@@ -134,12 +134,10 @@ def _update_projectiles(sim,dt):
                         sim.emit("bounce",pr.x,pr.y,pr.color);continue
                     if pr.explosive:
                         sim._explode_projectile(pr)
-                    elif pr.stick_on_hit:
-                        pr.x, pr.y = nx, ny
-                        pr.stuck = True; pr.stuck_timer = 3.0
-                        pr.stuck_angle = math.atan2(pr.vy, pr.vx)
-                        pr.vx = pr.vy = 0.0
                     else:
+                        # El impacto contra geometría del escenario nunca debe dejar
+                        # el proyectil pegado durante segundos. stick_on_hit se reserva
+                        # para impactos contra enemigos.
                         pr.active=False
                     sim.emit("wall_hit",pr.x,pr.y,pr.color);break
                 pr.x,pr.y=nx,ny
