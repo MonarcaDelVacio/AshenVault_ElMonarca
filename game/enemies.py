@@ -127,7 +127,11 @@ class Enemy:
         dx, dy = tx - self.x, ty - self.y
         dist = math.hypot(dx, dy) or 0.001
         self.facing = math.atan2(dy, dx)
-        sees = dist < d.detect_range and sim.arena.line_of_sight(self.x, self.y, tx, ty)
+        sees = dist < d.detect_range and (
+            sim._target_line_clear(self.x, self.y, tx, ty)
+            if hasattr(sim, "_target_line_clear")
+            else sim.arena.line_of_sight(self.x, self.y, tx, ty)
+        )
 
         # Confusion is intentionally different from stun/freeze: the enemy can
         # still move, but loses reliable pursuit/attack direction for its
