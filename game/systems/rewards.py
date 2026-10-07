@@ -1,6 +1,7 @@
 """Chest and room-reward helpers extracted from Sim."""
 
-from ..items import make_item\nfrom ..chests import Chest
+from ..items import make_item
+from ..chests import Chest
 
 
 def spawn_chest(sim, chest_type="common"):
