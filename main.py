@@ -394,6 +394,7 @@ class App:
                 return
             if click and weapons_rect.collidepoint(pos):
                 self.weapon_info_id=None
+                self.weapon_page=0
                 self.info="Armas"
                 self.back_state = CHAR_SELECT
                 self.go(HUB)
