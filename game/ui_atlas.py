@@ -205,7 +205,7 @@ class UIAtlas:
         "equipar": "inv_equipar",
         "desequipar": "inv_desequipar",
         "consumibles": "inv_consumibles",
-        "continuar": "dialog_continuar",
+        "continuar": "pause_reanudar",
         "omitir": "dialog_omitir",
         "siguiente": "dialog_siguiente",
         "anterior": "dialog_anterior",
@@ -256,11 +256,14 @@ class UIAtlas:
             return self.cache[name]
         try:
             base_rect = pygame.Rect(self.regions[name]).clip(self.atlas.get_rect())
+            # Los iconos se recortan por alpha para que su silueta real quede
+            # centrada dentro del panel. Las barras/paneles mantienen su región
+            # completa porque contienen geometría de fondo que se usa como referencia.
             hud_exact_names = {
                 key for key in self.regions
-                if (key.startswith("icon_") or key.startswith("bar_")
-                    or key.startswith("track_") or key == "equipment_slot"
-                    or key.startswith("hud_") or key.startswith("frame_") or key.startswith("pause_"))
+                if (key.startswith("bar_") or key.startswith("track_")
+                    or key == "equipment_slot" or key.startswith("hud_")
+                    or key.startswith("frame_") or key.startswith("pause_"))
             }
             if name in hud_exact_names:
                 rect = base_rect
@@ -431,25 +434,46 @@ class UIAtlas:
         if image is None:
             return False
 
-        # Todas las barras del HUD utilizan exactamente el mismo rectángulo de
-        # destino. El atlas contiene marcos con alturas originales diferentes,
-        # por lo que aquí se normalizan a un tamaño común en pantalla.
+        # Primero detectamos la silueta opaca real de cada barra. Los tres PNG
+        # tienen alturas/regiones originales diferentes, por lo que escalar la
+        # región completa deja márgenes transparentes de distinto tamaño.
+        # Al normalizar la silueta, las tres barras ocupan exactamente el mismo
+        # rectángulo de pantalla y quedan perfectamente paralelas.
+        visible = image.get_bounding_rect(min_alpha=8)
+        if visible.width and visible.height:
+            source_full = pygame.Rect(self.regions[full_key]) if source_key == full_key else None
+            if source_full is not None:
+                visible_source = pygame.Rect(
+                    source_full.x + visible.x, source_full.y + visible.y,
+                    visible.width, visible.height
+                )
+            else:
+                visible_source = None
+            image = image.subsurface(visible).copy()
+        else:
+            visible_source = pygame.Rect(self.regions[source_key])
         rendered_rect = target.copy()
-        if image.get_size() != rendered_rect.size:
-            image = pygame.transform.smoothscale(image, rendered_rect.size)
+        image = pygame.transform.smoothscale(image, rendered_rect.size)
         screen.blit(image, rendered_rect)
 
         ratio = max(0.0, min(1.0, float(ratio)))
 
-        # La geometría del track sigue saliendo de REGIONS. Sus offsets se
-        # transforman independientemente en X/Y hacia el tamaño común.
+        # El track conserva su posición relativa al modelo visible, no al margen
+        # transparente original.
         if source_key == full_key:
             full_rect = pygame.Rect(self.regions[full_key])
             track_rect = pygame.Rect(self.regions[track_key])
-            sx = (track_rect.x - full_rect.x) / max(1, full_rect.width)
-            sy = (track_rect.y - full_rect.y) / max(1, full_rect.height)
-            sw = track_rect.width / max(1, full_rect.width)
-            sh = track_rect.height / max(1, full_rect.height)
+            vx = visible_source.x - full_rect.x
+            vy = visible_source.y - full_rect.y
+            vw = max(1, visible_source.width)
+            vh = max(1, visible_source.height)
+            sx = (track_rect.x - full_rect.x - vx) / vw
+            sy = (track_rect.y - full_rect.y - vy) / vh
+            sw = track_rect.width / vw
+            sh = track_rect.height / vh
+            # Mantener el track dentro de la silueta después de recortar.
+            sx = max(0.0, min(1.0, sx)); sy = max(0.0, min(1.0, sy))
+            sw = max(0.01, min(1.0 - sx, sw)); sh = max(0.01, min(1.0 - sy, sh))
         else:
             sx, sy, sw, sh = 0.0, 0.0, 1.0, 1.0
 
