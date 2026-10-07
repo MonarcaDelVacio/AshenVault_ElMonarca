@@ -140,6 +140,17 @@ class Enemy:
             dist = math.hypot(dx, dy) or 0.001
         if self._defensive_reaction(sim, dt):
             return
+
+        if confused:
+            # Confused enemies do not initiate attacks or deliberate pursuit.
+            # When they can see the target they retreat from it; otherwise they
+            # drift laterally, preserving the distinction from stun/freeze.
+            if sees:
+                self._step(sim, dx / dist, dy / dist, d.speed * 0.75, dt)
+            else:
+                self._step(sim, -dy / dist * self.strafe, dx / dist * self.strafe, d.speed * 0.55, dt)
+            return
+
         if (not self.is_boss and not self.is_miniboss and float(getattr(d,"radius",0)) >= 22
                 and self.stomp_timer <= 0 and self.state not in (WINDUP,RECOVER)):
             self.stomp_timer=float(getattr(d,"stomp_interval",5.0))
