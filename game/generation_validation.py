@@ -18,7 +18,7 @@ def _walkable_tiles(room):
         (x, y)
         for y, row in enumerate(grid)
         for x, value in enumerate(row)
-        if value in (0, 2, 4)
+        if value == 0
     }
 
 
@@ -105,14 +105,14 @@ def validate_room(room_data):
 
     perimeter = set()
     for x in range(cols):
-        if grid[0][x] in (0, 2, 4):
+        if grid[0][x] == 0:
             perimeter.add((x, 0))
-        if grid[rows - 1][x] in (0, 2, 4):
+        if grid[rows - 1][x] == 0:
             perimeter.add((x, rows - 1))
     for y in range(rows):
-        if grid[y][0] in (0, 2, 4):
+        if grid[y][0] == 0:
             perimeter.add((0, y))
-        if grid[y][cols - 1] in (0, 2, 4):
+        if grid[y][cols - 1] == 0:
             perimeter.add((cols - 1, y))
     expected = _door_tiles(room_data)
     if perimeter != expected:
@@ -156,6 +156,10 @@ def validate_room(room_data):
     return errors
 
 
+def _room_adjacent(a, b):
+    return abs(a[0] - b[0]) + abs(a[1] - b[1]) == 1
+
+
 def validate_dungeon(dungeon):
     """Audita invariantes de la Dungeon ya construida, incluyendo espaciado."""
     errors = []
@@ -173,9 +177,13 @@ def validate_dungeon(dungeon):
     if rooms[boss].room_type != "boss":
         errors.append("la sala final no es boss")
 
-    boss_rooms = [r for r in rooms.values() if r.room_type == "boss"]
-    if len(boss_rooms) != 6:
-        errors.append(f"cantidad de bosses inesperada: {len(boss_rooms)}")
+    boss_ids = [rid for rid, room in rooms.items() if room.room_type == "boss"]
+    if len(boss_ids) != 6:
+        errors.append(f"cantidad de bosses inesperada: {len(boss_ids)}")
+    for i, rid in enumerate(boss_ids):
+        for other in boss_ids[i + 1:]:
+            if _room_adjacent(rid, other):
+                errors.append(f"bosses adyacentes: {rid} y {other}")
 
     for rid, room in rooms.items():
         if validate_room(room.data):
