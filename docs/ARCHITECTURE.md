@@ -502,3 +502,18 @@ The next phase is:
 **Phase 2 — Asset Registry and centralized asset metadata.**
 
 Phase 2 will first inventory every existing asset loader and mapping source, then introduce a compatibility registry without removing the existing loaders. Only after the registry is verified will consumers begin migrating to it.
+
+
+## Phase 4 status
+
+The repository already has the legacy `game/render.py` module. Python cannot
+safely host a `game/render/` package beside that module without changing import
+resolution, so the incremental split uses `game/rendering/` as the new package.
+
+The first extracted component is `game/rendering/atlas_geometry.py`, a pure
+helper for alpha-projection runs. `game/render.py` keeps a compatibility alias,
+so behavior and call sites remain unchanged while further renderer components
+are extracted.
+
+Next renderer extractions will follow dependency boundaries rather than moving
+large blocks blindly.
