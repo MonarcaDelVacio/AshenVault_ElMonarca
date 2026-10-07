@@ -663,3 +663,11 @@ The audit is intentionally validation-only at this stage: the procedural generat
 - Existing room item/pickup state continues to be owned by the Room object and rebound by Sim on entry.
 - Combat rooms retain their cleared/enemies_spawned/doors_locked state, preventing defeated rooms from spawning a second wave when revisited.
 - A persistent-room-state regression was planned, but the repository test-file write was blocked by the integration safety layer; the runtime code change itself was committed and should be manually smoke-tested.
+
+
+### Phase 9 — Door lifecycle hardening
+- Arena.open_doors() and Arena.close_doors() now synchronize both Door.open and Door.locked.
+- Open doors explicitly clear the lock flag; closed doors explicitly set it.
+- Transition flow remains graph-first, then room-entry logic decides whether the destination immediately locks for combat.
+- This removes a latent split-brain state where a door could be physically closed while its explicit lock flag still reported unlocked.
+- No runtime execution was available for this slice.
