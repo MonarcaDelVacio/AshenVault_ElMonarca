@@ -2415,11 +2415,48 @@ class Renderer:
                 description = ", ".join(effect_labels) or "Mejora permanente"
                 self.text(screen, description[:25], (px, py + 51), (198, 210, 222), self.small, center=True)
 
+        # Telegráfico del láser del jugador: una esfera energética crece
+        # durante el segundo previo al primer segmento del haz.
+        player_weapon = getattr(sim.player, "weapon", None)
+        player_weapon_def = getattr(player_weapon, "d", None)
+        if player_weapon_def is not None and getattr(player_weapon_def, "laser_weapon", False):
+            charge = float(getattr(player_weapon, "charge_time", 0.0))
+            start_charge = max(0.01, float(getattr(player_weapon_def, "laser_start_charge", 1.0)))
+            if 0.0 < charge < start_charge:
+                progress = max(0.0, min(1.0, charge / start_charge))
+                angle = float(getattr(sim.player, "aim", 0.0))
+                sx = int(sim.player.x + math.cos(angle) * 14 + ox)
+                sy = int(sim.player.y + math.sin(angle) * 14 + oy)
+                color = tuple(getattr(player_weapon_def, "color", (120, 220, 255)))
+                pulse = 0.5 + 0.5 * math.sin(t * 22.0)
+                radius = 6.0 + 9.0 * progress + pulse * 2.0
+                orb = pygame.Surface((52, 52), pygame.SRCALPHA)
+                pygame.draw.circle(orb, (*color, 24), (26, 26), int(radius * 2.0))
+                pygame.draw.circle(orb, (*color, 72), (26, 26), int(radius * 1.35))
+                pygame.draw.circle(orb, (255, 255, 255, 235), (26, 26), max(3, int(radius * 0.48)))
+                pygame.draw.circle(orb, (*color, 235), (26, 26), max(4, int(radius)))
+                screen.blit(orb, orb.get_rect(center=(sx, sy)))
+
         # Rayos láser persistentes: finos al inicio, crecen entre 1 y 3 s,
         # siguen el apuntado del propietario y terminan en la primera colisión.
         for laser in getattr(sim, "lasers", []):
             owner=laser.get("owner"); angle=float(laser.get("angle",0.0))
             if owner is None: continue
+            charge_left = float(laser.get("charge_left", 0.0))
+            if charge_left > 0.0:
+                progress = 1.0 - charge_left / max(0.001, float(laser.get("charge_duration", 1.0)))
+                sx = int(owner.x + math.cos(angle) * 14 + ox)
+                sy = int(owner.y + math.sin(angle) * 14 + oy)
+                color = tuple(laser.get("color", (255, 100, 100)))
+                pulse = 0.5 + 0.5 * math.sin(t * 22.0 + owner.x * 0.01)
+                radius = 6.0 + 9.0 * max(0.0, min(1.0, progress)) + pulse * 2.0
+                orb = pygame.Surface((52, 52), pygame.SRCALPHA)
+                pygame.draw.circle(orb, (*color, 24), (26, 26), int(radius * 2.0))
+                pygame.draw.circle(orb, (*color, 72), (26, 26), int(radius * 1.35))
+                pygame.draw.circle(orb, (255, 255, 255, 235), (26, 26), max(3, int(radius * 0.48)))
+                pygame.draw.circle(orb, (*color, 235), (26, 26), max(4, int(radius)))
+                screen.blit(orb, orb.get_rect(center=(sx, sy)))
+                continue
             length=float(laser.get("_render_length",laser.get("travel",laser.get("range",760.0))))
             sx,sy=owner.x+ox,owner.y+oy
             ex,ey=owner.x+math.cos(angle)*length+ox,owner.y+math.sin(angle)*length+oy
