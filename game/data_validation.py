@@ -53,6 +53,10 @@ def validate_data_graph(data):
     characters = _require_mapping(data, "characters", errors)
     bosses = _require_mapping(data, "bosses", errors)
     biomes = _require_mapping(data, "biomes", errors)
+    enemy_variants = data.get("enemy_variants", {})
+    if not isinstance(enemy_variants, dict):
+        errors.append("enemy_variants: debe ser un objeto JSON")
+        enemy_variants = {}
     biome_bosses = _require_mapping(data, "biome_bosses", errors)
     arenas = _require_mapping(data, "arenas", errors, allow_empty=True)
     rooms = _require_mapping(data, "rooms", errors, allow_empty=True)
@@ -120,6 +124,32 @@ def validate_data_graph(data):
                     errors.append(
                         f"jefe {ident}: fase {phase_index} referencia desconocida summon_ids={target}"
                     )
+
+    if enemy_variants:
+        families = enemy_variants.get("families")
+        if not isinstance(families, dict):
+            errors.append("enemy_variants: families inválido")
+        else:
+            for family_id, variants in families.items():
+                if not isinstance(variants, list):
+                    errors.append(f"enemy_variants {family_id}: familia inválida")
+                    continue
+                seen = set()
+                for index, variant in enumerate(variants):
+                    if not isinstance(variant, dict):
+                        errors.append(f"enemy_variants {family_id}[{index}]: entrada inválida")
+                        continue
+                    variant_id = variant.get("id")
+                    if not isinstance(variant_id, str) or not variant_id:
+                        errors.append(f"enemy_variants {family_id}[{index}]: falta id")
+                    elif variant_id in seen:
+                        errors.append(f"enemy_variants {family_id}: id duplicado {variant_id}")
+                    seen.add(variant_id)
+                    for field in ("damage_mult", "hp_mult", "speed_mult", "projectile_speed_mult", "projectile_visual_scale", "explosion_radius"):
+                        _require_non_negative_number("enemy_variants", f"{family_id}[{index}]", variant, field, errors)
+                    asset = variant.get("projectile_asset_sheet")
+                    if asset is not None and (not isinstance(asset, str) or not asset):
+                        errors.append(f"enemy_variants {family_id}[{index}]: projectile_asset_sheet inválido")
 
     for biome_id, biome in biomes.items():
         if not isinstance(biome, dict):
