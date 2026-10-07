@@ -61,9 +61,9 @@ def _fire_projectiles(sim, p, w, charge_ratio=0.0):
     d = w.d
     uses_weapon = getattr(d, "class", "") == "magic"
     if uses_weapon:
-        if w.durability <= 0:
+        if not w.unlimited_ammo and w.durability <= 0:
             return False
-    elif w.ammo <= 0:
+    elif not w.unlimited_ammo and w.ammo <= 0:
         if w.start_reload():
             sim.emit("reload_start", p.x, p.y)
         return False
@@ -78,12 +78,9 @@ def _fire_projectiles(sim, p, w, charge_ratio=0.0):
     range_mult = 1.0 + (getattr(d, "charge_range_mult", 2.0) - 1.0) * charge_ratio
     damage_mult = 1.0 + (getattr(d, "charge_damage_mult", 2.2) - 1.0) * charge_ratio
     if uses_weapon:
-        w.durability = max(0, w.durability - 1)
-        w.ammo = w.durability
     else:
-        # Incluso las armas iniciales consumen la munición del cargador.
-        # Lo infinito son los cargadores de reserva, no el cargador actual.
-        w.ammo -= 1
+        if not w.unlimited_ammo:
+            w.ammo -= 1
     sim.stats.setdefault("weapon_usage", {})[d.id] = sim.stats.get("weapon_usage", {}).get(d.id, 0) + 1
     w.cooldown = d.fire_interval / max(0.1, getattr(p, "attack_speed_mult", 1.0))
     p.energy -= d.energy_cost
@@ -136,9 +133,9 @@ def _fire_projectiles(sim, p, w, charge_ratio=0.0):
     sim.emit("shoot", mx, my, p.aim, d.color)
     if getattr(d, "charged_projectile", False):
         sim.emit("charge_release", p.x, p.y, charge_ratio)
-    if not uses_weapon and w.ammo <= 0 and w.start_reload():
+    if not uses_weapon and not w.unlimited_ammo and w.ammo <= 0 and w.start_reload():
         sim.emit("reload_start", p.x, p.y)
-    if uses_weapon and w.durability <= 0 and getattr(p, "weapon", None) is w:
+    if uses_weapon and not w.unlimited_ammo and w.durability <= 0 and getattr(p, "weapon", None) is w:
         sim.break_weapon(p, w)
     return True
 
@@ -213,8 +210,7 @@ def try_fire(sim, p, inp, dt):
     if not want or w.cooldown > 0 or w.reloading:
         return False
     if getattr(d, "class", "") == "melee":
-        if not w.unlimited_ammo and w.durability <= 0:
-            return False
+        w.unlimited_ammo = True
         p.fire_buffer = 0.0
         w.cooldown = d.fire_interval / max(0.1, getattr(p, "attack_speed_mult", 1.0))
         if d.energy_cost > 0:
@@ -231,8 +227,6 @@ def try_fire(sim, p, inp, dt):
         sim.stats["shots"] += 1
         sim.stats.setdefault("weapon_usage", {})[d.id] = sim.stats.get("weapon_usage", {}).get(d.id, 0) + 1
         sim.perform_melee_attack(p, d)
-        if not w.unlimited_ammo and w.durability <= 0:
-            sim.break_weapon(p, w)
         # La defensa contra proyectiles existe únicamente durante el golpe real.
         # Apuntar por sí solo nunca activa esta protección.
         p.melee_attack_timer = max(0.08, min(0.18, float(getattr(d, "fire_interval", 0.25)) * 0.45))
