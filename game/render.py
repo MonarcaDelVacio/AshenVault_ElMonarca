@@ -340,13 +340,14 @@ class Renderer:
                     rect = component_rects[0]
                     if rect.width >= 30 and rect.height >= 30:
                         rects.append(rect)
-                # walls.png is a three-model atlas, not a tile sheet:
-                # left = 45°, center = 90° horizontal, right = 90° vertical.
-                # Sort only by physical X position; never by component area.
+                # walls.png contains exactly three architectural wall models,
+                # ordered left -> front -> right in the PNG. They are complete models,
+                # not three arbitrary orientations detected from their dimensions.
+                # Keep the atlas order and never infer the model type from area.
                 rects.sort(key=lambda rr: (rr.centerx, rr.centery))
-                if len(rects) >= 3:
-                    rects = rects[:3]
-                for name, rect in zip(("diagonal", "horizontal", "vertical"), rects):
+                if len(rects) != 3:
+                    raise ValueError(f"walls.png debe contener exactamente 3 modelos separados; encontrados: {len(rects)}")
+                for name, rect in zip(("left", "front", "right"), rects):
                     frame = atlas.subsurface(rect).copy()
                     if frame.get_width() > 0 and frame.get_height() > 0:
                         self.wall_models[name] = frame
@@ -1416,117 +1417,134 @@ class Renderer:
         return None
 
     def _draw_room_wall_models(self, target, arena, wall_models, ox=0, oy=0):
-        """Dibuja las paredes siguiendo exclusivamente el borde de la sala.
+        """Renderiza SOLO la frontera real de la sala con los tres modelos del atlas.
 
-        No utiliza el perímetro rectangular completo. Agrupa tramos horizontales
-        y verticales para que los modelos se repitan de forma continua y usa el
-        modelo de 45° únicamente en las transiciones diagonales.
+        walls.png está compuesto por tres modelos: izquierda, frente y derecha.
+        La frontera se obtiene de las celdas WALL que tocan suelo real; por tanto,
+        el margen rectangular de la cuadrícula nunca recibe una pared visual.
+
+        Cada celda de frontera recibe como máximo un modelo. Los modelos se
+        escalan únicamente en su eje longitudinal a un bloque TILE, conservando
+        su proporción y su profundidad visual. Esto evita tanto el estiramiento
+        de un modelo sobre toda una sala como la duplicación accidental de una
+        misma pared sobre el mismo tramo.
         """
         if not wall_models:
             return
 
+        def floor(x, y):
+            return (
+                0 <= x < arena.cols
+                and 0 <= y < arena.rows
+                and arena.grid[y][x] == FLOOR
+            )
+
+        def side(tx, ty):
+            # A wall cell belongs to the visible room boundary only when it
+            # directly borders a floor cell. The floor direction determines
+            # which architectural model is used.
+            north, east, south, west = (
+                floor(tx, ty - 1), floor(tx + 1, ty),
+                floor(tx, ty + 1), floor(tx - 1, ty),
+            )
+            if not (north or east or south or west):
+                return None
+            # Bottom/front edge: floor is immediately north of the wall.
+            if north:
+                return "front"
+            # Left edge: floor is immediately east of the wall.
+            if east:
+                return "left"
+            # Right edge: floor is immediately west of the wall.
+            if west:
+                return "right"
+            # Back edge has no dedicated model. Reuse the front model mirrored
+            # vertically so it remains the same architectural family without
+            # inventing a fourth asset.
+            if south:
+                return "back"
+            return None
+
         boundary = {}
         for ty in range(arena.rows):
             for tx in range(arena.cols):
-                orientation = self._wall_boundary_orientation(arena, tx, ty)
-                if orientation:
-                    boundary[(tx, ty)] = orientation
+                if arena.grid[ty][tx] != WALL:
+                    continue
+                kind = side(tx, ty)
+                if kind:
+                    boundary[(tx, ty)] = kind
 
-        # Tramos horizontales: una única tira por segmento continuo.
-        horizontal = sorted((tx, ty) for (tx, ty), kind in boundary.items() if kind == "horizontal")
-        used = set()
-        for tx, ty in horizontal:
-            if (tx, ty) in used or (tx - 1, ty) in boundary and boundary[(tx - 1, ty)] == "horizontal":
-                continue
-            run = []
-            x = tx
-            while (x, ty) in boundary and boundary[(x, ty)] == "horizontal":
-                run.append(x)
-                used.add((x, ty))
-                x += 1
-            image = wall_models.get("horizontal")
+        def piece_for(kind):
+            if kind == "left":
+                return wall_models.get("left")
+            if kind == "right":
+                return wall_models.get("right")
+            return wall_models.get("front")
+
+        def scaled_piece(image, horizontal):
             if image is None:
-                continue
-            strip = self._tiled_wall_strip(image, True, len(run) * TILE)
-            # Si el suelo está al sur, la pared está sobre el suelo; si está al
-            # norte, queda debajo. El modelo conserva la misma lectura frontal.
-            has_south = any(
-                0 <= y + 1 < arena.rows and arena.grid[y + 1][xx] == FLOOR
-                for xx in run for y in (ty,)
-            )
-            y_pos = ty * TILE - TILE if has_south else ty * TILE
-            target.blit(strip, (int(ox + run[0] * TILE), int(oy + y_pos)))
+                return None
+            # Cache by image identity and orientation. The long axis occupies
+            # exactly one logical room block; the depth axis keeps its native ratio.
+            key = ("wall_piece", id(image), bool(horizontal))
+            cached = self._fit_cache.get(key)
+            if cached is not None:
+                return cached
+            if horizontal:
+                target_w = TILE
+                target_h = max(1, int(round(image.get_height() * TILE / max(1, image.get_width()))))
+            else:
+                target_h = TILE
+                target_w = max(1, int(round(image.get_width() * TILE / max(1, image.get_height()))))
+            cached = pygame.transform.smoothscale(image, (target_w, target_h))
+            self._fit_cache[key] = cached
+            return cached
 
-        # Tramos verticales.
-        vertical = sorted((tx, ty) for (tx, ty), kind in boundary.items() if kind == "vertical")
-        used.clear()
-        for tx, ty in vertical:
-            if (tx, ty) in used or (tx, ty - 1) in boundary and boundary[(tx, ty - 1)] == "vertical":
-                continue
-            run = []
-            y = ty
-            while (tx, y) in boundary and boundary[(tx, y)] == "vertical":
-                run.append(y)
-                used.add((tx, y))
-                y += 1
-            image = wall_models.get("vertical")
-            if image is None:
-                continue
-            strip = self._tiled_wall_strip(image, False, len(run) * TILE)
-            has_east = any(
-                0 <= tx + 1 < arena.cols and arena.grid[yy][tx + 1] == FLOOR
-                for yy in run
-            )
-            x_pos = tx * TILE - TILE if has_east else tx * TILE
-            target.blit(strip, (int(ox + x_pos), int(oy + run[0] * TILE)))
-
-        # Tramos diagonales: agrupar celdas consecutivas de la misma
-        # pendiente y colocar UN modelo 45° por tramo.
-        diagonal = wall_models.get("diagonal")
-        if diagonal is not None:
-            diagonal_cells = sorted(
-                (tx, ty) for (tx, ty), kind in boundary.items()
-                if kind == "diagonal"
-            )
-            used = set()
-            for cell in diagonal_cells:
-                if cell in used:
+        # Draw in deterministic order. A wall cell is consumed exactly once,
+        # even at corners of non-rectangular rooms.
+        for ty in range(arena.rows):
+            for tx in range(arena.cols):
+                kind = boundary.get((tx, ty))
+                if kind is None:
+                    continue
+                image = piece_for(kind)
+                if image is None:
                     continue
 
-                tx, ty = cell
-                run = [cell]
-                used.add(cell)
-
-                # Grow along both diagonal directions, allowing only directly
-                # adjacent diagonal boundary cells.
-                changed = True
-                while changed:
-                    changed = False
-                    for cx, cy in list(run):
-                        for nx, ny in ((cx + 1, cy + 1), (cx - 1, cy - 1),
-                                       (cx + 1, cy - 1), (cx - 1, cy + 1)):
-                            if (nx, ny) in boundary and boundary[(nx, ny)] == "diagonal" and (nx, ny) not in used:
-                                used.add((nx, ny))
-                                run.append((nx, ny))
-                                changed = True
-
-                # A single model spans the complete diagonal run. Its long axis
-                # follows the 45° edge; the atlas model itself is already drawn
-                # in the correct orientation and is not rotated.
-                min_x = min(x for x, _ in run)
-                max_x = max(x for x, _ in run)
-                min_y = min(y for _, y in run)
-                max_y = max(y for _, y in run)
-                span = max(max_x - min_x + 1, max_y - min_y + 1) * TILE
-                sprite = self._tiled_wall_strip(diagonal, True, span)
-                # The 45° model in walls.png already contains its intended
-                # perspective/orientation. It must NOT be rotated again.
-                center_x = (min_x + max_x + 1) * TILE / 2
-                center_y = (min_y + max_y + 1) * TILE / 2
-                target.blit(
-                    sprite,
-                    sprite.get_rect(center=(int(ox + center_x), int(oy + center_y))),
-                )
+                if kind in ("front", "back"):
+                    piece = scaled_piece(image, True)
+                    if piece is None:
+                        continue
+                    if kind == "front":
+                        # Front wall: its base sits on the south edge of the
+                        # logical WALL cell and the body rises toward the room.
+                        dest = piece.get_rect(
+                            midbottom=(int(ox + tx * TILE + TILE / 2),
+                                       int(oy + (ty + 1) * TILE))
+                        )
+                    else:
+                        # Back wall: mirror the same model so its depth projects
+                        # toward the exterior instead of into the room.
+                        piece = pygame.transform.flip(piece, False, True)
+                        dest = piece.get_rect(
+                            midtop=(int(ox + tx * TILE + TILE / 2),
+                                    int(oy + ty * TILE))
+                        )
+                else:
+                    piece = scaled_piece(image, False)
+                    if piece is None:
+                        continue
+                    if kind == "left":
+                        dest = piece.get_rect(
+                            midright=(int(ox + (tx + 1) * TILE),
+                                      int(oy + ty * TILE + TILE / 2))
+                        )
+                    else:
+                        dest = piece.get_rect(
+                            midleft=(int(ox + tx * TILE),
+                                     int(oy + ty * TILE + TILE / 2))
+                        )
+                target.blit(piece, dest)
 
 
     def _background(self, arena):
