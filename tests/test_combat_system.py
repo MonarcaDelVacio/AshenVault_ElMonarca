@@ -100,3 +100,29 @@ def test_player_laser_drains_energy_and_creates_beam_state():
     assert len(sim.lasers) == 1
     assert sim.lasers[0]["charge"] == 2.0
     assert sim.lasers[0]["damage"] == 15.0
+
+
+def test_projectile_stick_on_hit_does_not_persist_on_wall():
+    projectile = SimpleNamespace(
+        active=True, x=100.0, y=100.0, vx=120.0, vy=0.0,
+        radius=3.0, life=5.0, age=0.0, homing=0.0, team=0,
+        bounces=0, explosive=False, stick_on_hit=True, stuck=False,
+        stuck_timer=0.0, stuck_enemy_id=None, color=(1, 2, 3),
+    )
+    sim = SimpleNamespace(
+        arena=SimpleNamespace(
+            point_solid=lambda x, y: x >= 100.0,
+        ),
+        player=SimpleNamespace(alive=True),
+        pool=SimpleNamespace(items=[projectile]),
+        events=[],
+        emit=lambda *event: sim.events.append(event),
+        _chest_collision=lambda *args: False,
+        _damage_props=lambda *args: False,
+        _decoration_collision=lambda *args: False,
+    )
+
+    combat._update_projectiles(sim, 0.1)
+
+    assert projectile.active is False
+    assert projectile.stuck is False
