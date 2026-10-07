@@ -82,6 +82,44 @@ class AssetRegistry:
             )
         )
 
+    def register_runtime_frame(
+        self,
+        asset_id: str,
+        category: str,
+        *,
+        source_file: str,
+        frame_index: int,
+        source_rect: RectTuple,
+        alpha_bounds: RectTuple | None = None,
+        visual_bounds: RectTuple | None = None,
+        collision_bounds: RectTuple | None = None,
+        pivot: PointTuple | None = None,
+        anchor: PointTuple | None = None,
+        scale: float = 1.0,
+        variant: str | None = None,
+        handle: Any = None,
+        metadata: Mapping[str, Any] | None = None,
+    ) -> AssetRecord:
+        """Registra un frame ya cargado sin cambiar el loader que lo produjo."""
+        return self.register(
+            AssetRecord(
+                asset_id=asset_id,
+                category=category,
+                source_file=source_file,
+                frame_index=frame_index,
+                source_rect=source_rect,
+                alpha_bounds=alpha_bounds,
+                visual_bounds=visual_bounds,
+                collision_bounds=collision_bounds,
+                pivot=pivot,
+                anchor=anchor,
+                scale=float(scale),
+                variant=variant,
+                metadata=dict(metadata or {}),
+                handle=handle,
+            )
+        )
+
     def resolve(self, asset_id: str) -> AssetRecord | None:
         return self._records.get(asset_id)
 
