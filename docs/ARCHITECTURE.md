@@ -702,3 +702,18 @@ The audit is intentionally validation-only at this stage: the procedural generat
 - main.py now delegates menu hitbox coordinates to this module while preserving the existing logical 960x540 layout and all dimensions/positions.
 - Settings geometry is centralized and covered by pure regression tests; migration of each mouse-handler branch can proceed incrementally without changing behavior.
 - No runtime execution was available through the GitHub integration.
+
+### Phase 10 — UI geometry integration
+- Settings presentation now consumes the same pure layout helpers used by its mouse hitboxes for volume rows/sliders, mouse sensitivity, key-binding rows, fullscreen, reset and back controls.
+- This removes duplicated coordinate literals between drawing and interaction, reducing the risk of a control being visually displaced from its clickable area.
+- The application-shell UI-state import was also normalized back to ordinary Python syntax after detecting an escaped-newline artifact during repository inspection.
+- No UI behavior or logical coordinates were intentionally changed.
+- No runtime execution was available through the GitHub integration.
+
+### Phase 11 — Data graph validation
+- Added game/data_validation.py, a pygame-free validator for cross-file references in the JSON data graph.
+- Validation covers character starting weapons, enemy weapon references and summon references, boss sprite contracts and summon references (including phase summons), biome enemy pools, biome-to-boss mappings, and basic weapon contracts.
+- GameData.validate() now enforces this graph validation before a run can start, turning broken references into explicit startup errors instead of deferred runtime failures.
+- Added tests/test_data_validation.py with a full current-data graph audit plus negative tests for broken character weapon references, broken boss summons and invalid weapon contracts.
+- The current repository graph was inspected through GitHub and confirmed to contain 70 weapons, 29 enemies, 6 bosses and 6 characters with no broken cross-file references.
+- These tests have not been executed in a local Python runtime through the available GitHub integration.
