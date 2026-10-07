@@ -55,3 +55,29 @@ def test_drone_update_fires_at_nearest_enemy_when_ready():
     assert calls
     assert calls[0][0] == 0
     assert calls[0][9] == "physical"
+
+
+def test_drone_fires_three_shot_burst_before_next_burst():
+    drone = {"x":100.0,"y":100.0,"radius":10.0,"hp":18.0,"max_hp":18.0,"shot_cd":0.0,"burst_cd":0.0,"burst_left":0,"lifetime":20.0,"max_lifetime":20.0,"phase":0.0,"orbit":0.0,"orbit_speed":0.28,"orbit_radius":82.0,"idle_phase":0.0,"stuck_time":0.0,"repath_time":0.0,"avoid_x":0.0,"avoid_y":0.0,"vx":0.0,"vy":0.0}
+    player = SimpleNamespace(x=100.0,y=100.0,ability={"drone_attack_interval":1.0,"drone_damage_mult":1.0,"drone_burst_size":3,"drone_burst_interval":0.1},damage_mult=1.0,alive=True,drones=[])
+    enemy = SimpleNamespace(alive=True,spawn_delay=0.0,x=180.0,y=100.0)
+    calls=[]
+    arena=SimpleNamespace(width=600.0,height=400.0,box_hits=lambda *a:False)
+    sim=SimpleNamespace(player=player,drones=[drone],enemies=[enemy],hazards=[],pool=SimpleNamespace(items=[]),arena=arena,rng=SimpleNamespace(random=lambda:0.1),_world_collision=lambda *a:False,_drone_collision=lambda *a:False,_drone_path_clear=lambda *a:True,move_actor=lambda x,y,dx,dy,r:(x+dx,y+dy),spawn_projectile=lambda *args:calls.append(args),emit=lambda *args:None)
+    drones.update_drones(sim,0.01)
+    drones.update_drones(sim,0.1)
+    drones.update_drones(sim,0.1)
+    assert len(calls)==3
+    assert drone["burst_left"]==0
+    assert drone["shot_cd"]>0
+
+
+def test_drone_expires_after_lifetime():
+    drone={"x":100.0,"y":100.0,"radius":10.0,"hp":18.0,"max_hp":18.0,"shot_cd":0.0,"burst_cd":0.0,"burst_left":0,"lifetime":0.05,"max_lifetime":0.05,"phase":0.0,"orbit":0.0,"orbit_speed":0.28,"idle_phase":0.0,"stuck_time":0.0,"repath_time":0.0,"avoid_x":0.0,"avoid_y":0.0,"vx":0.0,"vy":0.0}
+    player=SimpleNamespace(x=100.0,y=100.0,ability={},damage_mult=1.0,alive=True,drones=[])
+    events=[]
+    arena=SimpleNamespace(width=600.0,height=400.0,box_hits=lambda *a:False)
+    sim=SimpleNamespace(player=player,drones=[drone],enemies=[],hazards=[],pool=SimpleNamespace(items=[]),arena=arena,rng=SimpleNamespace(random=lambda:0.1),_world_collision=lambda *a:False,_drone_collision=lambda *a:False,emit=lambda *args:events.append(args),_drone_path_clear=lambda *a:True,move_actor=lambda x,y,dx,dy,r:(x+dx,y+dy))
+    drones.update_drones(sim,0.1)
+    assert sim.drones==[]
+    assert events[-1][0]=="drone_expire"
