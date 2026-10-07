@@ -671,3 +671,12 @@ The audit is intentionally validation-only at this stage: the procedural generat
 - Transition flow remains graph-first, then room-entry logic decides whether the destination immediately locks for combat.
 - This removes a latent split-brain state where a door could be physically closed while its explicit lock flag still reported unlocked.
 - No runtime execution was available for this slice.
+
+
+### Phase 9 — Room-local state hardening
+- Chest consumption now clears both the active Sim reference and the owning Room reference, preventing an opened chest from reappearing after re-entry.
+- Treasure-room chest creation is explicitly persisted in the Room state, matching the persistence contract already used by combat-clear rewards.
+- Room entry clears residual live enemies before binding the destination room context. Combat rooms remain responsible for spawning only when their persistent cleared/enemies_spawned state says they have not been resolved.
+- Room-local props, items, pickups and shop offers remain owned by their Room object; transient hazards, waves and lasers continue to reset on entry by design.
+- Added regression coverage for chest-reference consumption and backward compatibility with room objects that do not expose a chest field.
+- These changes were not runtime-executed through the available GitHub integration.
