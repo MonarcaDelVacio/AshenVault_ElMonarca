@@ -149,3 +149,25 @@ def test_chase_starts_separating_before_enemy_overlap():
     assert moved
     assert moved[0][1] != 0.0
 
+def test_chase_rejects_flow_step_without_enemy_clearance():
+    enemy=SimpleNamespace(x=100.0,y=100.0,radius=10.0,d=SimpleNamespace(ai="melee"),strafe=1)
+    player=SimpleNamespace(x=300.0,y=100.0)
+    moved=[]
+    class Arena:
+        def line_of_sight(self,*args):
+            return False
+        def best_step(self,field,x,y,radius=0.0):
+            assert radius == enemy.radius
+            return (150.0,100.0)
+    sim=SimpleNamespace(
+        player=player,
+        enemies=[enemy],
+        arena=Arena(),
+        flow=None,
+        _obstacle_clear_to=lambda *args: True,
+        move_actor=lambda x,y,dx,dy,r:(moved.append((dx,dy)) or (x+dx,y+dy)),
+    )
+    chase(enemy,sim,0.1,50)
+    assert moved
+    assert moved[0][0] > 0.0
+
