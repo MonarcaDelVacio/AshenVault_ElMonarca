@@ -260,7 +260,7 @@ class UIAtlas:
                 key for key in self.regions
                 if (key.startswith("icon_") or key.startswith("bar_")
                     or key.startswith("track_") or key == "equipment_slot"
-                    or key.startswith("hud_") or key.startswith("frame_"))
+                    or key.startswith("hud_") or key.startswith("frame_") or key.startswith("pause_"))
             }
             if name in hud_exact_names:
                 rect = base_rect
