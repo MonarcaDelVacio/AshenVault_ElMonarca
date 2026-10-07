@@ -61,7 +61,7 @@ def chase(enemy, sim, dt, speed):
         if sim.arena.line_of_sight(enemy.x, enemy.y, p.x, p.y):
             tx, ty = p.x, p.y
         else:
-            step = sim.arena.best_step(sim.flow, enemy.x, enemy.y)
+            step = sim.arena.best_step(sim.flow, enemy.x, enemy.y, enemy.radius)
             if step is not None and hasattr(sim, "_obstacle_clear_to"):
                 if not sim._obstacle_clear_to(enemy.x, enemy.y, step[0], step[1], enemy.radius):
                     step = None
