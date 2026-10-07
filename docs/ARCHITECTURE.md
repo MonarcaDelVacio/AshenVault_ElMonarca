@@ -592,3 +592,10 @@ Phase 6 has begun with the core combat simulation extraction. Added `game/system
 The legacy `Sim` methods remain compatibility facades, so the existing player/enemy/weapons call sites keep their contracts. Combat behavior, damage formulas, projectile pooling, status application, shields, melee knockback, laser travel, and event emission were preserved rather than redesigned.
 
 Regression coverage was added in `tests/test_combat_system.py` for projectile spawning, melee hit detection, projectile damage/consumption, and laser energy/beam state. Further Phase 6 work should focus on auditing the weapon-fire and ability layers and their interaction with this extracted combat core before declaring the phase complete.
+
+
+## Phase 6 — Combat Systems (enemy attack layer)
+
+The combat refactor now also separates enemy attack execution into `game/systems/enemy_combat.py`. The extracted layer owns melee contact/effects, prop damage from enemy swings, projectile pattern generation, enemy weapon/projectile visual selection, explosive attack metadata, and combat events. `game/enemies.py` remains the AI/state owner and exposes `_attack()` as a compatibility facade.
+
+The player weapon layer (`game/weapons.py`) and character ability layer (`game/abilities.py`) remain intentionally separate for the next audit slice because they own input/cooldown/ammunition and character-specific orchestration respectively. No balance changes were introduced by this extraction.
