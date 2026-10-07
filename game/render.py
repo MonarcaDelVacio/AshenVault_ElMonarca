@@ -11,6 +11,7 @@ from .rendering.atlas_geometry import alpha_runs, split_grid_frames
 from .rendering.sprite_geometry import fit_dimensions
 from .rendering.weapon_geometry import melee_grip_anchor, weapon_max_dimension
 from .rendering.background_geometry import trim_edge_background
+from .rendering.rotation_geometry import quantized_facing_flip, quantized_sprite_angle
 
 VIEW_W, VIEW_H = 960, 540
 
@@ -1125,7 +1126,7 @@ class Renderer:
         idx=min(len(frames)-1,int(elapsed*len(frames)/max(0.001,max_life)))
         frame=frames[idx]
         base=self._fit_effect_frame(frame,size)
-        rot_key=("death",id(base),bool(math.cos(facing)<0))
+        rot_key=("death",id(base),quantized_facing_flip(facing))
         frame=self._rotation_cache.get(rot_key)
         if frame is None:
             frame=pygame.transform.flip(base,True,False) if math.cos(facing)<0 else base
@@ -1138,7 +1139,7 @@ class Renderer:
         idx=int(pr.age*len(frames)/0.42)%len(frames)
         frame=self._fit_effect_frame(frames[idx],size)
         angle=math.degrees(math.atan2(pr.vy,pr.vx))
-        angle_key=int(round((-angle)/8.0))*8
+        angle_key=quantized_sprite_angle(math.radians(angle))
         rot_key=("sheet_rot",id(frame),angle_key)
         rotated=self._rotation_cache.get(rot_key)
         if rotated is None:
@@ -1188,7 +1189,7 @@ class Renderer:
         if frame is None:
             return
         if angle is not None:
-            angle_key=int(round((-math.degrees(angle))/8.0))*8
+            angle_key=quantized_sprite_angle(angle)
             rot_key=("effect_rot",id(frame),angle_key)
             rotated=self._rotation_cache.get(rot_key)
             if rotated is None:
