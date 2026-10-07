@@ -84,6 +84,7 @@ def _choose_floor_surface(seed, room_type, biome):
         "volcanic": ("suelodelava", "sueloderocaylava", "suelodelavarosa", "tierracalienteazul", "tierracalientegris", "tierracalienterojiza", "tierracalientemorada"),
         "desert": ("arena", "suelodearena", "suelodearena2", "suelodearenadedecierto", "tierracalientemarron", "tierracalienterojiza"),
         "swamp": ("suelodepantano", "suelodehierbaytierra", "sueloderocasyhierba", "sueloderocasypasto", "suelodepasto", "tierracalienteverde", "tierracalientegris"),
+        "snow": ("sueloderocas2", "sueloderocaoscura2", "sueloderocasypasto"),
         "final": ("sueloderocaoscura2", "sueloderocaylava", "tierracalientemorada", "sueloderocasyfuegoazul", "suelodelavarosa"),
     }
     # El tipo de sala ya no cambia el bioma visual. Todas las habitaciones de
