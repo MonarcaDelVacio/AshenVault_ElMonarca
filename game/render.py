@@ -1598,37 +1598,43 @@ class Renderer:
         return surf
 
     def _draw_architecture_foreground(self, screen, arena, sim, decor_lights, ox, oy):
-        """Oculta a los actores detrás de las paredes y columnas altas.
+        """Oculta las paredes de la silueta cuando el jugador está junto a ellas.
 
-        La posición lógica/collider sigue siendo una sola casilla; solo el arte
-        sobresale verticalmente. La pared inferior conserva su altura de un tile.
+        La geometría visual sigue la misma frontera que el fondo; no existe una
+        segunda pared rectangular independiente para la oclusión.
         """
-        player_y = sim.player.y
         for ty, row in enumerate(arena.grid):
             for tx, tile in enumerate(row):
-                if tile in (PILLAR, TORCH_PILLAR):
-                    pillar_image = self.torch_column_image if tile == TORCH_PILLAR else self.column_image
-                    if pillar_image is not None:
-                        base_y = (ty + 1) * TILE
-                        if player_y < base_y:
-                            rect = pillar_image.get_rect(
-                                midbottom=(int(tx * TILE + TILE // 2 + ox), int(base_y + oy)))
-                            screen.blit(pillar_image, rect)
-                elif tile == WALL:
-                    # Las paredes ya no se consideran un rectángulo exterior.
-                    # Solo se superponen las piezas de la silueta real cuando
-                    # están cerca del jugador, conservando la oclusión local.
-                    if self._wall_boundary_orientation(arena, tx, ty):
-                        wall_models = self._wall_models_for_biome(arena.biome)
-                        near = math.hypot(
-                            sim.player.x - (tx * TILE + TILE / 2),
-                            sim.player.y - (ty * TILE + TILE / 2),
-                        ) <= TILE * 1.75
-                        if near:
-                            self._draw_room_wall_models(
-                                screen, arena, wall_models, ox, oy
-                            )
-                            break
+                if tile not in (PILLAR, TORCH_PILLAR):
+                    continue
+                pillar_image = self.torch_column_image if tile == TORCH_PILLAR else self.column_image
+                if pillar_image is not None:
+                    base_y = (ty + 1) * TILE
+                    if sim.player.y < base_y:
+                        rect = pillar_image.get_rect(
+                            midbottom=(int(tx * TILE + TILE // 2 + ox), int(base_y + oy))
+                        )
+                        screen.blit(pillar_image, rect)
+
+        # Solo se necesita la pasada de oclusión cuando el jugador está pegado
+        # al borde real de la habitación. Se dibuja una única vez, no una vez
+        # por cada celda WALL.
+        near_boundary = False
+        for ty in range(arena.rows):
+            for tx in range(arena.cols):
+                if self._wall_boundary_orientation(arena, tx, ty):
+                    if math.hypot(
+                        sim.player.x - (tx * TILE + TILE / 2),
+                        sim.player.y - (ty * TILE + TILE / 2),
+                    ) <= TILE * 1.75:
+                        near_boundary = True
+                        break
+            if near_boundary:
+                break
+
+        if near_boundary:
+            wall_models = self._wall_models_for_biome(arena.biome)
+            self._draw_room_wall_models(screen, arena, wall_models, ox, oy)
 
     def _draw_dynamic_shadows(self, screen, arena, sim, ox, oy):
         """Sombras dinamicas con una sola capa reutilizable y posiciones de pilares cacheadas."""
