@@ -292,9 +292,13 @@ class Arena:
     def tile_of(self,x,y):return int(x//TILE),int(y//TILE)
     def tile_center(self,tx,ty):return tx*TILE+TILE/2,ty*TILE+TILE/2
     def open_doors(self):
-        for d in self.doors.values(): d.open=True
+        for d in self.doors.values():
+            d.open=True
+            d.locked=False
     def close_doors(self):
-        for d in self.doors.values(): d.open=False
+        for d in self.doors.values():
+            d.open=False
+            d.locked=True
     def break_secret(self,tx,ty):
         if 0<=tx<self.cols and 0<=ty<self.rows and self.grid[ty][tx]==SECRET:
             self.grid[ty][tx]=FLOOR
