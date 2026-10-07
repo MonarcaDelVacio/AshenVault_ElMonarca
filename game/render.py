@@ -12,6 +12,7 @@ from .rendering.sprite_geometry import fit_dimensions
 from .rendering.weapon_geometry import melee_grip_anchor, weapon_max_dimension
 from .rendering.background_geometry import trim_edge_background
 from .rendering.rotation_geometry import quantized_facing_flip, quantized_sprite_angle
+from .rendering.atlas_background import make_background_transparent
 
 VIEW_W, VIEW_H = 960, 540
 
@@ -355,24 +356,13 @@ class Renderer:
                 except (pygame.error, OSError, ValueError):
                     pass
 
-        def make_atlas_background_transparent(surface, background_rgb, tolerance=4):
-            """Quita el fondo gris uniforme de los atlas sin borrar sus texturas."""
-            keyed = surface.copy()
-            br, bg, bb = background_rgb
-            for yy in range(keyed.get_height()):
-                for xx in range(keyed.get_width()):
-                    rr, gg, bl, aa = keyed.get_at((xx, yy))
-                    if (abs(rr - br) <= tolerance and abs(gg - bg) <= tolerance
-                            and abs(bl - bb) <= tolerance):
-                        keyed.set_at((xx, yy), (rr, gg, bl, 0))
-            return keyed
 
         wall_atlas_path = wall_dir / "wall2.png"
         if wall_atlas_path.is_file():
             try:
                 atlas = pygame.image.load(str(wall_atlas_path)).convert_alpha()
                 # wall2.png usa gris claro (RGB 184,184,184) como fondo vacío.
-                atlas = make_atlas_background_transparent(atlas, (184, 184, 184), 5)
+                atlas = make_background_transparent(atlas, (184, 184, 184), 5)
                 # La pieza de la esquina superior izquierda contiene el remate de ladrillos.
                 cap_w = min(56, atlas.get_width())
                 cap_h = min(28, atlas.get_height())
@@ -387,7 +377,7 @@ class Renderer:
                 atlas = pygame.image.load(str(cobbles_path)).convert_alpha()
                 # cobbles2.png usa gris medio (RGB 166,166,166); antes quedaba opaco
                 # y formaba rectángulos grises alrededor de las paredes.
-                atlas = make_atlas_background_transparent(atlas, (166, 166, 166), 5)
+                atlas = make_background_transparent(atlas, (166, 166, 166), 5)
                 # El atlas contiene tres bandas reales de piedra; la cuarta era fondo vacío.
                 band_count = 3
                 band_h = max(1, atlas.get_height() // 4)
