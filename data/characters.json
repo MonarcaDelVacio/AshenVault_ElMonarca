@@ -93,7 +93,8 @@
       "radius": 125,
       "damage": 24,
       "wave_speed": 520,
-      "stun": 0.45
+      "stun": 0.45,
+      "confusion": true
     }
   },
   "pyromancer": {
