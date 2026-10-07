@@ -571,3 +571,6 @@ combat call sites remain unchanged.
 Regression coverage was added in `tests/test_status_effects_system.py` for
 the established freeze limits, DoT refresh/damage/expiry behavior, and status
 application. No gameplay values were intentionally changed.
+
+
+The second Phase 5 extraction targets the coin pickup/magnet simulation path. Added `game/systems/pickups.py`, which owns the existing two-block coin attraction, movement toward the player, collection radius, coin/stat updates, and pickup event emission. `Sim._update_pickups()` remains as a compatibility facade and delegates to the extracted system. Focused regression tests cover attraction boundaries, collection, and the existing `coin_radius` upgrade behavior. No pickup speed, range, reward, or event semantics were intentionally changed.
