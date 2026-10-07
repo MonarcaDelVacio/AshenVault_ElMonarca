@@ -695,3 +695,10 @@ The audit is intentionally validation-only at this stage: the procedural generat
 - No rendering, input handling, persistence, or menu behavior was changed in this slice.
 - Added pure regression tests for state uniqueness and the existing menu/settings contracts.
 - No runtime execution was available through the GitHub integration.
+
+
+### Phase 10 — UI layout boundary
+- Added game/ui_layout.py as a pygame-free source of truth for the fixed logical menu and settings geometry.
+- main.py now delegates menu hitbox coordinates to this module while preserving the existing logical 960x540 layout and all dimensions/positions.
+- Settings geometry is centralized and covered by pure regression tests; migration of each mouse-handler branch can proceed incrementally without changing behavior.
+- No runtime execution was available through the GitHub integration.
