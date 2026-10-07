@@ -58,6 +58,7 @@ class GameData:
             "characters": {k: vars(v) for k, v in self.characters.items()},
             "bosses": {k: vars(v) for k, v in self.bosses.items()},
             "biomes": self.biomes,
+            "enemy_variants": self.enemy_variants,
             "biome_bosses": self.biome_bosses,
             "arenas": self.arenas,
             "rooms": self.rooms,
@@ -147,6 +148,20 @@ class GameData:
             sprite_set = getattr(enemy, "sprite_set", None)
             if sprite_set and sprite_set not in known_enemy_sprites:
                 raise ValueError(f"Enemigo {eid}: sprite_set sin modelo conocido {sprite_set}")
+        variant_families = getattr(self, "enemy_variants", {}).get("families", {})
+        variant_asset_errors = []
+        if isinstance(variant_families, dict):
+            for family_id, variants in variant_families.items():
+                if not isinstance(variants, list):
+                    continue
+                for index, variant in enumerate(variants):
+                    if not isinstance(variant, dict):
+                        continue
+                    asset = variant.get("projectile_asset_sheet")
+                    if asset and not os.path.isfile(os.path.join(root, asset.replace("/", os.sep))):
+                        variant_asset_errors.append(f"{family_id}[{index}]: {asset}")
+        if variant_asset_errors:
+            raise ValueError("Assets de variantes de enemigos inexistentes: " + "; ".join(variant_asset_errors))
         for bid, boss in self.bosses.items():
             sprite_set = getattr(boss, "sprite_set", None)
             if not isinstance(sprite_set, str) or not sprite_set:
