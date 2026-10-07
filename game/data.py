@@ -59,6 +59,13 @@ class GameData:
             "bosses": {k: vars(v) for k, v in self.bosses.items()},
             "biomes": self.biomes,
             "biome_bosses": self.biome_bosses,
+            "arenas": self.arenas,
+            "rooms": self.rooms,
+            "chests": self.chests,
+            "items": self.items,
+            "modifiers": self.modifiers,
+            "synergies": self.synergies,
+            "shops": self.shops,
         }
         graph_errors = validate_data_graph(graph)
         if graph_errors:
