@@ -256,7 +256,48 @@ class UIAtlas:
         if name in self.cache:
             return self.cache[name]
         try:
-            rect = pygame.Rect(self.regions[name]).clip(self.atlas.get_rect())
+            base_rect = pygame.Rect(self.regions[name]).clip(self.atlas.get_rect())
+
+            # Ajuste local para botones: si el atlas fue reexportado con un
+            # desplazamiento pequeño, no debemos capturar arte del botón vecino.
+            # Buscamos la región visible más grande y cercana al centro esperado.
+            button_names = set(self.BUTTONS.values())
+            if name in button_names:
+                margin = 28
+                search = base_rect.inflate(margin * 2, margin * 2).clip(self.atlas.get_rect())
+                probe = self.atlas.subsurface(search).copy()
+                mask = pygame.mask.from_surface(probe, 8)
+                candidates = []
+                for component in mask.connected_components(minimum=6):
+                    boxes = component.get_bounding_rects()
+                    if not boxes:
+                        continue
+                    bbox = boxes[0].copy()
+                    for part in boxes[1:]:
+                        bbox.union_ip(part)
+                    if bbox.width < 20 or bbox.height < 12:
+                        continue
+                    cx = search.x + bbox.centerx
+                    cy = search.y + bbox.centery
+                    distance = math.hypot(cx - base_rect.centerx, cy - base_rect.centery)
+                    area = bbox.width * bbox.height
+                    score = area / (1.0 + distance * 1.8)
+                    candidates.append((score, bbox.move(search.x, search.y)))
+
+                rect = base_rect
+                if candidates:
+                    _, detected = max(candidates, key=lambda item: item[0])
+                    expected_ratio = base_rect.width / max(1, base_rect.height)
+                    detected_ratio = detected.width / max(1, detected.height)
+                    if (
+                        abs(detected_ratio - expected_ratio) / max(1.0, expected_ratio) < 0.45
+                        and detected.width >= base_rect.width * 0.45
+                        and detected.height >= base_rect.height * 0.45
+                    ):
+                        rect = detected.clip(self.atlas.get_rect())
+            else:
+                rect = base_rect
+
             image = self.atlas.subsurface(rect).copy()
             visible = image.get_bounding_rect(min_alpha=8)
             if visible.width and visible.height:
@@ -265,7 +306,6 @@ class UIAtlas:
             return image
         except (pygame.error, ValueError):
             return None
-
     @staticmethod
     def _fit(image, size):
         if image is None:
