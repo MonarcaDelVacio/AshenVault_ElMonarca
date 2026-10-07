@@ -8,6 +8,7 @@ from .ui_atlas import UIAtlas
 from .assets import AssetRegistry
 from .assets.bounds import decoration_max_size
 from .rendering.atlas_geometry import alpha_runs, split_grid_frames
+from .rendering.sprite_geometry import fit_dimensions
 
 VIEW_W, VIEW_H = 960, 540
 
@@ -1243,13 +1244,10 @@ class Renderer:
         if bbox.width and bbox.height:
             image=image.subsurface(bbox).copy()
         w,h=image.get_size()
-        scale=min(float(max_dimension)/max(w,h),1.0)
-        size=(max(1,int(w*scale)),max(1,int(h*scale)))
+        size=fit_dimensions(w, h, max_dimension)
         out=image if size==(w,h) else pygame.transform.smoothscale(image,size)
         self._fit_cache[key]=out
         return out
-
-    @staticmethod
     def _melee_grip_anchor(weapon_def):
         path=str(getattr(weapon_def,"weapon_sprite","")).lower()
         if "guadana" in path: return (0.20,0.82)
@@ -2966,50 +2964,3 @@ class Renderer:
                 shown_interaction = True
 
         if not shown_interaction:
-            active_statue = getattr(sim, "_active_statue", lambda: None)()
-            if active_statue:
-                _, _, sx, sy = active_statue
-                interaction_hint(sx, sy, "Interactuar", 48)
-                shown_interaction = True
-
-        if not shown_interaction:
-            chest = getattr(sim, "chest", None)
-            if chest is not None and not chest.is_open and math.hypot(chest.x - p.x, chest.y - p.y) < 72:
-                interaction_hint(chest.x, chest.y, "Interactuar", 38)
-                shown_interaction = True
-
-        if not shown_interaction and getattr(sim, "room", None) is not None and getattr(sim.room, "room_type", "") == "shop":
-            nearby_offer = None
-            nearby_offer_dist = 55.0
-            for offer in getattr(sim, "shop_offers", []):
-                if getattr(offer, "sold", False):
-                    continue
-                dist = math.hypot(offer.x - p.x, offer.y - p.y)
-                if dist < nearby_offer_dist:
-                    nearby_offer = offer
-                    nearby_offer_dist = dist
-            if nearby_offer is not None:
-                interaction_hint(nearby_offer.x, nearby_offer.y, "Interactuar", 38)
-                shown_interaction = True
-
-        if not shown_interaction and nearest_item is not None:
-            ix, iy = nearest_item.x, nearest_item.y
-            interaction_hint(ix, iy, "Recoger", 30)
-
-
-        # Mira discreta para no competir visualmente con enemigos y efectos.
-        mx, my = mouse
-        pygame.draw.circle(screen, (235, 240, 248), (mx, my), 7, 1)
-        pygame.draw.line(screen, (235, 240, 248), (mx - 11, my), (mx - 5, my), 1)
-        pygame.draw.line(screen, (235, 240, 248), (mx + 5, my), (mx + 11, my), 1)
-        pygame.draw.line(screen, (235, 240, 248), (mx, my - 11), (mx, my - 5), 1)
-        pygame.draw.line(screen, (235, 240, 248), (mx, my + 5), (mx, my + 11), 1)
-
-        # Señal de daño en los bordes, sin tapar la acción central.
-        if fx.flash > 0:
-            ov = pygame.Surface((VIEW_W, VIEW_H), pygame.SRCALPHA)
-            a = int(115 * max(0.0, min(1.0, fx.flash / 0.35)))
-            for i in range(3):
-                pygame.draw.rect(ov, (255, 35, 45, max(0, a - i * 30)), (i * 7, i * 7, VIEW_W - i * 14, VIEW_H - i * 14), 7)
-            screen.blit(ov, (0, 0))
-
