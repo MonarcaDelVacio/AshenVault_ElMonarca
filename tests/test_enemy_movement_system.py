@@ -93,7 +93,8 @@ def test_defensive_cover_moves_enemy_behind_projectile_blocker():
     assert calls[0][0] > 0.0
     assert calls[0][1] == 0.0
     assert calls[0][2] > enemy.d.speed
-\n
+
+
 
 def test_enemy_step_flips_strafe_when_completely_stuck():
     enemy=SimpleNamespace(x=100.0,y=100.0,radius=10.0,d=SimpleNamespace(ai="melee"),strafe=1)
@@ -103,4 +104,18 @@ def test_enemy_step_flips_strafe_when_completely_stuck():
     )
     step(enemy,sim,1,0,100,0.2)
     assert enemy.strafe == -1
-\n
+
+def test_enemy_step_ignores_escape_candidate_blocked_by_physical_obstacle():
+    enemy=SimpleNamespace(x=100.0,y=100.0,radius=10.0,d=SimpleNamespace(ai="melee"),strafe=1)
+    calls=[]
+    def move_actor(x,y,dx,dy,r):
+        calls.append((dx,dy))
+        return x+dx,y+dy
+    sim=SimpleNamespace(
+        arena=SimpleNamespace(width=500,height=500),
+        move_actor=move_actor,
+        _obstacle_clear_to=lambda x0,y0,x1,y1,r: x1 < 105.0,
+    )
+    step(enemy,sim,1,0,100,0.2)
+    assert calls
+
