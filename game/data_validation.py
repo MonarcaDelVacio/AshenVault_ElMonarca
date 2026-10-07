@@ -67,7 +67,7 @@ def validate_data_graph(data):
 
     for name, container in (
         ("weapons", weapons), ("enemies", enemies), ("characters", characters),
-        ("bosses", bosses), ("biomes", biomes), ("biome_bosses", biome_bosses),
+        ("bosses", bosses), ("biomes", biomes),
         ("arenas", arenas), ("rooms", rooms), ("chests", chests),
         ("items", items), ("modifiers", modifiers), ("synergies", synergies),
     ):
