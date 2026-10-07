@@ -2,6 +2,7 @@
 import math
 import copy
 from .enemies import Enemy
+from .world import TILE
 
 
 class Boss(Enemy):
@@ -14,6 +15,10 @@ class Boss(Enemy):
         self.hp*=1.0 + 0.18*(self.difficulty_scale-1); self.max_hp=self.hp
         self.phase = 1
         self.phase_defs = bdef.phases
+        self.phase_count = max(1, len(self.phase_defs))
+        self.phase_max_hp = self.max_hp
+        self.phase_transition_lock = 0.0
+        self._phase_changed_pending = False
         self.is_boss = True
         self.boss_style = getattr(bdef, "boss_style", "commander")
         self.shield_active = False
@@ -29,6 +34,30 @@ class Boss(Enemy):
             ) if hasattr(bdef, k)
         }
 
+
+    def hurt(self, dmg, ang):
+        if not self.alive or self.phase_transition_lock > 0.0:
+            return
+        self.hp -= float(dmg)
+        self.flash = 0.1
+        self.kx += math.cos(ang) * 90
+        self.ky += math.sin(ang) * 90
+        if self.hp > 0:
+            return
+        if self.phase < self.phase_count:
+            self.phase += 1
+            self.hp = self.phase_max_hp
+            self.max_hp = self.phase_max_hp
+            self.phase_transition_lock = 0.16
+            self._phase_changed_pending = True
+            self.state = "recover"
+            self.timer = max(0.45, float(getattr(self.d, "recover", 0.3)))
+            self.cooldown = 0.0
+            self.summon_timer = 0.0
+            self.laser_timer = 1.0
+        else:
+            self.hp = 0.0
+            self.alive = False
 
     def _attack(self, sim, dist):
         style=self.boss_style
