@@ -1523,6 +1523,11 @@ class Renderer:
                     else:
                         pygame.draw.rect(surf, b["floor_a"] if (tx + ty) % 2 == 0 else b["floor_b"], r)
                 elif t == WALL:
+                    # Las celdas WALL que no tocan el suelo de la silueta son
+                    # solo el margen técnico de la cuadrícula y no forman parte
+                    # visual de la sala.
+                    if self._wall_boundary_orientation(arena, tx, ty) is None:
+                        continue
                     piece_key = self._wall_piece_key(arena, tx, ty)
                     piece = self.wall_piece_images.get(piece_key) if piece_key else None
                     if piece is None:
