@@ -1,6 +1,7 @@
 """Carga de datos JSON. Las entidades de Fase 2 son datos, no código hardcodeado."""
 import json, os, sys
 from .assets import AssetRegistry
+from .data_validation import validate_data_graph
 
 def data_dir():
     base=getattr(sys,"_MEIPASS",None) or os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -51,6 +52,17 @@ class GameData:
         # aporta identidad estable y procedencia durante la migración.
         self.asset_registry = AssetRegistry.from_game_data(self)
     def validate(self):
+        graph = {
+            "weapons": {k: vars(v) for k, v in self.weapons.items()},
+            "enemies": {k: vars(v) for k, v in self.enemies.items()},
+            "characters": {k: vars(v) for k, v in self.characters.items()},
+            "bosses": {k: vars(v) for k, v in self.bosses.items()},
+            "biomes": self.biomes,
+            "biome_bosses": self.biome_bosses,
+        }
+        graph_errors = validate_data_graph(graph)
+        if graph_errors:
+            raise ValueError("Errores en grafo de datos: " + "; ".join(graph_errors))
         for c in self.characters.values():
             if c.start_weapon not in self.weapons:raise ValueError(f"Personaje {c.id}: arma inicial desconocida {c.start_weapon}")
             if not getattr(c, "ability", None) or not c.ability.get("name"): raise ValueError(f"Personaje {c.id}: habilidad inválida")
