@@ -1431,7 +1431,16 @@ class Renderer:
         return None
 
     def _draw_room_wall_models(self, target, arena, wall_models, ox=0, oy=0):
-        """Dibuja un modelo completo por tramo de frontera real de la sala."""
+        """Dibuja las paredes de atlas con huellas de grid deterministas.
+
+        Cada sprite se recorta a su alpha real antes de escalar:
+        - laterales: 1x1 bloque por modelo;
+        - superior/inferior: 1x2 bloques, con el bloque inferior alineado
+          exactamente con la celda WALL que aporta la colisión;
+        - diagonales: 2x2 bloques centrados sobre cada celda diagonal y
+          desplazados por la geometría real de la cuadrícula, sin pasos
+          aproximados que produzcan escalones o huecos.
+        """
         if not wall_models:
             return
 
@@ -1443,20 +1452,35 @@ class Renderer:
             for tx in range(arena.cols):
                 if arena.grid[ty][tx] != WALL:
                     continue
-                normals = [(dx,dy) for dx,dy in ((0,-1),(1,0),(0,1),(-1,0)) if floor(tx+dx,ty+dy)]
+
+                normals = [
+                    (dx, dy)
+                    for dx, dy in ((0, -1), (1, 0), (0, 1), (-1, 0))
+                    if floor(tx + dx, ty + dy)
+                ]
                 if normals:
-                    boundary[(tx,ty)] = (sum(x for x,_ in normals), sum(y for _,y in normals))
+                    boundary[(tx, ty)] = (
+                        sum(x for x, _ in normals),
+                        sum(y for _, y in normals),
+                    )
                     continue
-                diagonals = [(dx,dy) for dx,dy in ((-1,-1),(1,-1),(-1,1),(1,1)) if floor(tx+dx,ty+dy)]
+
+                diagonals = [
+                    (dx, dy)
+                    for dx, dy in ((-1, -1), (1, -1), (-1, 1), (1, 1))
+                    if floor(tx + dx, ty + dy)
+                ]
                 if diagonals:
-                    boundary[(tx,ty)] = (sum(x for x,_ in diagonals), sum(y for _,y in diagonals))
+                    boundary[(tx, ty)] = (
+                        sum(x for x, _ in diagonals),
+                        sum(y for _, y in diagonals),
+                    )
 
         horizontal, vertical, diag_rising, diag_falling = [], [], [], []
         for (tx, ty), (nx, ny) in boundary.items():
             if not (nx or ny):
                 continue
             if abs(nx) == abs(ny):
-                # La diagonal ya está dibujada en el PNG; no se rota.
                 (diag_rising if nx * ny > 0 else diag_falling).append((tx, ty, nx, ny))
             elif abs(nx) > abs(ny):
                 vertical.append((tx, ty, nx, ny))
@@ -1491,7 +1515,7 @@ class Renderer:
                 key = tx - ty if slope > 0 else tx + ty
                 buckets.setdefault(key, []).append(item)
             for items in buckets.values():
-                items.sort(key=lambda item: item[0])
+                items.sort(key=lambda item: (item[0], item[1]))
                 current, previous = [], None
                 for item in items:
                     coord = item[0]
@@ -1505,135 +1529,98 @@ class Renderer:
                     groups.append(current)
             return groups
 
-        def fit_wall_piece(image, max_w, max_h):
-            """Escala un modelo completo sin deformarlo y sin superar su altura máxima."""
+        def crop_alpha(image):
+            """Elimina únicamente el margen transparente del modelo del atlas."""
             if image is None:
                 return None
-            max_w = max(1, int(max_w))
-            max_h = max(1, int(max_h))
-            iw, ih = image.get_size()
-            scale = min(max_w / max(1, iw), max_h / max(1, ih))
-            size = (
-                max(1, int(round(iw * scale))),
-                max(1, int(round(ih * scale))),
+            bbox = image.get_bounding_rect(min_alpha=8)
+            if bbox.width <= 0 or bbox.height <= 0:
+                return None
+            return image.subsurface(bbox).copy()
+
+        def fit_wall_exact(image, width, height):
+            """Mapea el alpha real del modelo al footprint exacto del grid."""
+            image = crop_alpha(image)
+            if image is None:
+                return None
+            width, height = max(1, int(width)), max(1, int(height))
+            key = ("wall_exact", id(image), width, height)
+            # id(image) cambia después del crop; por eso el cache se mantiene
+            # solo para el resultado de esta llamada.
+            return pygame.transform.smoothscale(image, (width, height))
+
+        def draw_horizontal_cell(item, image):
+            """Modelo frontal 1x2; la celda WALL es siempre el bloque inferior."""
+            if image is None:
+                return
+            tx, ty, nx, ny = item
+            piece = fit_wall_exact(image, TILE, TILE * 2)
+            if piece is None:
+                return
+
+            # El borde inferior del sprite coincide exactamente con el borde
+            # inferior de la celda WALL. La mitad inferior es la única zona
+            # asociada a la geometría/collider de la sala.
+            dest = pygame.Rect(
+                tx * TILE + ox,
+                (ty + 1) * TILE + oy - piece.get_height(),
+                piece.get_width(),
+                piece.get_height(),
             )
-            key = ("wall_piece_fit", id(image), max_w, max_h)
-            cached = self._fit_cache.get(key)
-            if cached is not None:
-                return cached
-            cached = pygame.transform.smoothscale(image, size)
-            self._fit_cache[key] = cached
-            return cached
+            target.blit(piece, dest)
 
-        def draw_repeated_horizontal(group, image):
-            """Repite el modelo horizontal sin huecos y limita su altura a 2 bloques."""
+        def draw_vertical_cell(item, image):
+            """Modelo lateral 1x1: ocupa toda la celda sin márgenes transparentes."""
+            if image is None:
+                return
+            tx, ty, nx, ny = item
+            piece = fit_wall_exact(image, TILE, TILE)
+            if piece is None:
+                return
+            dest = pygame.Rect(tx * TILE + ox, ty * TILE + oy, TILE, TILE)
+            target.blit(piece, dest)
+
+        def draw_diagonal_group(group, image):
+            """Encaja los modelos diagonales usando las celdas reales de la sala."""
             if not group or image is None:
                 return
-            xs = [item[0] for item in group]
-            ys = [item[1] for item in group]
-            x0 = min(xs) * TILE + ox
-            x1 = (max(xs) + 1) * TILE + ox
-            cy = (sum(ys) / len(ys) + 0.5) * TILE + oy
-            nx = sum(item[2] for item in group) / len(group)
-            ny = sum(item[3] for item in group) / len(group)
-            piece = fit_wall_piece(image, TILE, TILE * 2)
+
+            # El arte diagonal tiene una huella de 2x2. Cada modelo se centra
+            # en la celda de frontera y el siguiente avanza exactamente un tile
+            # en X/Y. Así dos piezas consecutivas comparten el mismo paso
+            # geométrico y no aparece el antiguo 0.72 mágico.
+            piece = fit_wall_exact(image, TILE * 2, TILE * 2)
             if piece is None:
                 return
 
-            # La pieza se repite de borde a borde. Si su anchura no coincide
-            # exactamente con TILE, la siguiente pieza empieza inmediatamente
-            # donde termina la anterior: no quedan franjas transparentes.
-            strip_w = max(TILE, x1 - x0)
-            strip = pygame.Surface((strip_w + piece.get_width() * 2, piece.get_height()), pygame.SRCALPHA)
-            for px in range(0, strip.get_width(), piece.get_width()):
-                strip.blit(piece, (px, 0))
+            for tx, ty, nx, ny in sorted(group, key=lambda item: (item[0], item[1])):
+                center_x = (tx + 0.5) * TILE + ox
+                center_y = (ty + 0.5) * TILE + oy
+                dest = piece.get_rect(center=(int(round(center_x)), int(round(center_y))))
+                target.blit(piece, dest)
 
-            # Recortamos exactamente al tramo de pared para que nunca invada
-            # la sala vecina ni deje un hueco al final.
-            crop = strip.subsurface(
-                pygame.Rect(
-                    max(0, (strip.get_width() - strip_w) // 2),
-                    0,
-                    strip_w,
-                    strip.get_height(),
-                )
-            ).copy()
-
-            # Las paredes horizontales se apoyan contra la frontera de la sala.
-            # El desplazamiento conserva la misma profundidad que el renderer
-            # anterior, pero la altura queda siempre <= 2 bloques.
-            nlen = max(1e-6, math.hypot(nx, ny))
-            cx = (x0 + x1) * 0.5 - (nx / nlen) * TILE * 0.18
-            cy -= (ny / nlen) * TILE * 0.18
-            target.blit(crop, crop.get_rect(center=(int(cx), int(cy))))
-
-        def draw_repeated_diagonal(group, image, rising):
-            """Repite el modelo diagonal sobre una pared diagonal real, sin efecto escalera."""
-            if not group or image is None:
-                return
-            xs = [item[0] for item in group]
-            ys = [item[1] for item in group]
-            nx = sum(item[2] for item in group) / len(group)
-            ny = sum(item[3] for item in group) / len(group)
-            piece = fit_wall_piece(image, TILE * 2, TILE * 2)
-            if piece is None:
-                return
-
-            # Cada modelo ocupa como máximo un cuadrado de 2x2 bloques. Se
-            # desplazan por la diagonal real de la sala, no por celdas escalonadas.
-            step = max(1, int(round(max(piece.get_width(), piece.get_height()) * 0.72)))
-            count = max(1, len(group))
-            cx0 = (min(xs) + 0.5) * TILE + ox
-            cy0 = (min(ys) + 0.5) * TILE + oy
-            direction = 1 if rising else -1
-
-            for index in range(count):
-                cx = cx0 + index * step
-                cy = cy0 + direction * index * step
-                nlen = max(1e-6, math.hypot(nx, ny))
-                cx -= (nx / nlen) * TILE * 0.18
-                cy -= (ny / nlen) * TILE * 0.18
-                target.blit(piece, piece.get_rect(center=(int(cx), int(cy))))
-
-        def draw_vertical_group(group, image):
-            if not group or image is None:
-                return
-            xs = [item[0] for item in group]
-            ys = [item[1] for item in group]
-            nx = sum(item[2] for item in group)
-            cx = (sum(xs) / len(xs) + 0.5) * TILE + ox
-            cy = (sum(ys) / len(ys) + 0.5) * TILE + oy
-            length = len(group) * TILE
-            iw, ih = image.get_size()
-            th = max(1, int(round(length)))
-            tw = max(1, int(round(iw * th / max(1, ih))))
-            key = ("wall_vertical_segment", id(image), length)
-            piece = self._fit_cache.get(key)
-            if piece is None:
-                piece = pygame.transform.smoothscale(image, (tw, th))
-                self._fit_cache[key] = piece
-            nlen = max(1e-6, math.hypot(nx, sum(item[3] for item in group)))
-            cx -= (nx / nlen) * TILE * 0.18
-            target.blit(piece, piece.get_rect(center=(int(cx), int(cy))))
-
-
+        # Una pieza por celda evita que el modelo lateral se estire sobre
+        # varios bloques y garantiza que cada borde de alpha llegue al siguiente.
         for group in runs_1d(horizontal, "x"):
-            draw_repeated_horizontal(group, wall_models.get("front"))
+            for item in group:
+                draw_horizontal_cell(item, wall_models.get("front"))
 
         for group in runs_1d(vertical, "y"):
             nx = sum(item[2] for item in group)
-            draw_vertical_group(group, wall_models.get("vertical_a" if nx > 0 else "vertical_b"))
+            image = wall_models.get("vertical_a" if nx > 0 else "vertical_b")
+            for item in group:
+                draw_vertical_cell(item, image)
 
-        # Una esquina aislada no es una pared diagonal: conserva el modelo
-        # horizontal/vertical. Los modelos diagonales se reservan para tramos
-        # diagonales reales (dos o más celdas consecutivas).
+        # Las diagonales reales usan exclusivamente sus dos modelos dedicados.
+        # Una esquina aislada mantiene el modelo cardinal para no convertir
+        # automáticamente una esquina en una diagonal.
         for group in runs_diag(diag_rising, 1):
             if len(group) >= 2:
-                draw_repeated_diagonal(group, wall_models.get("diag_rising"), rising=True)
+                draw_diagonal_group(group, wall_models.get("diag_rising"))
 
         for group in runs_diag(diag_falling, -1):
             if len(group) >= 2:
-                draw_repeated_diagonal(group, wall_models.get("diag_falling"), rising=False)
+                draw_diagonal_group(group, wall_models.get("diag_falling"))
 
     def _background(self, arena):
         key = (arena.biome, arena.room_id, arena.cols, arena.rows, getattr(arena, "floor_surface", None))
