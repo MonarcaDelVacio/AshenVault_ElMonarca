@@ -277,7 +277,6 @@ class Renderer:
                 continue
 
         # Texturas de escenarios opcionales: una losa repetida por sala y atlas de paredes.
-        # Coloca suelo1.png ... suelo11.png en assets/floors/ y wall2.png/cobbles2.png en assets/walls/.
         self.floor_images = {}
         floor_dir = self.asset_root / "floors"
         for number in range(1, 12):
@@ -314,42 +313,27 @@ class Renderer:
                     pass
         self.wall_top_images = {}
         self.wall_fill_images = {}
-        # Sprites individuales para los ocho segmentos del perímetro de la sala.
-        # La pared inferior es baja (32x32); los demás segmentos tienen 32x64.
-        # Todas conservan una huella de colisión de una casilla.
-        # Nuevo atlas de paredes: tres modelos completos (izquierda, frente y derecha).
-        # Los modelos antiguos de borde ya no participan en el render.
+        # walls.png contiene cinco modelos completos ya orientados:
+        # diagonal ascendente, diagonal descendente, frente horizontal y dos laterales.
+        # Se extraen por sus cinco regiones horizontales reales; nunca por tercios.
         self.wall_piece_images = {}
         self.wall_models = {}
         wall_dir = self.asset_root / "walls"
-        new_wall_path = self.asset_root / "walls" / "walls.png"
+        new_wall_path = wall_dir / "walls.png"
         if new_wall_path.is_file():
             try:
                 atlas = pygame.image.load(str(new_wall_path)).convert_alpha()
                 atlas = make_background_transparent(atlas, (255, 255, 255), 18)
-                # IMPORTANTE: walls.png es un atlas horizontal de tres modelos
-                # completos. No usamos connected_components como detector principal:
-                # una pared puede tener varias piezas desconectadas (techo, columnas,
-                # sombras, etc.) y entonces ese método puede devolver más de 3
-                # componentes, haciendo que el loader descarte TODOS los modelos.
-                #
-                # La separación correcta se obtiene por la proyección alpha sobre X:
-                # cada modelo ocupa una zona horizontal distinta del atlas. Primero
-                # unimos pequeños huecos internos y después usamos los dos huecos
-                # espaciales más grandes para separar izquierda/frente/derecha.
                 alpha = pygame.surfarray.array_alpha(atlas)
                 occupied = alpha.max(axis=0) > 8
-                runs = alpha_runs(occupied)
                 runs = [
                     (int(x0), int(x1))
-                    for x0, x1 in runs
-                    if int(x1) - int(x0) + 1 >= 4
+                    for x0, x1 in alpha_runs(occupied)
+                    if int(x1) - int(x0) + 1 >= 8
                 ]
-
-                # Los huecos pequeños forman parte del mismo modelo. El umbral es
-                # proporcional al ancho para que funcione aunque el atlas cambie
-                # de resolución.
-                merge_gap = max(12, int(atlas.get_width() * 0.03))
+                # El atlas tiene separaciones estrechas entre algunos modelos.
+                # Un 1.2% evita fusionar el diagonal inferior con el frontal.
+                merge_gap = max(6, int(atlas.get_width() * 0.012))
                 merged = []
                 for x0, x1 in runs:
                     if merged and x0 - merged[-1][1] - 1 <= merge_gap:
@@ -357,83 +341,55 @@ class Renderer:
                     else:
                         merged.append((x0, x1))
 
-                # Si todavía hay varias regiones por modelo, cortar por los dos
-                # huecos horizontales más grandes. Esto conserva el orden físico
-                # del PNG y no depende del tamaño/área de cada pared.
-                if len(merged) >= 3:
-                    gaps = [
-                        (merged[i + 1][0] - merged[i][1] - 1, i)
-                        for i in range(len(merged) - 1)
-                    ]
-                    split_indices = sorted((idx for _, idx in gaps), key=lambda idx: gaps[idx][0], reverse=True)[:2]
-                    split_indices.sort()
-                    groups = []
-                    start = 0
-                    for split_idx in split_indices:
-                        groups.append(merged[start:split_idx + 1])
-                        start = split_idx + 1
-                    groups.append(merged[start:])
-                    if len(groups) > 3:
-                        # Los grupos intermedios extremadamente pequeños son
-                        # separadores residuales; se absorben en el grupo vecino.
-                        groups = groups[:3]
-                else:
-                    groups = []
-
                 rects = []
-                if len(groups) == 3:
-                    for group in groups:
-                        x0 = min(run[0] for run in group)
-                        x1 = max(run[1] for run in group)
-                        # Recortar también verticalmente al alpha real de ese modelo.
-                        group_alpha = alpha[:, x0:x1 + 1]
-                        y_mask = group_alpha.max(axis=1) > 8
-                        y_runs = alpha_runs(y_mask)
-                        if not y_runs:
-                            continue
-                        y0 = int(y_runs[0][0])
-                        y1 = int(y_runs[-1][1])
-                        rects.append(pygame.Rect(x0, y0, x1 - x0 + 1, y1 - y0 + 1))
+                for x0, x1 in merged:
+                    group_alpha = alpha[:, x0:x1 + 1]
+                    y_mask = group_alpha.max(axis=1) > 8
+                    y_runs = alpha_runs(y_mask)
+                    if not y_runs:
+                        continue
+                    y0 = int(y_runs[0][0])
+                    y1 = int(y_runs[-1][1])
+                    rect = pygame.Rect(x0, y0, x1 - x0 + 1, y1 - y0 + 1)
+                    if rect.width >= 8 and rect.height >= 8:
+                        rects.append(rect)
 
-                # Último fallback: si el PNG está claramente compuesto por tres
-                # columnas pero la proyección quedó fragmentada, usamos sus tres
-                # tercios y recortamos el alpha real dentro de cada tercio.
-                if len(rects) != 3:
-                    rects = []
-                    third = atlas.get_width() / 3.0
-                    for index in range(3):
-                        x0 = int(round(index * third))
-                        x1 = int(round((index + 1) * third)) - 1
-                        cell_alpha = alpha[:, x0:x1 + 1]
-                        bbox_mask = cell_alpha > 8
-                        if not bbox_mask.any():
-                            rects = []
-                            break
-                        yy, xx = bbox_mask.nonzero()
-                        if len(xx) == 0 or len(yy) == 0:
-                            rects = []
-                            break
-                        left = x0 + int(xx.min())
-                        right = x0 + int(xx.max())
-                        top = int(yy.min())
-                        bottom = int(yy.max())
-                        if right - left + 1 < 4 or bottom - top + 1 < 4:
-                            rects = []
-                            break
-                        rects.append(pygame.Rect(left, top, right - left + 1, bottom - top + 1))
+                if len(rects) != 5:
+                    # Fallback para pequeñas interrupciones de alpha dentro de una pared.
+                    mask = pygame.mask.from_surface(atlas, threshold=8)
+                    components = mask.connected_components(minimum=40)
+                    component_rects = []
+                    for component in components:
+                        bbox = component.get_bounding_rect()
+                        if bbox.width >= 8 and bbox.height >= 8:
+                            component_rects.append(bbox)
+                    component_rects.sort(key=lambda r: (r.left, r.top))
+                    grouped = []
+                    for rect in component_rects:
+                        if grouped:
+                            prev = grouped[-1]
+                            gap = rect.left - prev.right
+                            vertical_overlap = min(prev.bottom, rect.bottom) - max(prev.top, rect.top)
+                            if gap <= max(18, int(atlas.get_width() * 0.015)) and vertical_overlap > -max(prev.height, rect.height) * 0.45:
+                                grouped[-1] = prev.union(rect)
+                                continue
+                        grouped.append(rect)
+                    rects = grouped
 
-                if len(rects) != 3:
-                    raise ValueError(
-                        f"walls.png no pudo separarse en los 3 modelos esperados; regiones detectadas: {len(rects)}"
-                    )
+                if len(rects) != 5:
+                    raise ValueError(f"walls.png debe contener 5 modelos completos; regiones detectadas: {len(rects)}")
 
-                for name, rect in zip(("left", "front", "right"), rects):
+                for name, rect in zip(
+                    ("diag_rising", "diag_falling", "front", "vertical_a", "vertical_b"),
+                    sorted(rects, key=lambda r: r.left),
+                ):
                     frame = atlas.subsurface(rect).copy()
                     if frame.get_width() > 0 and frame.get_height() > 0:
                         self.wall_models[name] = frame
+                self.wall_models["left"] = self.wall_models.get("vertical_a")
+                self.wall_models["right"] = self.wall_models.get("vertical_b")
             except (pygame.error, OSError, ValueError):
                 self.wall_models = {}
-
 
         # Columnas arquitectónicas: huella de una casilla y altura visual de dos.
         # La versión con antorcha reemplaza los faroles decorativos del escenario.
@@ -1465,9 +1421,10 @@ class Renderer:
         return None
 
     def _draw_room_wall_models(self, target, arena, wall_models, ox=0, oy=0):
-        """Delimita cada sala siguiendo su frontera real y su ángulo."""
+        """Dibuja un modelo completo por tramo de frontera real de la sala."""
         if not wall_models:
             return
+
         def floor(x, y):
             return 0 <= x < arena.cols and 0 <= y < arena.rows and arena.grid[y][x] == FLOOR
 
@@ -1478,52 +1435,120 @@ class Renderer:
                     continue
                 normals = [(dx,dy) for dx,dy in ((0,-1),(1,0),(0,1),(-1,0)) if floor(tx+dx,ty+dy)]
                 if normals:
-                    boundary[(tx,ty)] = (sum(x for x,_ in normals),sum(y for _,y in normals))
+                    boundary[(tx,ty)] = (sum(x for x,_ in normals), sum(y for _,y in normals))
                     continue
                 diagonals = [(dx,dy) for dx,dy in ((-1,-1),(1,-1),(-1,1),(1,1)) if floor(tx+dx,ty+dy)]
                 if diagonals:
-                    boundary[(tx,ty)] = (sum(x for x,_ in diagonals),sum(y for _,y in diagonals))
+                    boundary[(tx,ty)] = (sum(x for x,_ in diagonals), sum(y for _,y in diagonals))
 
-        def fit(image):
-            if image is None: return None
-            key=("wall_piece_angle",id(image))
-            cached=self._fit_cache.get(key)
-            if cached is not None: return cached
-            if image.get_width() >= image.get_height():
-                size=(TILE,max(1,int(round(image.get_height()*TILE/image.get_width()))))
+        horizontal, vertical, diag_rising, diag_falling = [], [], [], []
+        for (tx, ty), (nx, ny) in boundary.items():
+            if not (nx or ny):
+                continue
+            if abs(nx) == abs(ny):
+                # La diagonal ya está dibujada en el PNG; no se rota.
+                (diag_rising if nx * ny > 0 else diag_falling).append((tx, ty, nx, ny))
+            elif abs(nx) > abs(ny):
+                vertical.append((tx, ty, nx, ny))
             else:
-                size=(max(1,int(round(image.get_width()*TILE/image.get_height()))),TILE)
-            cached=pygame.transform.smoothscale(image,size)
-            self._fit_cache[key]=cached
+                horizontal.append((tx, ty, nx, ny))
+
+        def runs_1d(cells, axis):
+            groups, buckets = [], {}
+            for item in cells:
+                tx, ty, nx, ny = item
+                key = ty if axis == "x" else tx
+                buckets.setdefault(key, []).append(item)
+            for items in buckets.values():
+                items.sort(key=lambda item: item[0] if axis == "x" else item[1])
+                current, previous = [], None
+                for item in items:
+                    coord = item[0] if axis == "x" else item[1]
+                    if previous is None or coord == previous + 1:
+                        current.append(item)
+                    else:
+                        groups.append(current)
+                        current = [item]
+                    previous = coord
+                if current:
+                    groups.append(current)
+            return groups
+
+        def runs_diag(cells, slope):
+            groups, buckets = [], {}
+            for item in cells:
+                tx, ty, nx, ny = item
+                key = tx - ty if slope > 0 else tx + ty
+                buckets.setdefault(key, []).append(item)
+            for items in buckets.values():
+                items.sort(key=lambda item: item[0])
+                current, previous = [], None
+                for item in items:
+                    coord = item[0]
+                    if previous is None or coord == previous + 1:
+                        current.append(item)
+                    else:
+                        groups.append(current)
+                        current = [item]
+                    previous = coord
+                if current:
+                    groups.append(current)
+            return groups
+
+        def scaled_for_segment(image, length_px, mode):
+            if image is None:
+                return None
+            length_px = max(1, int(round(length_px)))
+            key = ("wall_complete_segment", id(image), mode, length_px)
+            cached = self._fit_cache.get(key)
+            if cached is not None:
+                return cached
+            w, h = image.get_size()
+            if mode == "horizontal":
+                tw = length_px
+                th = max(1, int(round(h * tw / max(1, w))))
+            elif mode == "vertical":
+                th = length_px
+                tw = max(1, int(round(w * th / max(1, h))))
+            else:
+                scale = length_px / max(1, max(w, h))
+                tw = max(1, int(round(w * scale)))
+                th = max(1, int(round(h * scale)))
+            cached = pygame.transform.smoothscale(image, (tw, th))
+            self._fit_cache[key] = cached
             return cached
 
-        for (tx,ty),(nx,ny) in boundary.items():
-            if not (nx or ny): continue
-            diagonal=abs(nx)==abs(ny)
-            if diagonal:
-                image=wall_models.get("front")
-            elif abs(nx)>abs(ny):
-                image=wall_models.get("left" if nx>0 else "right")
-            else:
-                image=wall_models.get("front")
-            piece=fit(image)
-            if piece is None: continue
+        def draw_group(group, image, mode):
+            if not group or image is None:
+                return
+            xs = [item[0] for item in group]
+            ys = [item[1] for item in group]
+            nx = sum(item[2] for item in group) / len(group)
+            ny = sum(item[3] for item in group) / len(group)
+            length = len(group) * TILE * (math.sqrt(2.0) if mode == "diagonal" else 1.0)
+            piece = scaled_for_segment(image, length, mode)
+            if piece is None:
+                return
+            cx = ox + (sum(xs) / len(xs) + 0.5) * TILE
+            cy = oy + (sum(ys) / len(ys) + 0.5) * TILE
+            nlen = max(1e-6, math.hypot(nx, ny))
+            cx -= (nx / nlen) * TILE * 0.18
+            cy -= (ny / nlen) * TILE * 0.18
+            target.blit(piece, piece.get_rect(center=(int(cx), int(cy))))
 
-            if diagonal:
-                # El mismo modelo existente sirve para ambos sentidos del chaflán.
-                piece=pygame.transform.rotate(piece,-45 if nx*ny>0 else 45)
-                if nx+ny<0:
-                    piece=pygame.transform.flip(piece,True,False)
-            elif abs(nx)>abs(ny):
-                if nx<0:
-                    piece=pygame.transform.flip(piece,True,False)
-            elif ny>0:
-                piece=pygame.transform.flip(piece,False,True)
+        for group in runs_1d(horizontal, "x"):
+            draw_group(group, wall_models.get("front"), "horizontal")
 
-            length=max(1.0,math.hypot(nx,ny))
-            cx=ox+tx*TILE+TILE/2-(nx/length)*TILE*0.18
-            cy=oy+ty*TILE+TILE/2-(ny/length)*TILE*0.18
-            target.blit(piece,piece.get_rect(center=(int(cx),int(cy))))
+        for group in runs_1d(vertical, "y"):
+            nx = sum(item[2] for item in group)
+            draw_group(group, wall_models.get("vertical_a" if nx > 0 else "vertical_b"), "vertical")
+
+        for group in runs_diag(diag_rising, 1):
+            draw_group(group, wall_models.get("diag_rising"), "diagonal")
+
+        for group in runs_diag(diag_falling, -1):
+            draw_group(group, wall_models.get("diag_falling"), "diagonal")
+
     def _background(self, arena):
         key = (arena.biome, arena.room_id, arena.cols, arena.rows, getattr(arena, "floor_surface", None))
         if self._bg_key == key:
