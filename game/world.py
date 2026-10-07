@@ -4,6 +4,7 @@ import random
 from bisect import bisect_left
 from collections import deque
 from .gen import generate_layout, generate_room
+from .assets.bounds import decoration_collision_radius
 
 TILE=32
 FLOOR,WALL,PILLAR,SECRET,TORCH_PILLAR=0,1,2,3,4
@@ -88,22 +89,14 @@ class Arena:
         self.grid=[list(r) for r in adata["grid"]]
         self.decorations=list(adata.get("decorations", []))
         self.decoration_colliders=[]
-        decoration_radii={
-            "rock":18.0, "bush":16.0, "bench_small":22.0, "bench_large":28.0,
-            "barrel_large":18.0, "signpost":13.0, "table":25.0, "counter":30.0,
-            "crate_stack":28.0, "crate_pair":24.0, "wood_chest_decor":20.0,
-            "biome_red_bush":18.0, "biome_lava_rock":24.0,
-            "biome_lava_rock_purple":24.0, "biome_shared_rock":22.0,
-            "fountain_active":32.0, "fountain_inactive":32.0, "fountain_small":23.0,
-            "well_empty":31.0,
-            # Las estatuas son grandes puntos físicos de interés.
-            "statue_goddess":48.0, "statue_archer":48.0, "statue_assassin":48.0,
-            "statue_knight":48.0, "statue_mage":48.0,
-            # Cofres decorativos también bloquean el paso.
-            "chest_gold_closed":22.0, "chest_gold_open":22.0,
-            "chest_green_closed":22.0, "chest_green_open":22.0,
-            "chest_purple_closed":22.0, "chest_purple_open":22.0,
-            "chest_red_closed":22.0, "chest_red_open":22.0,
+        decoration_radii = {
+            kind: decoration_collision_radius(kind)
+            for kind in (
+                "rock", "bush", "bench_small", "bench_large", "barrel_large", "signpost",
+                "table", "counter", "crate_stack", "crate_pair", "wood_chest_decor",
+                "biome_red_bush", "biome_lava_rock", "biome_lava_rock_purple", "biome_shared_rock",
+                "fountain_active", "fountain_inactive", "fountain_small", "well_empty",
+            )
         }
         self._decoration_radii = decoration_radii
         for deco in self.decorations:
