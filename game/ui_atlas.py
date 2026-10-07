@@ -371,11 +371,10 @@ class UIAtlas:
             return False
         target = pygame.Rect(*map(int, rect))
         base_rect = pygame.Rect(*map(int, rect))
-        if selected:
-            target = base_rect.inflate(max(4, base_rect.width // 14), max(4, base_rect.height // 10))
-        # Nunca deformamos un PNG del atlas: se ajusta dentro del rectángulo
-        # disponible conservando exactamente su proporción original.
-        sprite = self._fit(image, target.size)
+        # El modelo nunca cambia de escala al pasar el cursor: el resaltado se
+        # dibuja alrededor de exactamente la misma silueta que está en pantalla.
+        # Así el borde de selección no puede separarse de las esquinas del PNG.
+        sprite = self._fit(image, base_rect.size)
         dst = sprite.get_rect(center=base_rect.center)
         screen.blit(sprite, dst)
         if selected:
@@ -383,7 +382,7 @@ class UIAtlas:
             outline = mask.outline()
             if outline:
                 glow = pygame.Surface(sprite.get_size(), pygame.SRCALPHA)
-                pygame.draw.polygon(glow, (120, 225, 255, 210), outline, width=2)
+                pygame.draw.lines(glow, (120, 225, 255, 235), True, outline, width=2)
                 screen.blit(glow, dst.topleft)
         return True
 
