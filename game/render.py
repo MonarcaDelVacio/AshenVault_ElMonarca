@@ -3079,12 +3079,13 @@ class Renderer:
             maximum = max(1, maximum)
             ratio = max(0.0, min(1.0, val / maximum))
             bar_rect = pygame.Rect(50, y, 150, 28)
+            # Las tres barras del HUD comparten exactamente el mismo tamaño visual.
             if not self.ui_atlas.draw_bar(screen, bar_rect, ratio, kind=kind):
                 pygame.draw.rect(screen, (7, 9, 14), bar_rect, border_radius=4)
                 fill_w = int((bar_rect.width - 2) * ratio)
                 if fill_w:
                     pygame.draw.rect(screen, color, (bar_rect.x + 1, bar_rect.y + 1, fill_w, bar_rect.height - 2), border_radius=3)
-            self.text(screen, "%d/%d" % (math.ceil(val), maximum), (210, y + 14), (245, 246, 250), self.small, center=True)
+            self.text(screen, "%d/%d" % (math.ceil(val), maximum), (bar_rect.right + 34, bar_rect.centery), (245, 246, 250), self.small, center=True)
 
         status_bar(10, p.hp, p.max_hp, (220, 65, 76), "health")
         status_bar(42, p.shield, p.max_shield, (75, 160, 240), "shield")
@@ -3116,34 +3117,42 @@ class Renderer:
                 screen.blit(layer, hud_rect.topleft)
 
         # Dungeon: icono pequeno + nombre centrados en su propio panel.
-        dungeon_icon_pos = (dungeon_panel.x + 18, dungeon_panel.centery)
-        if not self.ui_atlas.draw_icon(screen, dungeon_icon_pos, size=17, kind="pin"):
-            pygame.draw.circle(screen, (105, 230, 218), dungeon_icon_pos, 5, 1)
         dungeon_img = self.small.render(dungeon_name.upper(), True, (226, 233, 241))
-        max_name_width = dungeon_panel.w - 39
+        max_name_width = dungeon_panel.w - 48
         if dungeon_img.get_width() > max_name_width:
             dungeon_img = pygame.transform.smoothscale(dungeon_img, (max_name_width, dungeon_img.get_height()))
-        name_x = dungeon_icon_pos[0] + 9 + dungeon_img.get_width() // 2
-        screen.blit(dungeon_img, dungeon_img.get_rect(center=(name_x, dungeon_panel.centery)))
+        icon_size = 17
+        group_gap = 8
+        group_width = icon_size + group_gap + dungeon_img.get_width()
+        group_left = dungeon_panel.centerx - group_width // 2
+        dungeon_icon_pos = (group_left + icon_size // 2, dungeon_panel.centery)
+        if not self.ui_atlas.draw_icon(screen, dungeon_icon_pos, size=icon_size, kind="pin"):
+            pygame.draw.circle(screen, (105, 230, 218), dungeon_icon_pos, 5, 1)
+        name_center_x = group_left + icon_size + group_gap + dungeon_img.get_width() // 2
+        screen.blit(dungeon_img, dungeon_img.get_rect(center=(name_center_x, dungeon_panel.centery)))
 
-        # Monedas: icono pequeno y contador centrados juntos dentro de su panel.
+        # Monedas: el icono y el contador se centran como un único grupo.
         coin_frames = self.coin_frames
         coin_frame = None
         if coin_frames:
             coin_frame = coin_frames[int(pygame.time.get_ticks() * 0.008) % len(coin_frames)]
             coin_frame = self._fit_image(coin_frame, 14, cache_key="hud_coin")
         coin_text = self.small.render(str(int(p.coins)), True, (255, 225, 135))
-        # El fotograma animado puede cambiar de ancho entre imágenes. Reservamos
-        # siempre una caja fija para la moneda para que el contador no "salte".
-        icon_box = pygame.Rect(coin_panel.centerx - 30, coin_panel.y + 12, 20, 20)
+        coin_icon_size = 20
+        coin_gap = 6
+        coin_group_width = coin_icon_size + coin_gap + coin_text.get_width()
+        coin_group_left = coin_panel.centerx - coin_group_width // 2
+        icon_box = pygame.Rect(coin_group_left, coin_panel.centery - coin_icon_size // 2,
+                               coin_icon_size, coin_icon_size)
         if coin_frame:
             screen.blit(coin_frame, coin_frame.get_rect(center=icon_box.center))
         else:
             pygame.draw.circle(screen, (238, 190, 55), icon_box.center, 5)
             pygame.draw.circle(screen, (255, 232, 120), icon_box.center, 5, 1)
-        # El número queda fijo respecto al panel: no depende del ancho de cada
-        # fotograma animado y permanece centrado con el icono de la moneda.
-        text_rect = coin_text.get_rect(center=(coin_panel.centerx + 20, coin_panel.centery))
+        text_rect = coin_text.get_rect(
+            center=(coin_group_left + coin_icon_size + coin_gap + coin_text.get_width() // 2,
+                    coin_panel.centery)
+        )
         screen.blit(coin_text, text_rect)
 
         if getattr(sim, "statue_buffs", None):
@@ -3190,8 +3199,9 @@ class Renderer:
         weapon_rect = pygame.Rect(22, VIEW_H - 74, 218, 64)
         panel(weapon_rect, fill=(15, 17, 25, 218), border=(64, 70, 86))
 
+        weapon_display_icon = None
+        weapon_display_name = "PUÑOS"
         if w is None:
-            self.text(screen, "PUÑOS", (62, VIEW_H - 61), (240, 241, 246), self.small)
             ammo_text, ammo_color = "SIN ARMA", (180, 190, 205)
             is_melee = True
             weapon_id = "fists"
@@ -3199,12 +3209,8 @@ class Renderer:
         else:
             wdef = getattr(w, "d", None)
             weapon_id = getattr(wdef, "id", "")
-            hud_weapon = self._fit_image(self.weapon_scaled_images.get(weapon_id), 28)
-            if hud_weapon is not None:
-                screen.blit(hud_weapon, hud_weapon.get_rect(topleft=(62, VIEW_H - 61)))
-                self.text(screen, getattr(wdef, "name", "ARMA"), (102, VIEW_H - 61), (240, 241, 246), self.small)
-            else:
-                self.text(screen, getattr(wdef, "name", "ARMA"), (62, VIEW_H - 61), (240, 241, 246), self.small)
+            weapon_display_name = getattr(wdef, "name", "ARMA")
+            weapon_display_icon = self._fit_image(self.weapon_scaled_images.get(weapon_id), 28)
             is_uses_weapon = getattr(wdef, "class", "") in ("melee", "magic")
             if weapon_id == "fists":
                 ammo_text, ammo_color = "PUÑOS", (210, 218, 230)
@@ -3218,13 +3224,29 @@ class Renderer:
                 ammo_text = "MUNICIÓN  %d/%s" % (w.ammo, reserve_text)
                 ammo_color = (210, 218, 230) if getattr(w, "unlimited_ammo", False) else ((255, 120, 120) if w.ammo <= 2 and w.reserve_magazines <= 0 else (210, 218, 230))
 
+        # Cabecera del arma: icono y nombre forman un único grupo centrado en el panel.
+        weapon_name_img = self.small.render(str(weapon_display_name), True, (240, 241, 246))
+        weapon_gap = 8 if weapon_display_icon is not None else 0
+        weapon_icon_w = weapon_display_icon.get_width() if weapon_display_icon is not None else 0
+        weapon_group_w = weapon_icon_w + weapon_gap + weapon_name_img.get_width()
+        weapon_group_left = weapon_rect.centerx - weapon_group_w // 2
+        if weapon_display_icon is not None:
+            screen.blit(weapon_display_icon,
+                        weapon_display_icon.get_rect(center=(weapon_group_left + weapon_icon_w // 2,
+                                                              weapon_rect.y + 19)))
+            weapon_name_center_x = weapon_group_left + weapon_icon_w + weapon_gap + weapon_name_img.get_width() // 2
+        else:
+            weapon_name_center_x = weapon_rect.centerx
+        screen.blit(weapon_name_img,
+                    weapon_name_img.get_rect(center=(weapon_name_center_x, weapon_rect.y + 19)))
+
         # Munición y estado de recarga quedan en una sola línea limpia.
-        ammo_pos = (62, VIEW_H - 34)
-        self.text(screen, ammo_text, ammo_pos, ammo_color, self.small)
+        ammo_pos = (weapon_rect.centerx, weapon_rect.y + 47)
+        self.text(screen, ammo_text, ammo_pos, ammo_color, self.small, center=True)
 
         # Solo cuando el cargador está completamente vacío mostramos el icono de recarga.
         if w is not None and not is_uses_weapon and weapon_id != "fists" and not w.reloading and w.ammo <= 0 and w.reserve_magazines > 0:
-            reload_center = (177, VIEW_H - 31)
+            reload_center = (weapon_rect.centerx + 62, weapon_rect.y + 47)
             if not self.ui_atlas.draw_icon(screen, reload_center, size=22, kind="refresh"):
                 pygame.draw.circle(screen, (240, 200, 90), reload_center, 9, 2)
                 self.text(screen, "R", reload_center, (240, 200, 90), self.small, center=True)
