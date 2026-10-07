@@ -523,5 +523,10 @@ and reported that the game continues to function correctly. No new crash, room
 transition, door, spritesheet, merchant, ranged-weapon, or invisible-hitbox issue
 was observed during that manual check.
 
-Next renderer extractions will follow dependency boundaries rather than moving
-large blocks blindly.
+The second extracted component is `game/rendering/sprite_geometry.py`, a pure
+aspect-ratio sizing helper used by the legacy renderer. The renderer remains the
+compatibility facade; only the sizing arithmetic moved, with no change to sprite
+selection, trimming, scaling policy, or cache behavior.
+
+Next renderer extractions will continue to target small dependency-safe helpers
+before moving any world-rendering or actor-rendering blocks.
