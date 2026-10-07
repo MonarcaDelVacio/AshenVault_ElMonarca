@@ -549,3 +549,25 @@ The seventh Phase 4 extraction is `game/rendering/animation_geometry.py`, which 
 
 
 The eighth Phase 4 extraction is `game/rendering/wall_geometry.py`, which centralizes wall-edge/corner classification. `Renderer._wall_piece_key` remains as a compatibility wrapper so all existing world-rendering call sites keep their contract while the classification logic becomes independently testable.
+
+
+## Phase 5 status — Simulation systems
+
+The first Phase 5 extraction targets the most self-contained combat-state responsibility
+inside `Sim`: status effects and defensive shield handling.
+
+Added `game/systems/status_effects.py`, which now owns:
+- freeze duration calculation and boss/miniboss caps
+- freeze application/event emission
+- fire/poison DoT state creation and refresh
+- periodic DoT damage
+- frontal shield absorption/drain and shield-break/block events
+
+`Sim` remains the compatibility facade. Its existing private method names
+(`_apply_freeze`, `_apply_dot`, `_update_dot_effects`, `_damage_shield`,
+and `_freeze_duration`) now delegate to the extracted system, so existing
+combat call sites remain unchanged.
+
+Regression coverage was added in `tests/test_status_effects_system.py` for
+the established freeze limits, DoT refresh/damage/expiry behavior, and status
+application. No gameplay values were intentionally changed.
