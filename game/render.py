@@ -7,6 +7,7 @@ from .world import TILE, FLOOR, WALL, PILLAR, SECRET, TORCH_PILLAR, bonfire_posi
 from .ui_atlas import UIAtlas
 from .assets import AssetRegistry
 from .assets.bounds import decoration_max_size
+from .rendering.atlas_geometry import alpha_runs
 
 VIEW_W, VIEW_H = 960, 540
 
@@ -688,15 +689,8 @@ class Renderer:
             handle=frame,
         )
 
-    @staticmethod
-    def _alpha_runs(values):
-        runs=[]; start=None
-        for i, active in enumerate(values):
-            if active and start is None: start=i
-            elif not active and start is not None:
-                runs.append((start,i-1)); start=None
-        if start is not None: runs.append((start,len(values)-1))
-        return runs
+    # Compatibility alias retained while atlas loaders migrate.
+    _alpha_runs = staticmethod(alpha_runs)
 
     def _load_ranged_weapon_atlas(self, path):
         """Carga el atlas ranged respetando sus celdas alineadas.
