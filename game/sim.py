@@ -1122,9 +1122,6 @@ class Sim:
         self.emit("weapon_break",player.x,player.y)
         return True
 
-    def _distance(self, x0, y0, x1, y1):
-        return math.hypot(x0 - x1, y0 - y1)
-
     def _try_interact(self):
         """Compatibility facade for the extracted interaction system."""
         return try_interact(self)
