@@ -20,12 +20,12 @@ use the same value.
 - Chest interaction/collision helpers.
 
 The legacy Arena decoration fallback remains intact for headless tests and
-compatibility. It is not removed until the authoritative bounds migration is
-validated.
+compatibility. Its collision radii are now centralized in `bounds.py`, so the
+fallback no longer owns a second copy of those constants.
 
 ## Next work
 
-Next Phase 3 step is to make alpha/visual/collision/interaction bounds an
+The next Phase 3 step is to make alpha/visual/collision/interaction bounds an
 explicit shared representation rather than deriving them independently in
 multiple renderer methods. Regression coverage will target missing models,
 transparent margins, duplicate colliders, and collider/model scale drift.
