@@ -105,3 +105,37 @@ def test_data_graph_rejects_enemy_without_sprite_set():
     }
     errors = validate_data_graph(graph)
     assert any("falta sprite_set" in error for error in errors)
+
+
+def test_data_graph_rejects_unknown_synergy_requirement():
+    graph = {
+        "weapons": {"pistol": {"class": "pistol", "projectile_sprite": "x", "magazine": 1}},
+        "enemies": {}, "characters": {}, "bosses": {}, "biomes": {}, "biome_bosses": {},
+        "arenas": {}, "rooms": {}, "chests": {}, "items": {"known": {"effects": {}}},
+        "modifiers": {}, "synergies": {"bad": {"requires": ["missing"]}},
+        "shops": {},
+    }
+    errors = validate_data_graph(graph)
+    assert any("requisito desconocido requires=missing" in error for error in errors)
+
+
+def test_data_graph_rejects_invalid_shop_items():
+    graph = {
+        "weapons": {"pistol": {"class": "pistol", "projectile_sprite": "x", "magazine": 1}},
+        "enemies": {}, "characters": {}, "bosses": {}, "biomes": {}, "biome_bosses": {},
+        "arenas": {}, "rooms": {}, "chests": {}, "items": {}, "modifiers": {}, "synergies": {},
+        "shops": {"items": [{"kind": "heal", "price": -1, "amount": 2}]},
+    }
+    errors = validate_data_graph(graph)
+    assert any("shop 0: price inválido" in error for error in errors)
+
+
+def test_data_graph_rejects_unknown_arena_biome():
+    graph = {
+        "weapons": {"pistol": {"class": "pistol", "projectile_sprite": "x", "magazine": 1}},
+        "enemies": {}, "characters": {}, "bosses": {},
+        "biomes": {}, "biome_bosses": {}, "arenas": {"arena": {"biome": "missing"}},
+        "rooms": {}, "chests": {}, "items": {}, "modifiers": {}, "synergies": {}, "shops": {},
+    }
+    errors = validate_data_graph(graph)
+    assert any("arena arena: bioma desconocido missing" in error for error in errors)
