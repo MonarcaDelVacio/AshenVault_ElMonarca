@@ -1,5 +1,6 @@
 """Carga de datos JSON. Las entidades de Fase 2 son datos, no código hardcodeado."""
 import json, os, sys
+from .assets import AssetRegistry
 
 def data_dir():
     base=getattr(sys,"_MEIPASS",None) or os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -45,6 +46,10 @@ class GameData:
         self.arenas=_load("arenas")
         self.biomes=_load("biomes"); self.enemy_variants=_load("enemy_variants"); self.synergies=_load("synergies"); self.biome_bosses={"ruins":"warden","forest":"thorn_matron","dungeon":"iron_judge","laboratory":"null_archon","volcanic":"pyre_colossus","final":"ashen_regent","desert":"warden","swamp":"thorn_matron"}; self.rooms=_load("rooms"); self.chests=_load("chests"); self.modifiers=_load("modifiers"); self.items=_load("items"); self.shops=_load("shops"); self.bosses={k:Defn(k,v,BOSS_DEFAULTS) for k,v in _load("bosses").items()}
         self.validate()
+        # Registro declarativo en modo compatibilidad. Los loaders de pygame
+        # siguen siendo responsables de crear superficies; el registro solo
+        # aporta identidad estable y procedencia durante la migración.
+        self.asset_registry = AssetRegistry.from_game_data(self)
     def validate(self):
         for c in self.characters.values():
             if c.start_weapon not in self.weapons:raise ValueError(f"Personaje {c.id}: arma inicial desconocida {c.start_weapon}")
