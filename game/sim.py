@@ -11,6 +11,7 @@ from .chests import Chest
 from .statues import STATUE_BUFFS, statue_cost, statue_offer
 from .systems.status_effects import damage_shield, apply_dot, update_dot_effects, apply_freeze, freeze_duration
 from .systems.pickups import update_pickups\nfrom .systems.hazards import update_hazards
+from .systems.shop import setup_shop, buy_shop_offer
 
 class Input:
     def __init__(self):
@@ -959,59 +960,11 @@ class Sim:
                 self.enemies.append(self._new_enemy(e,sx,sy)); self.emit("spawn",sx,sy)
 
     def _setup_shop(self):
-        self.shop_offers=[]
-        cx,cy=self.arena.width/2,self.arena.height/2
-        weapon_ids=list(self.data.weapons)
-        self.rng.shuffle(weapon_ids)
-        prices=self.data.shops.get("weapon_prices", {})
-        # Tres ofertas reales e independientes: dos armas + un consumible.
-        # El jugador puede comprar las tres durante la misma visita si tiene monedas.
-        for idx,wid in enumerate(weapon_ids[:2]):
-            w=self.data.weapons[wid]
-            price=prices.get(w.rarity,20)
-            self.shop_offers.append(type("ShopOffer",(),{"kind":"weapon","id":wid,"name":w.name,"price":price,"x":cx-72+idx*144,"y":cy-35,"sold":False})())
-        # La tercera oferta es siempre un objeto real de data/items.json.
-        # Antes se mezclaban consumibles auxiliares de shops.json con los objetos
-        # permanentes del juego, lo que producía iconos inexistentes y compras que
-        # podían quedar bloqueadas si el recurso correspondiente estaba lleno.
-        item_ids=list(self.data.items)
-        self.rng.shuffle(item_ids)
-        if item_ids:
-            ident=item_ids[0]
-            item_def=self.data.items[ident]
-            effects=item_def.get("effects", {}) if isinstance(item_def, dict) else getattr(item_def, "effects", {})
-            name=item_def.get("name", ident) if isinstance(item_def, dict) else getattr(item_def, "name", ident)
-            price=18 + 4 * len(effects)
-            self.shop_offers.append(type("ShopOffer",(),{"kind":"item","id":ident,"name":name,"price":price,"amount":1,"x":cx,"y":cy+55,"sold":False})())
+        """Compatibility facade for the extracted shop system."""
+        return setup_shop(self)
     def _buy_shop_offer(self, offer):
-        p=self.player
-        if offer.sold or p.coins < offer.price: return False
-        if offer.kind == "weapon":
-            # Las armas compradas respetan el límite de tres; el intercambio se
-            # reserva para armas que están físicamente en el suelo.
-            if len(p.inventory) >= 3 or any(w.d.id == offer.id for w in p.inventory): return False
-            p.inventory.append(WeaponState(self.data.weapons[offer.id]))
-        elif offer.kind == "heal":
-            if p.hp >= p.max_hp: return False
-            p.hp=min(p.max_hp,p.hp+offer.amount)
-            p.set_status("heal", 1.8)
-        elif offer.kind == "shield":
-            if p.shield >= p.max_shield: return False
-            p.shield=min(p.max_shield,p.shield+offer.amount)
-            p.set_status("shield", 2.2)
-        elif offer.kind == "energy":
-            if p.energy >= p.max_energy: return False
-            old_energy=p.energy; p.energy=min(p.max_energy,p.energy+offer.amount)
-            if p.energy>old_energy:
-                p.feedback_flash("energy",.26); self.emit("energy_pickup",offer.x,offer.y,p.energy-old_energy)
-        elif offer.kind == "item":
-            item_def=self.data.items.get(offer.id)
-            if item_def is None: return False
-            apply_item_bonuses(p, item_def, self.data.synergies)
-        else: return False
-        p.coins -= offer.price; self.stats["purchases"] += 1; offer.sold=True
-        self.emit("shop_purchase",offer.x,offer.y,offer.id); return True
-
+        """Compatibility facade for the extracted shop purchase system."""
+        return buy_shop_offer(self, offer)
     def _spawn_boss(self):
         biome=self.arena.biome
         boss_id=self.data.biome_bosses.get(biome) if hasattr(self.data,"biome_bosses") else None
