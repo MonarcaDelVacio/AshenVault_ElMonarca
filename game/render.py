@@ -1637,6 +1637,19 @@ class Renderer:
         # repite dentro de la sala, pero jamás se mezclan dos superficies.
         floor_name = getattr(arena, "floor_surface", None)
         floor_img = self.named_floor_images.get(floor_name) if floor_name else None
+        if str(arena.biome) == "snow" and floor_img is not None:
+            # El bioma nevado no necesita un atlas adicional: reutiliza la textura
+            # rocosa existente con una capa fría de nieve, manteniendo el patrón.
+            snow_key = ("snow_floor", id(floor_img))
+            snow_floor = self._fit_cache.get(snow_key)
+            if snow_floor is None:
+                snow_floor = floor_img.copy()
+                frost = pygame.Surface(snow_floor.get_size(), pygame.SRCALPHA)
+                frost.fill((205, 225, 248, 92))
+                snow_floor.blit(frost, (0, 0), special_flags=pygame.BLEND_RGBA_ADD)
+                self._fit_cache[snow_key] = snow_floor
+            floor_img = snow_floor
+
         if floor_img is None:
             fallback_by_biome = {
                 "ruins": 10, "forest": 5, "dungeon": 9,
