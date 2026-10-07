@@ -1461,14 +1461,19 @@ class Renderer:
                                 midbottom=(int(tx * TILE + TILE // 2 + ox), int(base_y + oy)))
                             screen.blit(pillar_image, rect)
                 elif tile == WALL:
-                    piece_key = self._wall_piece_key(arena, tx, ty)
-                    piece = self.wall_piece_images.get(piece_key) if piece_key else None
-                    if piece is None:
-                        continue
-                    dest_y = (ty + 1) * TILE - piece.get_height()
-                    base_y = dest_y + piece.get_height()
-                    if player_y < base_y:
-                        screen.blit(piece, (int(tx * TILE + ox), int(dest_y + oy)))
+                    wall_models = self._wall_models_for_biome(arena.biome)
+                    if ty == 0 and player_y < TILE * 1.5 and wall_models.get("front") is not None:
+                        top = pygame.transform.smoothscale(wall_models["front"], (arena.width, TILE * 2))
+                        screen.blit(top, (int(ox), int(oy - TILE)))
+                    elif ty == arena.rows - 1 and player_y > arena.height - TILE * 1.5 and wall_models.get("front") is not None:
+                        bottom = pygame.transform.smoothscale(wall_models["front"], (arena.width, TILE * 2))
+                        screen.blit(bottom, (int(ox), int(oy + arena.height - TILE * 2)))
+                    elif tx == 0 and sim.player.x < TILE * 1.5 and wall_models.get("left") is not None:
+                        left = pygame.transform.smoothscale(wall_models["left"], (TILE * 2, arena.height))
+                        screen.blit(left, (int(ox - TILE), int(oy)))
+                    elif tx == arena.cols - 1 and sim.player.x > arena.width - TILE * 1.5 and wall_models.get("right") is not None:
+                        right = pygame.transform.smoothscale(wall_models["right"], (TILE * 2, arena.height))
+                        screen.blit(right, (int(ox + arena.width - TILE), int(oy)))
 
     def _draw_dynamic_shadows(self, screen, arena, sim, ox, oy):
         """Sombras dinamicas con una sola capa reutilizable y posiciones de pilares cacheadas."""
