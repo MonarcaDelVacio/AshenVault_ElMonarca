@@ -87,8 +87,8 @@ duplicate decoration colliders.
 ## Migration strategy
 
 1. Register declarative identities. Done.
-2. Register runtime sheet frames beside existing loaders.
-3. Compare registry regions against current loader outputs.
+2. Register runtime sheet frames beside existing loaders. Done for the generic/grid/component/merchant/door/ranged loaders.
+3. Compare registry regions against current loader outputs. Pending Phase 3 validation.
 4. Make renderer resolve assets through the registry.
 5. Only then remove duplicate loader-specific metadata.
 
