@@ -606,3 +606,12 @@ The player weapon layer (`game/weapons.py`) and character ability layer (`game/a
 Mira's drone lifecycle has been extracted to `game/systems/drones.py`. The extracted layer owns drone spawning, safe positioning, collision/path checks, formation steering, projectile avoidance, combat positioning, ranged fire, damage and destruction. `Sim` remains the world-state owner and exposes compatibility facades for the existing callers.
 
 The weapon firing path in `game/weapons.py` and active-character ability dispatcher in `game/abilities.py` are already standalone modules with relatively low coupling, so they are being audited rather than mechanically split again. This avoids creating indirection where no architectural boundary is gained.
+
+
+### Phase 6 — ability/weapon audit follow-up
+
+The post-extraction audit verified that Mira retains the requested 20-second ability cooldown, and completed the drone behavior contract: drones now have a finite lifetime, fire three-shot bursts with a short intra-burst interval, and preserve the existing durability cap so a single hit cannot immediately delete a healthy drone. Character upgrades continue to control drone count, damage, attack cadence, and durability.
+
+Rook's shockwave ability now explicitly enables confusion alongside stun; the existing hazard system owns the status application and event emission, so no duplicate effect implementation was introduced.
+
+The remaining Phase 6 work is final regression/integration auditing of player weapon input, reload/ammunition semantics, special projectiles, and laser edge cases before moving to Movement/AI.
