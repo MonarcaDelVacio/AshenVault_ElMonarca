@@ -331,8 +331,12 @@ class Arena:
             finite=[(field[ty+dy][tx+dx],tx+dx,ty+dy) for dx,dy in _NEIGH
                     if self._can_step(tx,ty,dx,dy) and field[ty+dy][tx+dx] < INF]
             if finite:
-                _,nx,ny=min(finite,key=lambda q:q[0])
-                return self.tile_center(nx,ny)
+                if radius > 0.0:
+                    finite=[item for item in finite
+                            if not self.box_hits(*self.tile_center(item[1], item[2]), radius)]
+                if finite:
+                    _,nx,ny=min(finite,key=lambda q:q[0])
+                    return self.tile_center(nx,ny)
             return None
         for dx,dy in _NEIGH:
             if not self._can_step(tx,ty,dx,dy):
