@@ -648,3 +648,10 @@ The audit is intentionally validation-only at this stage: the procedural generat
 - Room topology validation begins Phase 9: every dungeon-room adjacency must have symmetric doors, and every non-adjacent direction must remain closed/nonexistent.
 - Regression coverage was added for boss spatial spacing, pillar solidity, room-door topology and decoration/spawn clearance.
 - These tests are prepared but not runtime-executed through the available GitHub integration.
+
+
+### Phase 9 — Room system, first slice
+- Dungeon room transitions now require both sides of a connection to exist: the current room must have an open door and the destination room must expose the matching opposite door.
+- This is a defensive runtime check in addition to the procedural topology validator; malformed room graphs cannot silently produce one-way transitions.
+- Regression coverage includes symmetric room-door topology and a transition that deliberately removes the destination door.
+- The next Phase 9 slices should cover room lifecycle/clear-state invariants, door locking/unlocking, and persistent room state across transitions.
