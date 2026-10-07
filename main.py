@@ -74,6 +74,7 @@ class App:
         self.reward = 0
         self.info = None
         self.weapon_info_id = None
+        self.weapon_page = 0
         self.score_phase = "stats"
         self.score_timer = 0.0
         self.score_kills_display = 0
@@ -407,13 +408,25 @@ class App:
             scores=self.save.data.get("weapon_scores",{})
             used=[wid for wid,count in scores.items() if count>0 and wid in self.data.weapons]
             used.sort(key=lambda wid:(-int(scores.get(wid,0)), self.data.weapons[wid].name))
-            cols=8; card_w,card_h=92,74; gap_x,gap_y=9,9
+            cols=8; rows=4; page_size=cols*rows; card_w,card_h=92,74; gap_x,gap_y=9,9
+            page_count=max(1,(len(used)+page_size-1)//page_size)
+            self.weapon_page=max(0,min(self.weapon_page,page_count-1))
             start_x=(VIEW_W-(cols*card_w+(cols-1)*gap_x))//2; start_y=86
             if self.weapon_info_id:
                 if click:
                     self.weapon_info_id=None
                 return
-            for n,wid in enumerate(used[:40]):
+            left_arrow=pygame.Rect(28,438,48,36)
+            right_arrow=pygame.Rect(VIEW_W-76,438,48,36)
+            if page_count > 1:
+                if click and left_arrow.collidepoint(pos):
+                    self.weapon_page=(self.weapon_page-1)%page_count
+                    return
+                if click and right_arrow.collidepoint(pos):
+                    self.weapon_page=(self.weapon_page+1)%page_count
+                    return
+            page_items=used[self.weapon_page*page_size:(self.weapon_page+1)*page_size]
+            for n,wid in enumerate(page_items):
                 row,col=divmod(n,cols)
                 rect=pygame.Rect(start_x+col*(card_w+gap_x),start_y+row*(card_h+gap_y),card_w,card_h)
                 if rect.collidepoint(pos):
@@ -422,6 +435,7 @@ class App:
             back=pygame.Rect(VIEW_W//2-100,488,200,30)
             if click and back.collidepoint(pos):
                 self.info=None
+                self.weapon_page=0
                 self.go(CHAR_SELECT)
             return
         if self.state == HUB and not self.info:
@@ -705,8 +719,16 @@ class App:
                     if k in (pygame.K_ESCAPE, pygame.K_RETURN, pygame.K_SPACE):
                         self.weapon_info_id = None
                     return
+                if k in (pygame.K_LEFT, pygame.K_a, pygame.K_RIGHT, pygame.K_d):
+                    scores=self.save.data.get("weapon_scores",{})
+                    used=[wid for wid,count in scores.items() if count>0 and wid in self.data.weapons]
+                    page_count=max(1,(len(used)+31)//32)
+                    if page_count > 1:
+                        self.weapon_page=(self.weapon_page + (1 if k in (pygame.K_RIGHT,pygame.K_d) else -1))%page_count
+                    return
                 if k == pygame.K_ESCAPE:
                     self.info = None
+                    self.weapon_page = 0
                     self.go(CHAR_SELECT)
                     return
                 if k in (pygame.K_RETURN, pygame.K_SPACE):
@@ -1174,19 +1196,37 @@ class App:
             if self.score_continue_ready:
                 self.draw_option_card((VIEW_W-180,VIEW_H-58,150,40),"Continuar",True)
 
+    def _weapon_collection_image(self, wid):
+        """Devuelve el modelo visual real del arma, incluido el atlas ranged."""
+        w=self.data.weapons.get(wid)
+        if w is None:
+            return None
+        image=getattr(self.r,"weapon_images",{}).get(wid)
+        if image is not None:
+            return image
+        sheet_key=getattr(w,"weapon_sprite_sheet",None)
+        index=getattr(w,"weapon_sprite_index",None)
+        frames=getattr(self.r,"weapon_variant_frames",{}).get(sheet_key,[]) if sheet_key else []
+        if isinstance(index,int) and 0 <= index < len(frames):
+            return frames[index]
+        return None
+
     def draw_weapon_collection(self):
         self.draw_menu_bg()
         self.r.text(self.screen,"ARMAS",(VIEW_W//2,42),(240,195,105),self.r.menu_title,True)
         scores=self.save.data.get("weapon_scores",{})
         used=[wid for wid,count in scores.items() if count>0 and wid in self.data.weapons]
         used.sort(key=lambda wid:(-int(scores.get(wid,0)), self.data.weapons[wid].name))
+        cols,rows=8,4; page_size=cols*rows; page_count=max(1,(len(used)+page_size-1)//page_size)
+        self.weapon_page=max(0,min(self.weapon_page,page_count-1))
         if not used:
             self.r.text(self.screen,"AUN NO HAS UTILIZADO ARMAS EN UNA PARTIDA",(VIEW_W//2,230),(175,190,205),self.r.menu_font,True)
         else:
-            cols=8; card_w,card_h=92,74; gap_x,gap_y=9,9
+            card_w,card_h=92,74; gap_x,gap_y=9,9
             start_x=(VIEW_W-(cols*card_w+(cols-1)*gap_x))//2; start_y=86
             mouse=self._logical_mouse_pos()
-            for n,wid in enumerate(used[:40]):
+            page_items=used[self.weapon_page*page_size:(self.weapon_page+1)*page_size]
+            for n,wid in enumerate(page_items):
                 w=self.data.weapons[wid]; row,col=divmod(n,cols)
                 rect=pygame.Rect(start_x+col*(card_w+gap_x),start_y+row*(card_h+gap_y),card_w,card_h)
                 hovered=rect.collidepoint(mouse)
@@ -1194,7 +1234,7 @@ class App:
                 active=hovered or selected
                 pygame.draw.rect(self.screen,(12,18,29,245) if not active else (18,34,42,250),rect,border_radius=7)
                 pygame.draw.rect(self.screen,(86,230,220) if active else (70,84,105),rect,2 if active else 1,border_radius=7)
-                image=getattr(self.r,"weapon_images",{}).get(wid)
+                image=self._weapon_collection_image(wid)
                 if image:
                     iw,ih=image.get_size(); scale=min(48/max(1,iw),36/max(1,ih))
                     thumb=pygame.transform.smoothscale(image,(max(1,int(iw*scale)),max(1,int(ih*scale))))
@@ -1203,6 +1243,13 @@ class App:
                 if img.get_width()>rect.w-8:
                     img=pygame.transform.smoothscale(img,(rect.w-8,img.get_height()))
                 self.screen.blit(img,img.get_rect(center=(rect.centerx,rect.bottom-14)))
+            if page_count > 1:
+                left_rect=pygame.Rect(28,438,48,36); right_rect=pygame.Rect(VIEW_W-76,438,48,36)
+                if not self.ui_atlas.draw_icon(self.screen,left_rect.center,size=28,kind="left"):
+                    self.r.text(self.screen,"<",(left_rect.centerx,left_rect.centery),(190,220,225),self.r.menu_font,True)
+                if not self.ui_atlas.draw_icon(self.screen,right_rect.center,size=28,kind="right"):
+                    self.r.text(self.screen,">",(right_rect.centerx,right_rect.centery),(190,220,225),self.r.menu_font,True)
+                self.r.text(self.screen,"PÁGINA %d / %d"%(self.weapon_page+1,page_count),(VIEW_W//2,455),(165,190,205),self.r.menu_small,True)
         if self.weapon_info_id:
             self.draw_weapon_info(self.weapon_info_id)
         else:
@@ -1215,7 +1262,7 @@ class App:
         panel=pygame.Rect(250,92,460,356)
         pygame.draw.rect(self.screen,(8,12,22,252),panel,border_radius=12)
         pygame.draw.rect(self.screen,(95,140,155,230),panel,2,border_radius=12)
-        image=getattr(self.r,"weapon_images",{}).get(wid)
+        image=self._weapon_collection_image(wid)
         if image:
             iw,ih=image.get_size(); scale=min(78/max(1,iw),62/max(1,ih))
             thumb=pygame.transform.smoothscale(image,(max(1,int(iw*scale)),max(1,int(ih*scale))))
