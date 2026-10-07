@@ -10,7 +10,7 @@ from .items import make_item, apply_item_bonuses
 from .chests import Chest
 from .statues import STATUE_BUFFS, statue_cost, statue_offer
 from .systems.status_effects import damage_shield, apply_dot, update_dot_effects, apply_freeze, freeze_duration
-from .systems.pickups import update_pickups
+from .systems.pickups import update_pickups\nfrom .systems.hazards import update_hazards
 
 class Input:
     def __init__(self):
