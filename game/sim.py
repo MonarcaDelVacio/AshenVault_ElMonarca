@@ -78,6 +78,12 @@ class Sim:
             self.lasers=[l for l in self.lasers if l.get("owner") is not p]
         self.emit("weapon_switch",p.x,p.y)
 
+    def _target_line_clear(self, x0, y0, x1, y1):
+        """Target visibility including physical decorations and props."""
+        if hasattr(self, "_obstacle_clear_to"):
+            return self._obstacle_clear_to(x0, y0, x1, y1)
+        return self.arena.line_of_sight(x0, y0, x1, y1)
+
     def enemy_target(self, enemy):
         """Selecciona jugador o dron, manteniendo el objetivo durante un breve lock."""
         p=self.player
@@ -97,13 +103,15 @@ class Sim:
                 locked["x"]=obj.x if hasattr(obj,"x") else obj.get("x",locked["x"])
                 locked["y"]=obj.y if hasattr(obj,"y") else obj.get("y",locked["y"])
                 dist=math.hypot(locked["x"]-enemy.x,locked["y"]-enemy.y)
-                if dist <= float(getattr(enemy.d,"detect_range",700)) and self.arena.line_of_sight(enemy.x,enemy.y,locked["x"],locked["y"]):
+                if (dist <= float(getattr(enemy.d,"detect_range",700))
+                        and self._target_line_clear(enemy.x,enemy.y,locked["x"],locked["y"])):
                     return locked
 
         visible=[]
         for target in candidates:
             dist=math.hypot(target["x"]-enemy.x,target["y"]-enemy.y)
-            if dist <= float(getattr(enemy.d,"detect_range",700)) and self.arena.line_of_sight(enemy.x,enemy.y,target["x"],target["y"]):
+            if (dist <= float(getattr(enemy.d,"detect_range",700))
+                    and self._target_line_clear(enemy.x,enemy.y,target["x"],target["y"])):
                 visible.append((dist,target))
         if not visible:
             chosen=candidates[0]
