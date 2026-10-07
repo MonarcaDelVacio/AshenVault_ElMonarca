@@ -92,4 +92,5 @@ def test_defensive_cover_moves_enemy_behind_projectile_blocker():
     # The target must be beyond the blocker, not at the blocker itself.
     assert calls[0][0] > 0.0
     assert calls[0][1] == 0.0
+    assert calls[0][2] > enemy.d.speed
 \n
