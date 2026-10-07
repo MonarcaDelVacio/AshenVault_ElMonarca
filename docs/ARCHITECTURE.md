@@ -636,4 +636,6 @@ Phase 8 begins with a non-invasive validation layer in `game/generation_validati
 
 Regression coverage in `tests/test_generation_validation.py` audits a seed batch across the main room types and explicitly rejects an extra perimeter opening. The generator itself remains unchanged in this slice; the goal is to establish an executable contract before modifying procedural generation behavior.
 
-The next Phase 8 slice should use this validation layer to audit larger seed batches and then address any generation edge cases found, especially room accessibility, decoration clearance, spawn safety and special-room spacing.
+The next Phase 8 slice expanded this contract into large deterministic seed batches. Room validation now covers all 16 combinations of active door sides, verifies every door has a floor route to the player spawn, checks duplicate/out-of-floor spawns and rejects perimeter openings that do not correspond to a door. Dungeon-level validation also checks start/final room types, the six-boss structure and spacing between special/no-enemy rooms and minibosses.
+
+The audit is intentionally validation-only at this stage: the procedural generator was not changed because no concrete generation defect was established by static inspection. The expanded tests cover 128 layout seeds, 64 seeds across all supported room types and door combinations, and 64 constructed dungeons. These tests have been added but have not been executed in the available GitHub environment.
