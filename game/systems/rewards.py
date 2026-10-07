@@ -1,13 +1,13 @@
 """Chest and room-reward helpers extracted from Sim."""
 
-from ..items import make_item
+from ..items import make_item\nfrom ..chests import Chest
 
 
 def spawn_chest(sim, chest_type="common"):
     cx, cy = sim.arena.width / 2, sim.arena.height / 2
     if sim.chest is not None:
         return
-    sim.chest = sim._make_chest(chest_type, cx, cy)
+    sim.chest = Chest(chest_type, cx, cy)
     sim.emit("chest_spawn", cx, cy, chest_type)
 
 
