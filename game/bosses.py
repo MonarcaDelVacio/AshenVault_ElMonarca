@@ -66,11 +66,27 @@ class Boss(Enemy):
         self.cooldown = self.d.cooldown
         if getattr(self, "_special_windup", None) == "stomp":
             self._special_windup = None
-            radius = 72.0 + 12.0 * self.phase
+            radius = math.hypot(sim.arena.width, sim.arena.height) + TILE
+            speed = 500.0 + 45.0 * self.phase
             damage = float(self.d.damage) * (1.0 + 0.12 * (self.phase - 1))
-            sim.wave_attacks.append({"x": self.x, "y": self.y, "radius": 18.0, "speed": 250.0 + 35.0 * self.phase,
-                                     "life": 1.15, "damage": damage, "color": tuple(self.d.color),
+            sim.wave_attacks.append({"x": self.x, "y": self.y, "radius": 18.0, "speed": speed,
+                                     "life": radius / speed + 0.18, "damage": damage, "color": tuple(self.d.color),
                                      "max_radius": radius, "team": 1, "hit": False, "hit_ids": set()})
+            sim.emit("boss_shockwave_full_room", self.x, self.y, radius, damage)
+            return
+        if getattr(self, "_special_windup", None) == "charge":
+            self._special_windup = None
+            charge_distance = 150.0 + 35.0 * self.phase
+            self.x, self.y = sim.move_actor(
+                self.x, self.y,
+                math.cos(self.facing) * charge_distance,
+                math.sin(self.facing) * charge_distance,
+                self.radius,
+            )
+            radius = 74.0 + 12.0 * self.phase
+            sim.emit("explosion", self.x, self.y, radius, tuple(self.d.color))
+            sim.emit("boss_charge", self.x, self.y, self.phase)
+            return
             sim.emit("boss_stomp", self.x, self.y)
             sim.emit("boss_shockwave", self.x, self.y, radius, damage)
             return
@@ -231,6 +247,10 @@ class Boss(Enemy):
         super()._attack(sim,dist)
 
     def update(self, sim, dt):
+        self.phase_transition_lock=max(0.0,self.phase_transition_lock-dt)
+        if self._phase_changed_pending:
+            self._phase_changed_pending=False
+            sim.emit("boss_phase", self.x, self.y, self.phase)
         self.shield_timer=max(0.0,self.shield_timer-dt)
         self.laser_timer=max(0.0,self.laser_timer-dt)
         # Todos los jefes pueden canalizar el mismo rayo base; el color, daño y
@@ -264,15 +284,7 @@ class Boss(Enemy):
             if self.stomp_timer<=0 and self.state not in ("windup","recover"):
                 self.state="windup"; self.timer=max(0.55,0.9-0.08*self.phase); self._special_windup="stomp"
                 self.stomp_timer=getattr(self.d,"stomp_interval",4.8)
-        hp_ratio = self.hp / self.max_hp if self.max_hp else 0
-        new_phase = 1 if hp_ratio > 0.66 else 2 if hp_ratio > 0.33 else 3
-        if new_phase != self.phase:
-            self.phase = new_phase
-            sim.emit("boss_phase", self.x, self.y, self.phase)
-            self.cooldown = 0.0
-            self.summon_timer = 0.0
-
-        pd = self.phase_defs[self.phase - 1]
+        pd = self.phase_defs[min(self.phase - 1, len(self.phase_defs) - 1)]
         scale=self.difficulty_scale
         keys = (
             "cooldown", "speed", "pellets", "fan_angle", "projectile_pattern", "projectile_speed",
@@ -293,6 +305,44 @@ class Boss(Enemy):
         # Cada arquetipo ocupa el espacio de forma distinta: presión cercana,
         # control a distancia, o invocación para obligar al jugador a reposicionarse.
         style = self.boss_style
+
+        # Mecánicas de identidad fuera del patrón de proyectiles:
+        # tanque = barrera, mago = reposicionamiento, coloso = carga.
+        self.signature_timer = max(0.0, float(getattr(self, "signature_timer", 0.0)) - dt)
+        if self.signature_timer <= 0.0 and self.spawn_delay <= 0 and self.state not in ("windup", "recover"):
+            if style == "tank" and self.phase >= 2:
+                self.shield_active = True
+                self.shield_integrity = 24.0 + 10.0 * self.phase
+                self.shield_timer = 1.8 + 0.35 * self.phase
+                self.signature_timer = 7.0 - min(1.5, self.phase * 0.4)
+                sim.emit("boss_shield", self.x, self.y, True)
+            elif style == "mage" and self.phase >= 2:
+                dx, dy = p.x - self.x, p.y - self.y
+                if math.hypot(dx, dy) < 330.0:
+                    angle = math.atan2(-dy, -dx) + self.rng.uniform(-0.55, 0.55)
+                    tx = p.x + math.cos(angle) * (250.0 + 40.0 * self.phase)
+                    ty = p.y + math.sin(angle) * (250.0 + 40.0 * self.phase)
+                    safe = sim._safe_npc_position(tx, ty, self.radius, min_distance=150)
+                    if safe is not None:
+                        self.x, self.y = safe
+                        self.signature_timer = 8.0 - min(1.2, self.phase * 0.35)
+                        sim.emit("boss_teleport", self.x, self.y, self.phase)
+                    else:
+                        self.signature_timer = 1.0
+                else:
+                    self.signature_timer = 2.0
+            elif style == "colossus" and self.phase >= 2:
+                dist_to_player = math.hypot(p.x - self.x, p.y - self.y)
+                if dist_to_player > 170.0:
+                    self.facing = math.atan2(p.y - self.y, p.x - self.x)
+                    self.state = "windup"
+                    self.timer = max(0.6, 0.9 - 0.08 * self.phase)
+                    self._special_windup = "charge"
+                    self.signature_timer = 8.0 - min(1.2, self.phase * 0.3)
+                else:
+                    self.signature_timer = 2.0
+            else:
+                self.signature_timer = 2.5
         preferred = {
             "commander": 245, "summoner": 285, "tank": 105,
             "mage": 355, "colossus": 135, "regent": 175,
