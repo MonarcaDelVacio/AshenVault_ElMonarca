@@ -2825,15 +2825,12 @@ class Renderer:
                 self.text(screen, getattr(wdef, "name", "ARMA"), (102, VIEW_H - 61), (240, 241, 246), self.small)
             else:
                 self.text(screen, getattr(wdef, "name", "ARMA"), (62, VIEW_H - 61), (240, 241, 246), self.small)
-            is_melee = getattr(wdef, "class", "") == "melee"
+            is_uses_weapon = getattr(wdef, "class", "") in ("melee", "magic")
             if weapon_id == "fists":
                 ammo_text, ammo_color = "PUÑOS", (210, 218, 230)
-            elif is_melee:
-                if getattr(w, "unlimited_ammo", False):
-                    ammo_text, ammo_color = "USOS  ∞", (210, 218, 230)
-                else:
-                    ammo_text = "USOS  %d/%d" % (w.durability, w.max_durability)
-                    ammo_color = (255, 120, 120) if w.durability <= 3 else (210, 218, 230)
+            elif is_uses_weapon:
+                ammo_text = "USOS  %d/%d" % (w.durability, w.max_durability)
+                ammo_color = (255, 120, 120) if w.durability <= 3 else (210, 218, 230)
             elif w.reloading:
                 ammo_text, ammo_color = "RECARGANDO", (240, 200, 90)
             else:
@@ -2846,7 +2843,7 @@ class Renderer:
         self.text(screen, ammo_text, ammo_pos, ammo_color, self.small)
 
         # Solo cuando el cargador está completamente vacío mostramos el icono de recarga.
-        if w is not None and not is_melee and weapon_id != "fists" and not w.reloading and w.ammo <= 0 and w.reserve_magazines > 0:
+        if w is not None and not is_uses_weapon and weapon_id != "fists" and not w.reloading and w.ammo <= 0 and w.reserve_magazines > 0:
             reload_center = (177, VIEW_H - 31)
             if not self.ui_atlas.draw_icon(screen, reload_center, size=22, kind="refresh"):
                 pygame.draw.circle(screen, (240, 200, 90), reload_center, 9, 2)
