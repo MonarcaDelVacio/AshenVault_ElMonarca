@@ -625,5 +625,7 @@ Regression tests cover obstacle escape and direct line-of-sight chasing. No move
 
 The next Movement/AI slice should audit target selection, confusion behavior, dodge/defensive reactions, flying movement, and flow-field edge cases before changing procedural generation or room lifecycle code.
 
+Phase 7 movement hardening now also covers enemy congestion and physical clearance. Chase separation uses soft radial spacing before enemies overlap, with stronger lateral separation when a group is already compressed. Blocked steering candidates are rejected when the physical obstacle sweep reports no clear segment. Flow-field steps are evaluated against the enemy's collision radius, including recovery from disconnected/INF tiles, so a geometrically valid tile is not selected when the actor cannot actually occupy it. Flying enemies retain bounded movement. Door geometry remains generation-owned: active openings are exactly two perimeter blocks, while internal access corridors remain wider to provide actor clearance. Focused regression coverage was added for pre-overlap separation, blocked escape steering, flying bounds, defensive cover, and flow-step clearance.
+
 
 This slice also corrected enemy separation in the extracted chase helper and completed the confusion contract: confused enemies retreat/disorient instead of initiating attacks, while stun/freeze remain immobilizing statuses. A regression test now covers separation with another enemy present.
