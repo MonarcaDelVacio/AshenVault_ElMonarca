@@ -27,6 +27,7 @@ def use_ability(sim):
     elif kind == "shield":
         amount = a.get("amount", 4) * ability_mult
         p.shield = min(p.max_shield, p.shield + amount)
+        p.ability_shield_hp = max(float(getattr(p, "ability_shield_hp", 0.0)), float(amount))
         p.invuln = max(p.invuln, a.get("invuln", 0.8))
         p.ability_shield_fx = max(p.ability_shield_fx, a.get("invuln", 0.8) * ability_mult)
         p.set_status("shield", max(2.2, a.get("invuln", 0.8) * ability_mult))
