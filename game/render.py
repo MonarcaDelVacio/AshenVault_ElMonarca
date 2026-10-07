@@ -2816,31 +2816,38 @@ class Renderer:
             self.text(screen, "ESTATUAS  " + labels, (hud_panel.right, hud_panel.bottom + 7), (125, 225, 205), self.small, right=True)
         self.draw_minimap(screen, sim, large=False)
 
-        # Barra de jefe: centrada y reducida para no invadir los indicadores laterales.
+        # Barra de jefe: una fase ocupa la barra completa. Al agotarse,
+        # Boss repone la vida al máximo de la siguiente fase y cambia el color.
         bosses = [e for e in sim.enemies if getattr(e, "is_boss", False) and e.alive]
         if bosses:
             boss = bosses[0]
-            bw, bh = 500, 38
-            bx, by = (VIEW_W - bw) // 2, 10
+            bw, bh = 560, 46
+            bx, by = (VIEW_W - bw) // 2, 8
             boss_rect = pygame.Rect(bx, by, bw, bh)
-            panel(boss_rect, fill=(17, 15, 22, 238), border=(104, 73, 78))
+            phase = max(1, min(int(getattr(boss, "phase_count", 3)), int(getattr(boss, "phase", 1))))
+            phase_colors = {
+                1: (218, 82, 92),
+                2: (174, 92, 224),
+                3: (242, 166, 70),
+            }
+            phase_color = phase_colors.get(phase, (218, 82, 92))
+            panel(boss_rect, fill=(11, 12, 20, 242), border=phase_color)
             title = str(boss.d.name).upper()
-            self.text(screen, title[:34], (bx + 11, by + 4), (242, 231, 226), self.small)
-            phase = max(1, min(3, int(getattr(boss, "phase", 1))))
-            phase_color = {1: (211, 92, 84), 2: (231, 133, 65), 3: (240, 184, 83)}[phase]
-            self.text(screen, "FASE %d/3" % phase, (bx + bw - 62, by + 4), phase_color, self.small)
-            track = pygame.Rect(bx + 10, by + 22, bw - 20, 9)
+            self.text(screen, title[:36], (bx + 14, by + 5), (242, 237, 236), self.small)
+            phase_label = "FASE %d/%d" % (phase, max(1, int(getattr(boss, "phase_count", 3))))
+            phase_surface = self.small.render(phase_label, True, phase_color)
+            screen.blit(phase_surface, phase_surface.get_rect(topright=(bx + bw - 14, by + 5)))
+
+            track = pygame.Rect(bx + 12, by + 24, bw - 24, 13)
+            pygame.draw.rect(screen, (5, 6, 11), track, border_radius=5)
             hp_ratio = max(0.0, min(1.0, boss.hp / max(1.0, boss.max_hp)))
-            if not self.ui_atlas.draw_bar(screen, track, hp_ratio):
-                pygame.draw.rect(screen, (6, 7, 12), track, border_radius=4)
-                fill_w = int((track.width - 2) * hp_ratio)
-                if fill_w > 0:
-                    fill = pygame.Rect(track.x + 1, track.y + 1, fill_w, track.height - 2)
-                    pygame.draw.rect(screen, (157, 43, 58), fill, border_radius=3)
-                    pygame.draw.line(screen, (236, 105, 102), (fill.x + 2, fill.y + 1), (max(fill.x + 2, fill.right - 2), fill.y + 1), 1)
-            for mark in (1 / 3, 2 / 3):
-                mx = track.x + int(track.width * mark)
-                pygame.draw.line(screen, (29, 22, 29), (mx, track.y + 1), (mx, track.bottom - 1), 2)
+            fill_w = int((track.width - 2) * hp_ratio)
+            if fill_w > 0:
+                fill = pygame.Rect(track.x + 1, track.y + 1, fill_w, track.height - 2)
+                pygame.draw.rect(screen, phase_color, fill, border_radius=4)
+                pygame.draw.line(screen, tuple(min(255, int(v * 1.22)) for v in phase_color),
+                                 (fill.x + 2, fill.y + 1), (max(fill.x + 2, fill.right - 2), fill.y + 1), 1)
+            pygame.draw.rect(screen, tuple(max(0, int(v * 0.55)) for v in phase_color), track, 1, border_radius=5)
 
         # Panel inferior: arma y munición a la izquierda; habilidades a la derecha.
         w = getattr(p, "weapon", None)
