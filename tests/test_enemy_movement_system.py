@@ -181,10 +181,10 @@ def test_chase_uses_physical_target_visibility_when_available():
     )
     sim = SimpleNamespace(
         player=player,
-        arena=SimpleNamespace(line_of_sight=lambda *args: True),
+        arena=SimpleNamespace(line_of_sight=lambda *args: True, best_step=lambda *args: (130.0, 100.0)),
         _target_line_clear=lambda *args: False,
         enemies=[enemy],
         flow=[],
     )
-    movement.chase(enemy, sim, 0.1, 10.0)
+    chase(enemy, sim, 0.1, 10.0)
     assert enemy.stepped[0] < 0.99
