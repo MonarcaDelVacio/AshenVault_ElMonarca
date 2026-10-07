@@ -215,6 +215,24 @@
       "sky_raider"
     ]
   },
+  "snow": {
+    "name": "Cumbres Heladas",
+    "floor_a": [ 190, 205, 220 ],
+    "floor_b": [ 210, 222, 235 ],
+    "wall": [ 125, 145, 165 ],
+    "wall_top": [ 180, 198, 215 ],
+    "pillar": [ 145, 165, 185 ],
+    "pillar_top": [ 200, 215, 230 ],
+    "enemy_pool": [
+      "ice_monkey",
+      "gargoyle",
+      "flyer",
+      "wisp",
+      "stone_golem",
+      "stone_colossus",
+      "undead_knight"
+    ]
+  },
   "final": {
     "name": "Núcleo del Vacío",
     "floor_a": [
