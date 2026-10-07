@@ -2,7 +2,7 @@
 
 ## Estado
 
-Fase 11 completada a nivel de implementación y auditoría estática del repositorio.
+Implementación y auditoría estática de Fase 11 completadas; queda la verificación final de runtime/test por falta de ejecutor disponible en esta sesión.
 
 ## Cobertura
 
