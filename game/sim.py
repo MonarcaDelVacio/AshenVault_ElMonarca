@@ -279,6 +279,9 @@ class Sim:
         self.items=room.items
         self.pickups=room.pickups
         self.chest=getattr(room, "chest", None)
+        # Las transiciones solo ocurren con la sala anterior resuelta; cualquier
+        # entidad viva residual debe quedar fuera del nuevo contexto de sala.
+        self.enemies=[]
         self.hazards=[]; self.wave_attacks=[]; self.lasers=[]
         # Mira mantiene sus drones entre salas; solo se reposicionan alrededor del jugador.
         if not getattr(room, "props_spawned", False):
@@ -300,9 +303,11 @@ class Sim:
         self._flow_tile=self.arena.tile_of(self.player.x,self.player.y); self._flow_refresh=0.; self.flow=self.arena.flow_field(*self._flow_tile)
         if room.room_type=="boss" and not room.cleared:
             self.chest=None
+            room.chest=None
             self.arena.close_doors(); self._spawn_boss(); room.enemies_spawned=True; room.doors_locked=True
         elif self._room_should_combat() and not room.cleared:
             self.chest=None
+            room.chest=None
             self.arena.close_doors();
             if room.room_type=="miniboss": self._spawn_miniboss()
             else: self._spawn_room_enemies()
@@ -540,6 +545,7 @@ class Sim:
         cx,cy=self.arena.width/2,self.arena.height/2
         if room.room_type=="treasure":
             self._spawn_chest("common")
+            room.chest=self.chest
         elif room.room_type=="healing":
             old=self.player.hp; self.player.hp=min(self.player.max_hp,self.player.hp+3)
             self.player.shield=min(self.player.max_shield,self.player.shield+2)
