@@ -941,7 +941,7 @@ class Sim:
     def perform_fist_attack(self, p):
         return perform_fist_attack(self, p)
     def perform_melee_attack(self, p, d):
-        return perform_melee_attack(self, p)
+        return perform_melee_attack(self, p, d)
     def _update_projectiles(self, dt):
         return _update_projectiles(self, dt)
     def _explode_projectile(self, pr):
@@ -954,8 +954,8 @@ class Sim:
         return update_player_laser(self, charge_time, dt)
     def start_enemy_laser(self, owner, angle, duration=2.2, color=None, damage=14.0, width=2.0, max_width=12.0, range_=760.0, explosion_radius=24.0):
         return start_enemy_laser(self, owner, angle, duration, color, damage, width, max_width, range_, explosion_radius)
-    def _laser_hit_target(self, pr):
-        return _laser_hit_target(self, pr)
+    def _laser_hit_target(self, pr, dt):
+        return _laser_hit_target(self, pr, dt)
     def _update_lasers(self, dt):
         return _update_lasers(self, dt)
     def _update_hazards(self,dt):
