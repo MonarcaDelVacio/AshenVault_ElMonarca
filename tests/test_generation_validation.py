@@ -73,3 +73,15 @@ def test_room_validation_rejects_decoration_over_player_spawn():
     room = generate_room(11, "combat", "ruins", ("N",))
     room["decorations"] = [{"kind":"rock","x":room["player_spawn"][0],"y":room["player_spawn"][1],"variant":0}]
     assert "decoración invade el spawn del jugador" in validate_room(room)
+
+def test_dungeon_transition_requires_symmetric_destination_door():
+    dungeon = Dungeon(0)
+    dungeon.room.arena.open_doors()
+    side = next(side for side in ("N", "S", "W", "E") if dungeon.neighbor(dungeon.current, side) in dungeon.rooms)
+    nxt = dungeon.neighbor(dungeon.current, side)
+    opposite = {"N":"S","S":"N","W":"E","E":"W"}[side]
+    destination = dungeon.rooms[nxt]
+    destination.arena.doors.pop(opposite, None)
+    current = dungeon.current
+    assert dungeon.transition(side) is False
+    assert dungeon.current == current
