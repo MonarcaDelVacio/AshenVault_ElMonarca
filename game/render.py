@@ -1949,6 +1949,29 @@ class Renderer:
             pygame.draw.circle(screen,(80,210,255),(int(px),int(py)),34,4)
             pygame.draw.circle(screen,(150,240,255),(int(px),int(py)),22,2)
 
+    def _resolve_decoration_image(self, deco):
+        """Resolve the exact decoration frame used by rendering and collision."""
+        kind=str(deco.get("kind",""))
+        variant=deco.get("variant",0)
+        image=self.decoration_images.get(kind)
+        frames=self.decoration_frames.get(kind)
+        if frames and kind.startswith("biome_"):
+            raw_variant=deco.get("variant",0)
+            try:
+                variant_seed=float(raw_variant)
+            except (TypeError, ValueError):
+                variant_seed=0.0
+            index=(int(variant_seed*len(frames)) % len(frames)
+                   if 0.0 <= variant_seed <= 1.0 else int(raw_variant) % len(frames))
+            image=frames[index]
+        if image is None and kind in ("bush","rock"):
+            try:
+                variant_index=int(variant) % 6 + 1
+            except (TypeError, ValueError):
+                variant_index=1
+            image=self.decoration_images.get(f"{kind}_{variant_index}")
+        return image
+
     def decoration_overlap(self, deco, x, y, radius):
         """Prueba la colisión real contra los píxeles opacos del modelo."""
         kind=str(deco.get("kind",""))
@@ -1956,18 +1979,7 @@ class Renderer:
         key=(kind,variant)
         cached=self._decoration_mask_cache.get(key)
         if cached is None:
-            image=self.decoration_images.get(kind)
-            frames=self.decoration_frames.get(kind)
-            if frames and kind.startswith("biome_"):
-                raw_variant = deco.get("variant", 0)
-                try:
-                    variant_seed = float(raw_variant)
-                except (TypeError, ValueError):
-                    variant_seed = 0.0
-                index = int(variant_seed * len(frames)) % len(frames) if 0.0 <= variant_seed <= 1.0 else int(raw_variant) % len(frames)
-                image = frames[index]
-            if image is None and kind in ("bush","rock"):
-                image=self.decoration_images.get(f"{kind}_{variant%6+1}")
+            image=self._resolve_decoration_image(deco)
             if image is None:
                 return False
             max_size=decoration_max_size(kind)
@@ -2003,18 +2015,7 @@ class Renderer:
         if key in self._decoration_collider_cache:
             rx,ry,ox,oy=self._decoration_collider_cache[key]
         else:
-            image=self.decoration_images.get(kind)
-            frames=self.decoration_frames.get(kind)
-            if frames and kind.startswith("biome_"):
-                raw_variant = deco.get("variant", 0)
-                try:
-                    variant_seed = float(raw_variant)
-                except (TypeError, ValueError):
-                    variant_seed = 0.0
-                index = int(variant_seed * len(frames)) % len(frames) if 0.0 <= variant_seed <= 1.0 else int(raw_variant) % len(frames)
-                image = frames[index]
-            if image is None and kind in ("bush","rock"):
-                image=self.decoration_images.get(f"{kind}_{variant%6+1}")
+            image=self._resolve_decoration_image(deco)
             if image is None:
                 return None
             bbox=image.get_bounding_rect(min_alpha=8)
@@ -2041,9 +2042,7 @@ class Renderer:
 
     def _draw_single_scene_decoration(self, screen, deco, ox, oy, t):
         kind=deco.get("kind")
-        image=self.decoration_images.get(kind)
-        if image is None and kind in ("bush","rock"):
-            image=self.decoration_images.get(f"{kind}_{int(deco.get("variant",0))%6+1}")
+        image=self._resolve_decoration_image(deco)
         if image is None:
             return
         base_y=float(deco.get("y",0))*TILE+TILE
@@ -2051,17 +2050,8 @@ class Renderer:
         y=base_y+oy
         max_size=decoration_max_size(kind)
         frames = self.decoration_frames.get(kind)
-        if frames:
-            if kind.startswith("biome_"):
-                raw_variant = deco.get("variant", 0)
-                try:
-                    variant_seed = float(raw_variant)
-                except (TypeError, ValueError):
-                    variant_seed = 0.0
-                index = int(variant_seed * len(frames)) % len(frames) if 0.0 <= variant_seed <= 1.0 else int(raw_variant) % len(frames)
-                image = frames[index]
-            else:
-                image = frames[int(t * 8.0) % len(frames)]
+        if frames and not kind.startswith("biome_"):
+            image = frames[int(t * 8.0) % len(frames)]
         draw=self._fit_image(image,max_size)
         if kind=="fountain_active":
             pulse=0.97+0.03*math.sin(t*3.2)
