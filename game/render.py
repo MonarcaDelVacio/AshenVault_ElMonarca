@@ -1539,15 +1539,20 @@ class Renderer:
             return image.subsurface(bbox).copy()
 
         def fit_wall_exact(image, width, height):
-            """Mapea el alpha real del modelo al footprint exacto del grid."""
-            image = crop_alpha(image)
+            """Mapea una vez el alpha real del modelo al footprint exacto."""
             if image is None:
                 return None
             width, height = max(1, int(width)), max(1, int(height))
             key = ("wall_exact", id(image), width, height)
-            # id(image) cambia después del crop; por eso el cache se mantiene
-            # solo para el resultado de esta llamada.
-            return pygame.transform.smoothscale(image, (width, height))
+            cached = self._fit_cache.get(key)
+            if cached is not None:
+                return cached
+            cropped = crop_alpha(image)
+            if cropped is None:
+                return None
+            cached = pygame.transform.smoothscale(cropped, (width, height))
+            self._fit_cache[key] = cached
+            return cached
 
         def draw_horizontal_cell(item, image):
             """Modelo frontal 1x2; la celda WALL es siempre el bloque inferior."""
