@@ -543,3 +543,6 @@ The fifth Phase 4 extraction is `game/rendering/rotation_geometry.py`, which cen
 
 
 The sixth Phase 4 extraction is `game/rendering/atlas_background.py`, which centralizes the existing flat-color keying used by wall and cobblestone atlases. The renderer now delegates that operation without changing the configured RGB values or tolerances. Regression tests verify source immutability and selective transparency.
+
+
+The seventh Phase 4 extraction is `game/rendering/animation_geometry.py`, which centralizes frame-index calculation for timed combat animations and projectile sheets. Existing durations and looping/clamping behavior are preserved; the renderer now delegates only the timing arithmetic. Targeted tests cover clamping, looping, empty animations, and invalid durations.
