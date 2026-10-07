@@ -1117,7 +1117,9 @@ class App:
                 bbox = score_frame.get_bounding_rect(min_alpha=8)
                 if bbox.width and bbox.height:
                     score_frame = score_frame.subsurface(bbox).copy()
-                max_w, max_h = 94, 112
+                # En la pantalla de EXP el personaje funciona como elemento decorativo
+                # y no debe invadir el nivel ni la barra de experiencia.
+                max_w, max_h = 72, 82
                 scale = min(
                     max_w / max(1, score_frame.get_width()),
                     max_h / max(1, score_frame.get_height()),
@@ -1127,7 +1129,7 @@ class App:
                     max(1, int(score_frame.get_height() * scale)),
                 )
                 score_frame = pygame.transform.smoothscale(score_frame, score_size)
-                scr.blit(score_frame, score_frame.get_rect(center=(VIEW_W // 2, 202)))
+                scr.blit(score_frame, score_frame.get_rect(center=(VIEW_W // 2, 194)))
 
             # La pantalla de EXP no muestra un texto central previo al boton.
 
