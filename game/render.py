@@ -1237,6 +1237,10 @@ class Renderer:
     def _weapon_max_dimension(weapon_class):
         return weapon_max_dimension(weapon_class)
 
+    @staticmethod
+    def _wall_piece_key(arena, tx, ty):
+        return wall_piece_key(arena, tx, ty, FLOOR)
+
     def text(self, surf, s, pos, color=(235, 235, 240), font=None, center=False, right=False):
         img = (font or self.font).render(s, True, color)
         r = img.get_rect()
