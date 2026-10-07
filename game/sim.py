@@ -985,7 +985,10 @@ class Sim:
     def _update_hazards(self,dt):
         for prop in self.props:
             if prop.get("broken") and prop.get("fade",0)>0: prop["fade"]-=dt
-        self.props=[p for p in self.props if not p.get("broken") or p.get("fade",0)>0]
+        # Room.props es el almacenamiento persistente de props. Filtrar con
+        # asignación rompería el alias y haría reaparecer props destruidos al volver
+        # a entrar; conservar la misma lista mantiene su estado de sala.
+        self.props[:]=[p for p in self.props if not p.get("broken") or p.get("fade",0)>0]
         for h in self.hazards:
             h["life"]-=dt; h["tick"]-=dt; h["particle_timer"]-=dt
             if h["particle_timer"]<=0 and h["life"]>0.25:
