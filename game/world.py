@@ -328,8 +328,11 @@ class Arena:
         if self.solid_tile(tx,ty):return None
         bd=field[ty][tx];best=None
         for dx,dy in _NEIGH:
-            if self._can_step(tx,ty,dx,dy) and field[ty+dy][tx+dx]<bd:
-                bd=field[ty+dy][tx+dx];best=(tx+dx,ty+dy)
+            if not self._can_step(tx,ty,dx,dy):
+                continue
+            value=field[ty+dy][tx+dx]
+            if value < bd:
+                bd=value; best=(tx+dx,ty+dy)
         return self.tile_center(*best) if best else None
 
 class Room:
