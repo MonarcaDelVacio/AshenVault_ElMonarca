@@ -14,13 +14,7 @@ from game.ui_atlas import UIAtlas
 from game.intro import IntroPlayer
 from game.sim import Sim, Input
 
-INTRO, MENU, PLAY, PAUSE, MAP, DEAD, VICTORY, SCORE, SETTINGS, CHAR_SELECT, HUB, STATUE = "intro", "menu", "play", "pause", "map", "dead", "victory", "score", "settings", "char_select", "hub", "statue"
-MENU_ITEMS = ["Jugar", "Configuracion", "Salir"]
-PAUSE_ITEMS = ["Continuar", "Configuracion", "Reiniciar run", "Salir al menu"]
-SETTINGS_ITEMS = ["Volumen efectos", "Volumen musica", "Sensibilidad mouse", "Mover arriba", "Mover abajo", "Mover izquierda", "Mover derecha", "Dash", "Habilidad", "Recargar", "Pausa", "Minimapa", "Pantalla completa", "Restablecer", "Volver"]
-SETTING_KEYS = {"Mover arriba":"up", "Mover abajo":"down", "Mover izquierda":"left", "Mover derecha":"right", "Dash":"dash", "Habilidad":"ability", "Recargar":"reload", "Pausa":"pause", "Minimapa":"map"}
-HUB_ITEMS = ["Iniciar run", "Personajes", "Mejoras", "Volver al menu"]
-
+from game.ui_state import (\n    INTRO, MENU, PLAY, PAUSE, MAP, DEAD, VICTORY, SCORE, SETTINGS, CHAR_SELECT, HUB, STATUE,\n    MENU_ITEMS, PAUSE_ITEMS, SETTINGS_ITEMS, SETTING_KEYS, HUB_ITEMS,\n)\n
 
 class App:
     def __init__(self):
