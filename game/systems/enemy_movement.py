@@ -11,8 +11,9 @@ def step(enemy, sim, ux, uy, speed, dt):
         ux, uy = ux / n, uy / n
         distance = max(0.0, float(speed) * float(dt))
         if enemy.d.ai == "flying":
-            enemy.x = max(enemy.radius + 2, min(sim.arena.width - enemy.radius - 2, enemy.x + ux * distance))
-            enemy.y = max(enemy.radius + 2, min(sim.arena.height - enemy.radius - 2, enemy.y + uy * distance))
+            margin = float(enemy.radius) + 2.0
+            enemy.x = max(margin, min(sim.arena.width - margin, enemy.x + ux * distance))
+            enemy.y = max(margin, min(sim.arena.height - margin, enemy.y + uy * distance))
             return
 
         # Primer intento: movimiento normal con deslizamiento por la superficie.
