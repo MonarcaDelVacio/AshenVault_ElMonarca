@@ -9,6 +9,7 @@ from .bosses import Boss
 from .items import make_item, apply_item_bonuses
 from .chests import Chest
 from .statues import STATUE_BUFFS, statue_cost, statue_offer
+from .systems.status_effects import damage_shield, apply_dot, update_dot_effects, apply_freeze, freeze_duration
 
 class Input:
     def __init__(self):
@@ -1372,65 +1373,20 @@ class Sim:
         if not self.over:
             self._try_transition()
     def _damage_shield(self, enemy, damage, incoming_from_target, source="projectile"):
-        """Devuelve True si el escudo frontal absorbe el golpe; su integridad se agota."""
-        if not getattr(enemy, "shield_active", False) or getattr(enemy, "shield_integrity", 0) <= 0:
-            return False
-        da = (incoming_from_target - enemy.facing + math.pi) % (2 * math.pi) - math.pi
-        if abs(da) >= getattr(enemy.d, "shield_arc", 2.1) * 0.5:
-            return False
-        drain = max(2.0, float(damage) * 0.5)
-        enemy.shield_integrity = max(0.0, enemy.shield_integrity - drain)
-        if enemy.shield_integrity <= 0:
-            enemy.shield_active=False
-            enemy.shield_timer=0.0
-            self.emit("shield_break", enemy.x, enemy.y, getattr(enemy.d, "color", (120, 190, 255)))
-        else:
-            self.emit("projectile_block", enemy.x, enemy.y, (120, 190, 255))
-        return True
+        return damage_shield(self, enemy, damage, incoming_from_target, source)
 
-    def _apply_dot(self,target,kind,duration=4.0,base_damage=1.0):
-        if kind not in ("fire","poison"): return
-        state=getattr(target,"dot_effects",None)
-        if state is None:
-            state={}; target.dot_effects=state
-        old=state.get(kind,{})
-        state[kind]={"time":max(float(duration),float(old.get("time",0.0))),
-                     "tick":min(float(old.get("tick",0.0)),0.25),
-                     "damage":max(float(old.get("damage",0.0)),min(0.4,max(0.1,float(base_damage)*0.12)))}
-        if hasattr(target,"set_status"):
-            target.set_status({"fire":"burn","poison":"poison"}[kind],duration)
+    def _apply_dot(self, target, kind, duration=4.0, base_damage=1.0):
+        return apply_dot(self, target, kind, duration, base_damage)
 
-    def _update_dot_effects(self,dt):
-        for target in [self.player]+[e for e in self.enemies if e.alive]:
-            effects=getattr(target,"dot_effects",{})
-            for kind,effect in list(effects.items()):
-                effect["time"]-=dt; effect["tick"]-=dt
-                if effect["tick"]<=0 and effect["time"]>0:
-                    effect["tick"]=0.65
-                    damage=min(0.4,max(0.1,float(effect.get("damage",0.1))))
-                    if target is self.player:
-                        if self.player.take_damage(damage,None):
-                            self.on_player_hit(self.player.x,self.player.y,damage)
-                    else:
-                        target.hurt(damage,0.0)
-                        self.emit("enemy_status_tick",target.x,target.y,kind,damage)
-                if effect["time"]<=0: effects.pop(kind,None)
+    def _update_dot_effects(self, dt):
+        return update_dot_effects(self, dt)
 
     @staticmethod
     def _freeze_duration(power):
-        # La potencia del impacto determina la duracion: armas mas fuertes
-        # congelan durante mas tiempo, con limites para evitar bloqueos extremos.
-        return max(0.45, min(3.5, 0.45 + float(power) / 18.0))
+        return freeze_duration(power)
 
     def _apply_freeze(self, target, power):
-        duration = self._freeze_duration(power)
-        if getattr(target, "is_boss", False):
-            duration = min(duration, 1.2)
-        elif getattr(target, "is_miniboss", False):
-            duration = min(duration, 1.7)
-        if hasattr(target, "frozen"):
-            target.frozen = max(float(getattr(target, "frozen", 0.0)), duration)
-        self.emit("freeze", target.x, target.y, duration)
+        return apply_freeze(self, target, power)
 
     def perform_fist_attack(self, p):
         reach=30.0+p.radius; arc=1.9; damage=max(1.0,1.5*p.damage_mult)
