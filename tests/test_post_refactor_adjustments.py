@@ -96,3 +96,9 @@ def test_minimap_only_declares_boss_and_miniboss_icons():
     assert 'room.room_type=="shop"' not in section
     assert 'room.room_type=="treasure"' not in section
     assert 'room.room_type=="healing"' not in section
+
+
+def test_ranged_atlas_is_explicitly_right_facing_before_cursor_rotation():
+    source = (ROOT / "game" / "render.py").read_text(encoding="utf-8")
+    assert 'if sheet_key == "ranged"' in source
+    assert "base_angle = (" in source
