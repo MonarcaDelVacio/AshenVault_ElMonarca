@@ -540,3 +540,6 @@ The fourth extraction is `game/rendering/background_geometry.py`, which now owns
 
 
 The fifth Phase 4 extraction is `game/rendering/rotation_geometry.py`, which centralizes the existing 8-degree sprite rotation quantization and horizontal facing decision. Projectile, combat-animation, and death-sprite paths now use the helper while retaining the existing rotation cache keys and visual policy. Targeted tests cover the established buckets and facing behavior.
+
+
+The sixth Phase 4 extraction is `game/rendering/atlas_background.py`, which centralizes the existing flat-color keying used by wall and cobblestone atlases. The renderer now delegates that operation without changing the configured RGB values or tolerances. Regression tests verify source immutability and selective transparency.
