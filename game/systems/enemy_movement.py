@@ -57,7 +57,10 @@ def chase(enemy, sim, dt, speed):
             tx, ty = p.x, p.y
         else:
             step = sim.arena.best_step(sim.flow, enemy.x, enemy.y)
-            tx, ty = step if step else (p.x, p.y)
+            if step is not None and hasattr(sim, "_obstacle_clear_to"):
+                if not sim._obstacle_clear_to(enemy.x, enemy.y, step[0], step[1], enemy.radius):
+                    step = None
+            tx, ty = step if step is not None else (p.x, p.y)
         dx, dy = tx - enemy.x, ty - enemy.y
         n = math.hypot(dx, dy) or 1
         sx = sy = 0.0
