@@ -649,6 +649,44 @@ class Renderer:
                 except (pygame.error, OSError):
                     pass
 
+    def _asset_source_key(self, path):
+        try:
+            return path.resolve().relative_to(self.asset_root.parent.resolve()).as_posix()
+        except (OSError, ValueError):
+            return Path(path).as_posix()
+
+    def _register_loaded_frame(
+        self,
+        category,
+        path,
+        frame_index,
+        source_rect,
+        frame,
+        *,
+        alpha_bounds=None,
+        variant=None,
+    ):
+        """Registra un frame sin cambiar el resultado del loader existente."""
+        source = self._asset_source_key(Path(path))
+        asset_id = f"frame:{category}:{source}:{int(frame_index)}"
+        self.asset_registry.register_runtime_frame(
+            asset_id,
+            category,
+            source_file=source,
+            frame_index=int(frame_index),
+            source_rect=tuple(int(v) for v in source_rect),
+            alpha_bounds=(
+                tuple(int(v) for v in alpha_bounds)
+                if alpha_bounds is not None else None
+            ),
+            visual_bounds=(
+                tuple(int(v) for v in alpha_bounds)
+                if alpha_bounds is not None else None
+            ),
+            variant=variant,
+            handle=frame,
+        )
+
     @staticmethod
     def _alpha_runs(values):
         runs=[]; start=None
@@ -835,9 +873,15 @@ class Renderer:
             cell_w = image.get_width() // 2
             frames = []
             for col in range(2):
-                cell = image.subsurface(pygame.Rect(col * cell_w, 0, cell_w, image.get_height())).copy()
+                source_rect = pygame.Rect(col * cell_w, 0, cell_w, image.get_height())
+                cell = image.subsurface(source_rect).copy()
                 cell = self._trim_edge_background(cell)
-                if cell.get_width() and cell.get_height(): frames.append(cell)
+                if cell.get_width() and cell.get_height():
+                    frames.append(cell)
+                    self._register_loaded_frame(
+                        "door", path, col, source_rect, cell,
+                        alpha_bounds=(0, 0, cell.get_width(), cell.get_height()),
+                    )
             return frames
         except (pygame.error, OSError, ValueError):
             return []
@@ -851,12 +895,20 @@ class Renderer:
             cell_w = image.get_width() // cols
             cell_h = image.get_height() // rows
             frames = []
+            frame_index = 0
             for row in range(rows):
                 for col in range(cols):
-                    cell = image.subsurface(pygame.Rect(col * cell_w, row * cell_h, cell_w, cell_h)).copy()
+                    source_rect = pygame.Rect(col * cell_w, row * cell_h, cell_w, cell_h)
+                    cell = image.subsurface(source_rect).copy()
                     bbox = cell.get_bounding_rect(min_alpha=8)
                     if bbox.width and bbox.height:
-                        frames.append(cell.subsurface(bbox).copy())
+                        frame = cell.subsurface(bbox).copy()
+                        frames.append(frame)
+                        self._register_loaded_frame(
+                            "grid", path, frame_index, source_rect, frame,
+                            alpha_bounds=(bbox.x, bbox.y, bbox.width, bbox.height),
+                        )
+                    frame_index += 1
             return frames
         except (pygame.error, OSError, ValueError):
             return []
@@ -886,7 +938,15 @@ class Renderer:
                     bounds = cell.get_bounding_rect(min_alpha=8)
                     if bounds.width >= 2 and bounds.height >= 2:
                         cell = cell.subsurface(bounds).copy()
+                        alpha_bounds = (bounds.x, bounds.y, bounds.width, bounds.height)
+                    else:
+                        alpha_bounds = None
+                    frame_index = len(frames)
                     frames.append(cell)
+                    self._register_loaded_frame(
+                        "merchant", path, frame_index, rect, cell,
+                        alpha_bounds=alpha_bounds,
+                    )
             return frames
         except (pygame.error, OSError, ValueError):
             return []
@@ -935,7 +995,15 @@ class Renderer:
                 if median > 0:
                     rects = [r for r in rects if r.width * r.height <= median * 4.5]
             rects.sort(key=lambda r: (r.top, r.left))
-            return [image.subsurface(r).copy() for r in rects]
+            frames = []
+            for frame_index, rect in enumerate(rects):
+                frame = image.subsurface(rect).copy()
+                frames.append(frame)
+                self._register_loaded_frame(
+                    "component", path, frame_index, rect, frame,
+                    alpha_bounds=(0, 0, rect.width, rect.height),
+                )
+            return frames
         except (pygame.error, OSError, ValueError):
             return []
 
@@ -965,8 +1033,20 @@ class Renderer:
                 for x0,x1 in cols:
                     rect=pygame.Rect(x0,y0,x1-x0+1,y1-y0+1)
                     if rect.width < 2 or rect.height < 2: continue
-                    frames.append(image.subsurface(rect).copy())
-            return frames or [image]
+                    frame=image.subsurface(rect).copy()
+                    frames.append(frame)
+                    self._register_loaded_frame(
+                        "sheet", path, len(frames)-1, rect, frame,
+                        alpha_bounds=(0, 0, rect.width, rect.height),
+                    )
+            if frames:
+                return frames
+            self._register_loaded_frame(
+                "sheet", path, 0,
+                pygame.Rect(0, 0, image.get_width(), image.get_height()), image,
+                alpha_bounds=(0, 0, image.get_width(), image.get_height()),
+            )
+            return [image]
         except (pygame.error, OSError, ValueError):
             return []
 
