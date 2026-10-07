@@ -58,22 +58,26 @@ class Player:
         self.weapon = WeaponState(wdef)
         if getattr(cdef, "start_weapon", None) == getattr(wdef, "id", None):
             weapon_class = getattr(wdef, "class", "")
-            if weapon_class in ("melee", "magic"):
-                # Melee y magia conservan USOS reales; no reciben reservas infinitas.
-                self.weapon.unlimited_ammo = False
-                self.weapon.reserve_magazines = 0
-                self.weapon.max_reserve_magazines = 0
-                self.weapon.durability = min(30, max(1, int(getattr(wdef, "durability", getattr(wdef, "magazine", 30)))))
-                self.weapon.max_durability = self.weapon.durability
-                self.weapon.ammo = self.weapon.durability
-            else:
-                # Las armas iniciales a distancia tienen reservas infinitas,
-                # pero cada cargador sigue consumiéndose y recargándose.
+            if weapon_class == "melee":
+                # Toda arma melee es permanente: nunca pierde usos ni se destruye.
                 self.weapon.unlimited_ammo = True
                 self.weapon.reserve_magazines = 0
                 self.weapon.max_reserve_magazines = 0
-            # Se reduce ligeramente el daño de las armas iniciales a distancia
-            # para compensar la reserva infinita.
+                self.weapon.durability = 0
+                self.weapon.max_durability = 0
+                self.weapon.ammo = 0
+            elif weapon_class == "magic":
+                # La magia mantiene su sistema de usos independiente.
+                self.weapon.unlimited_ammo = False
+                self.weapon.reserve_magazines = 0
+                self.weapon.max_reserve_magazines = 0
+            else:
+                # El arma inicial de cada personaje es de uso ilimitado:
+                # no consume munición ni reservas y no necesita recarga.
+                self.weapon.unlimited_ammo = True
+                self.weapon.reserve_magazines = 0
+                self.weapon.max_reserve_magazines = 0
+                self.weapon.ammo = self.weapon.d.magazine
             self.weapon.damage_mult = 0.70 if weapon_class not in ("melee", "magic") else 1.0
         self.inventory = [self.weapon]
         self.selected_slot = 0
