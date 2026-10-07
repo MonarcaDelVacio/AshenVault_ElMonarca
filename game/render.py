@@ -7,7 +7,7 @@ from .world import TILE, FLOOR, WALL, PILLAR, SECRET, TORCH_PILLAR, bonfire_posi
 from .ui_atlas import UIAtlas
 from .assets import AssetRegistry
 from .assets.bounds import decoration_max_size
-from .rendering.atlas_geometry import alpha_runs
+from .rendering.atlas_geometry import alpha_runs, split_grid_frames
 
 VIEW_W, VIEW_H = 960, 540
 
@@ -900,23 +900,15 @@ class Renderer:
             image = pygame.image.load(str(path)).convert_alpha()
             if cols <= 0 or rows <= 0 or image.get_width() % cols or image.get_height() % rows:
                 return []
-            cell_w = image.get_width() // cols
-            cell_h = image.get_height() // rows
             frames = []
-            frame_index = 0
-            for row in range(rows):
-                for col in range(cols):
-                    source_rect = pygame.Rect(col * cell_w, row * cell_h, cell_w, cell_h)
-                    cell = image.subsurface(source_rect).copy()
-                    bbox = cell.get_bounding_rect(min_alpha=8)
-                    if bbox.width and bbox.height:
-                        frame = cell.subsurface(bbox).copy()
-                        frames.append(frame)
-                        self._register_loaded_frame(
-                            "grid", path, frame_index, source_rect, frame,
-                            alpha_bounds=(bbox.x, bbox.y, bbox.width, bbox.height),
-                        )
-                    frame_index += 1
+            for frame_index, source_rect, bbox, frame in split_grid_frames(
+                image, cols, rows, alpha_threshold=8
+            ):
+                frames.append(frame)
+                self._register_loaded_frame(
+                    "grid", path, frame_index, source_rect, frame,
+                    alpha_bounds=(bbox.x, bbox.y, bbox.width, bbox.height),
+                )
             return frames
         except (pygame.error, OSError, ValueError):
             return []
