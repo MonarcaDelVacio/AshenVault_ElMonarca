@@ -680,3 +680,10 @@ The audit is intentionally validation-only at this stage: the procedural generat
 - Room-local props, items, pickups and shop offers remain owned by their Room object; transient hazards, waves and lasers continue to reset on entry by design.
 - Added regression coverage for chest-reference consumption and backward compatibility with room objects that do not expose a chest field.
 - These changes were not runtime-executed through the available GitHub integration.
+
+
+### Phase 9 — Persistent prop-state aliasing
+- Room.props is now kept as the authoritative mutable list for destructible room props.
+- Hazard cleanup prunes that list in place instead of replacing Sim.props with a new list, preserving destroyed/faded prop state across room re-entry.
+- This prevents a subtle persistence regression where a broken crate/barrel could disappear during the current visit but reappear after leaving and returning to the room.
+- No manual/runtime test was required for this structural fix; targeted regression coverage should be added if the prop lifecycle is expanded further.
