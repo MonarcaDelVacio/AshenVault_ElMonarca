@@ -687,3 +687,11 @@ The audit is intentionally validation-only at this stage: the procedural generat
 - Hazard cleanup prunes that list in place instead of replacing Sim.props with a new list, preserving destroyed/faded prop state across room re-entry.
 - This prevents a subtle persistence regression where a broken crate/barrel could disappear during the current visit but reappear after leaving and returning to the room.
 - No manual/runtime test was required for this structural fix; targeted regression coverage should be added if the prop lifecycle is expanded further.
+
+
+### Phase 10 — UI state boundary
+- Added game/ui_state.py as a pygame-free source of truth for application states, menu labels, settings actions and key-binding identifiers.
+- main.py remains the application state-machine/presentation facade and now imports those definitions instead of owning the static UI contract directly.
+- No rendering, input handling, persistence, or menu behavior was changed in this slice.
+- Added pure regression tests for state uniqueness and the existing menu/settings contracts.
+- No runtime execution was available through the GitHub integration.
