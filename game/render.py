@@ -14,6 +14,7 @@ from .rendering.background_geometry import trim_edge_background
 from .rendering.rotation_geometry import quantized_facing_flip, quantized_sprite_angle
 from .rendering.atlas_background import make_background_transparent
 from .rendering.animation_geometry import animation_frame_index
+from .rendering.wall_geometry import wall_piece_key
 
 VIEW_W, VIEW_H = 960, 540
 
@@ -1246,38 +1247,6 @@ class Renderer:
         else:
             r.topleft = pos
         surf.blit(img, r)
-
-    @staticmethod
-    def _wall_piece_key(arena, tx, ty):
-        """Identifica bordes y esquinas exteriores a partir de dónde está el suelo."""
-        def is_floor(x, y):
-            return 0 <= x < arena.cols and 0 <= y < arena.rows and arena.grid[y][x] == FLOOR
-
-        north, east = is_floor(tx, ty - 1), is_floor(tx + 1, ty)
-        south, west = is_floor(tx, ty + 1), is_floor(tx - 1, ty)
-        nw, ne = is_floor(tx - 1, ty - 1), is_floor(tx + 1, ty - 1)
-        sw, se = is_floor(tx - 1, ty + 1), is_floor(tx + 1, ty + 1)
-
-        # Las esquinas se detectan por el suelo diagonal, aunque las casillas
-        # cardinales contiguas sean también pared.
-        if not (north or east or south or west):
-            if se:
-                return "esquinasuperiorizquierda"
-            if sw:
-                return "esquinasuperiorderecha"
-            if ne:
-                return "esquinainferiorizquierda"
-            if nw:
-                return "esquinainferiorderecha"
-        if south:
-            return "paredsuperior"
-        if north:
-            return "paredinferior"
-        if east:
-            return "paredlateralizquierda"
-        if west:
-            return "paredlateralderecha"
-        return None
 
     def _background(self, arena):
         key = (arena.biome, arena.room_id, arena.cols, arena.rows, getattr(arena, "floor_surface", None))
