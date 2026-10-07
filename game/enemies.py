@@ -257,67 +257,12 @@ class Enemy:
         return False
 
     def _step(self, sim, ux, uy, speed, dt):
-        ox, oy = self.x, self.y
-        n = math.hypot(ux, uy) or 1.0
-        ux, uy = ux / n, uy / n
-        distance = max(0.0, float(speed) * float(dt))
-        if self.d.ai == "flying":
-            self.x = max(self.radius + 2, min(sim.arena.width - self.radius - 2, self.x + ux * distance))
-            self.y = max(self.radius + 2, min(sim.arena.height - self.radius - 2, self.y + uy * distance))
-            return
-
-        # Primer intento: movimiento normal con deslizamiento por la superficie.
-        nx, ny = sim.move_actor(self.x, self.y, ux * distance, uy * distance, self.radius)
-        moved = math.hypot(nx - ox, ny - oy)
-        if moved >= distance * 0.42 or distance <= 0.01:
-            self.x, self.y = nx, ny
-            return
-
-        # Si quedó atrapado contra una esquina/objeto, no insiste en la misma
-        # dirección. Prueba desvíos angulares y elige el que más conserva el
-        # rumbo original. Esto permite rodear cajas, columnas y esquinas.
-        candidates = []
-        for deg in (22, -22, 45, -45, 68, -68, 90, -90, 115, -115, 145, -145):
-            a = math.atan2(uy, ux) + math.radians(deg)
-            cx, cy = math.cos(a), math.sin(a)
-            tx, ty = sim.move_actor(self.x, self.y, cx * distance, cy * distance, self.radius)
-            progress = math.hypot(tx - ox, ty - oy)
-            alignment = cx * ux + cy * uy
-            # Penaliza desvíos extremos, pero prioriza salir del atasco.
-            score = progress * (0.72 + 0.28 * max(0.0, alignment))
-            candidates.append((score, progress, tx, ty))
-        if candidates:
-            _, best_progress, bx, by = max(candidates, key=lambda q: q[0])
-            if best_progress > moved + 0.5:
-                self.x, self.y = bx, by
-                return
-
-        self.x, self.y = nx, ny
-        if moved < distance * 0.18:
-            self.strafe *= -1
+        from .systems.enemy_movement import step
+        return step(self, sim, ux, uy, speed, dt)
 
     def _chase(self, sim, dt, speed):
-        p = sim.player
-        if sim.arena.line_of_sight(self.x, self.y, p.x, p.y):
-            tx, ty = p.x, p.y
-        else:
-            step = sim.arena.best_step(sim.flow, self.x, self.y)
-            tx, ty = step if step else (p.x, p.y)
-        dx, dy = tx - self.x, ty - self.y
-        n = math.hypot(dx, dy) or 1
-        sx = sy = 0.0
-        for o in sim.enemies:
-            if o is not self and o.alive:
-                ex, ey = self.x - o.x, self.y - o.y
-                r = self.radius + o.radius + 4
-                if abs(ex) < r and abs(ey) < r:
-                    dd = math.hypot(ex, ey) or 1
-                    if dd < r:
-                        sx += ex / dd * (r - dd) / r
-                        sy += ey / dd * (r - dd) / r
-        ux, uy = dx / n + sx * 0.8, dy / n + sy * 0.8
-        m = math.hypot(ux, uy) or 1
-        self._step(sim, ux / m, uy / m, speed, dt)
+        from .systems.enemy_movement import chase
+        return chase(self, sim, dt, speed)
 
     def _attack(self, sim, dist):
         """Compatibility facade for the extracted enemy combat system."""
