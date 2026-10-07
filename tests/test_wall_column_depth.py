@@ -82,3 +82,13 @@ def test_special_rooms_use_four_symmetric_support_pillars():
     pillars = {(x, y) for y, row in enumerate(grid) for x, tile in enumerate(row)
                if tile in (PILLAR, TORCH_PILLAR)}
     assert pillars == {(6, 5), (18, 5), (6, 11), (18, 11)}
+
+def test_atlas_wall_models_use_exact_grid_footprints_and_alpha_bounds():
+    source = (ROOT / "game" / "render.py").read_text(encoding="utf-8")
+    assert 'bbox = image.get_bounding_rect(min_alpha=8)' in source
+    assert 'piece = fit_wall_exact(image, TILE, TILE * 2)' in source
+    assert 'piece = fit_wall_exact(image, TILE, TILE)' in source
+    assert 'piece = fit_wall_exact(image, TILE * 2, TILE * 2)' in source
+    assert 'step = max(1, int(round(max(piece.get_width(), piece.get_height()) * 0.72)))' not in source
+    assert 'for item in group:\n                draw_horizontal_cell(item, wall_models.get("front"))' in source
+    assert 'for item in group:\n                draw_vertical_cell(item, image)' in source
