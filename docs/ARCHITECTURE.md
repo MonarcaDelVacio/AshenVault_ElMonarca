@@ -624,3 +624,6 @@ Phase 7 has started with the first cohesive AI extraction: `game/systems/enemy_m
 Regression tests cover obstacle escape and direct line-of-sight chasing. No movement speed, pathfinding, detection range, attack range, or AI decision probabilities were intentionally changed.
 
 The next Movement/AI slice should audit target selection, confusion behavior, dodge/defensive reactions, flying movement, and flow-field edge cases before changing procedural generation or room lifecycle code.
+
+
+This slice also corrected enemy separation in the extracted chase helper and completed the confusion contract: confused enemies retreat/disorient instead of initiating attacks, while stun/freeze remain immobilizing statuses. A regression test now covers separation with another enemy present.
