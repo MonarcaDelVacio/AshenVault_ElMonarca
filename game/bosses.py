@@ -87,9 +87,6 @@ class Boss(Enemy):
             sim.emit("explosion", self.x, self.y, radius, tuple(self.d.color))
             sim.emit("boss_charge", self.x, self.y, self.phase)
             return
-            sim.emit("boss_stomp", self.x, self.y)
-            sim.emit("boss_shockwave", self.x, self.y, radius, damage)
-            return
         melee_profile = bool(getattr(self.d, "ranged_melee_profile", False))
         melee_threshold = float(getattr(self.d, "ranged_melee_threshold", 155.0))
 
