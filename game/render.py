@@ -1505,59 +1505,130 @@ class Renderer:
                     groups.append(current)
             return groups
 
-        def scaled_for_segment(image, length_px, mode):
+        def fit_wall_piece(image, max_w, max_h):
+            """Escala un modelo completo sin deformarlo y sin superar su altura máxima."""
             if image is None:
                 return None
-            length_px = max(1, int(round(length_px)))
-            key = ("wall_complete_segment", id(image), mode, length_px)
+            max_w = max(1, int(max_w))
+            max_h = max(1, int(max_h))
+            iw, ih = image.get_size()
+            scale = min(max_w / max(1, iw), max_h / max(1, ih))
+            size = (
+                max(1, int(round(iw * scale))),
+                max(1, int(round(ih * scale))),
+            )
+            key = ("wall_piece_fit", id(image), max_w, max_h)
             cached = self._fit_cache.get(key)
             if cached is not None:
                 return cached
-            w, h = image.get_size()
-            if mode == "horizontal":
-                tw = length_px
-                th = max(1, int(round(h * tw / max(1, w))))
-            elif mode == "vertical":
-                th = length_px
-                tw = max(1, int(round(w * th / max(1, h))))
-            else:
-                scale = length_px / max(1, max(w, h))
-                tw = max(1, int(round(w * scale)))
-                th = max(1, int(round(h * scale)))
-            cached = pygame.transform.smoothscale(image, (tw, th))
+            cached = pygame.transform.smoothscale(image, size)
             self._fit_cache[key] = cached
             return cached
 
-        def draw_group(group, image, mode):
+        def draw_repeated_horizontal(group, image):
+            """Repite el modelo horizontal sin huecos y limita su altura a 2 bloques."""
+            if not group or image is None:
+                return
+            xs = [item[0] for item in group]
+            ys = [item[1] for item in group]
+            x0 = min(xs) * TILE + ox
+            x1 = (max(xs) + 1) * TILE + ox
+            cy = (sum(ys) / len(ys) + 0.5) * TILE + oy
+            nx = sum(item[2] for item in group) / len(group)
+            ny = sum(item[3] for item in group) / len(group)
+            piece = fit_wall_piece(image, TILE, TILE * 2)
+            if piece is None:
+                return
+
+            # La pieza se repite de borde a borde. Si su anchura no coincide
+            # exactamente con TILE, la siguiente pieza empieza inmediatamente
+            # donde termina la anterior: no quedan franjas transparentes.
+            strip_w = max(TILE, x1 - x0)
+            strip = pygame.Surface((strip_w + piece.get_width() * 2, piece.get_height()), pygame.SRCALPHA)
+            for px in range(0, strip.get_width(), piece.get_width()):
+                strip.blit(piece, (px, 0))
+
+            # Recortamos exactamente al tramo de pared para que nunca invada
+            # la sala vecina ni deje un hueco al final.
+            crop = strip.subsurface(
+                pygame.Rect(
+                    max(0, (strip.get_width() - strip_w) // 2),
+                    0,
+                    strip_w,
+                    strip.get_height(),
+                )
+            ).copy()
+
+            # Las paredes horizontales se apoyan contra la frontera de la sala.
+            # El desplazamiento conserva la misma profundidad que el renderer
+            # anterior, pero la altura queda siempre <= 2 bloques.
+            nlen = max(1e-6, math.hypot(nx, ny))
+            cx = (x0 + x1) * 0.5 - (nx / nlen) * TILE * 0.18
+            cy -= (ny / nlen) * TILE * 0.18
+            target.blit(crop, crop.get_rect(center=(int(cx), int(cy))))
+
+        def draw_repeated_diagonal(group, image, rising):
+            """Repite el modelo diagonal sobre una pared diagonal real, sin efecto escalera."""
             if not group or image is None:
                 return
             xs = [item[0] for item in group]
             ys = [item[1] for item in group]
             nx = sum(item[2] for item in group) / len(group)
             ny = sum(item[3] for item in group) / len(group)
-            length = len(group) * TILE * (math.sqrt(2.0) if mode == "diagonal" else 1.0)
-            piece = scaled_for_segment(image, length, mode)
+            piece = fit_wall_piece(image, TILE * 2, TILE * 2)
             if piece is None:
                 return
-            cx = ox + (sum(xs) / len(xs) + 0.5) * TILE
-            cy = oy + (sum(ys) / len(ys) + 0.5) * TILE
-            nlen = max(1e-6, math.hypot(nx, ny))
+
+            # Cada modelo ocupa como máximo un cuadrado de 2x2 bloques. Se
+            # desplazan por la diagonal real de la sala, no por celdas escalonadas.
+            step = max(1, int(round(max(piece.get_width(), piece.get_height()) * 0.72)))
+            count = max(1, len(group))
+            cx0 = (min(xs) + 0.5) * TILE + ox
+            cy0 = (min(ys) + 0.5) * TILE + oy
+            direction = 1 if rising else -1
+
+            for index in range(count):
+                cx = cx0 + index * step
+                cy = cy0 + direction * index * step
+                nlen = max(1e-6, math.hypot(nx, ny))
+                cx -= (nx / nlen) * TILE * 0.18
+                cy -= (ny / nlen) * TILE * 0.18
+                target.blit(piece, piece.get_rect(center=(int(cx), int(cy))))
+
+        def draw_vertical_group(group, image):
+            if not group or image is None:
+                return
+            xs = [item[0] for item in group]
+            ys = [item[1] for item in group]
+            nx = sum(item[2] for item in group)
+            cx = (sum(xs) / len(xs) + 0.5) * TILE + ox
+            cy = (sum(ys) / len(ys) + 0.5) * TILE + oy
+            length = len(group) * TILE
+            iw, ih = image.get_size()
+            th = max(1, int(round(length)))
+            tw = max(1, int(round(iw * th / max(1, ih))))
+            key = ("wall_vertical_segment", id(image), length)
+            piece = self._fit_cache.get(key)
+            if piece is None:
+                piece = pygame.transform.smoothscale(image, (tw, th))
+                self._fit_cache[key] = piece
+            nlen = max(1e-6, math.hypot(nx, sum(item[3] for item in group)))
             cx -= (nx / nlen) * TILE * 0.18
-            cy -= (ny / nlen) * TILE * 0.18
             target.blit(piece, piece.get_rect(center=(int(cx), int(cy))))
 
+
         for group in runs_1d(horizontal, "x"):
-            draw_group(group, wall_models.get("front"), "horizontal")
+            draw_repeated_horizontal(group, wall_models.get("front"))
 
         for group in runs_1d(vertical, "y"):
             nx = sum(item[2] for item in group)
-            draw_group(group, wall_models.get("vertical_a" if nx > 0 else "vertical_b"), "vertical")
+            draw_vertical_group(group, wall_models.get("vertical_a" if nx > 0 else "vertical_b"))
 
         for group in runs_diag(diag_rising, 1):
-            draw_group(group, wall_models.get("diag_rising"), "diagonal")
+            draw_repeated_diagonal(group, wall_models.get("diag_rising"), rising=True)
 
         for group in runs_diag(diag_falling, -1):
-            draw_group(group, wall_models.get("diag_falling"), "diagonal")
+            draw_repeated_diagonal(group, wall_models.get("diag_falling"), rising=False)
 
     def _background(self, arena):
         key = (arena.biome, arena.room_id, arena.cols, arena.rows, getattr(arena, "floor_surface", None))
