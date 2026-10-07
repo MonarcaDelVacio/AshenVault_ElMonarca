@@ -390,18 +390,30 @@ class Dungeon:
         path_len=len(self.layout["path"])
         zone_end_indices=[]
         prev=-1
-        # Mantener seis zonas, pero variar ligeramente dónde termina cada una.
-        # Así dos runs no repiten la misma secuencia de jefes aunque tengan
-        # la misma cantidad total de zonas. La primera zona siempre tiene
-        # al menos tres salas antes de su jefe y cada zona siguiente al menos dos.
+        # Mantener seis zonas y evitar que dos bosses queden físicamente adyacentes.
+        # La ruta puede girar, por lo que dos índices separados por una sala
+        # intermedia todavía pueden ocupar coordenadas cardinalmente vecinas.
+        path_coords=self.layout["path"]
         for zi in range(5):
             target=round((zi+1)*(path_len-1)/6)
             low=max(prev+2, 3 if zi==0 else prev+2)
             high=(path_len-1)-2*(5-zi)
             candidates=[i for i in range(low, high+1) if abs(i-target)<=1]
-            if not candidates: candidates=[i for i in range(low, high+1)]
-            end=rng.choice(candidates)
-            zone_end_indices.append(end); prev=end
+            if not candidates: candidates=list(range(low, high+1))
+            candidates=[i for i in candidates if all(
+                abs(path_coords[i][0]-path_coords[prev_i][0])+
+                abs(path_coords[i][1]-path_coords[prev_i][1]) > 1
+                for prev_i in zone_end_indices
+            )]
+            if not candidates:
+                candidates=[i for i in range(low, high+1) if all(
+                    abs(path_coords[i][0]-path_coords[prev_i][0])+
+                    abs(path_coords[i][1]-path_coords[prev_i][1]) > 1
+                    for prev_i in zone_end_indices
+                )]
+            if not candidates:
+                raise AssertionError("no fue posible espaciar los bosses")
+            end=rng.choice(candidates); zone_end_indices.append(end); prev=end
         zone_end_indices.append(path_len-1)
         boss_path_rooms={tuple(self.layout["path"][i]) for i in zone_end_indices}
         for rid in self.layout["rooms"]:
