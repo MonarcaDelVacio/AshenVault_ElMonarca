@@ -56,7 +56,7 @@ def chase(enemy, sim, dt, speed):
         n = math.hypot(dx, dy) or 1
         sx = sy = 0.0
         for o in sim.enemies:
-            if o is not self and o.alive:
+            if o is not enemy and o.alive:
                 ex, ey = enemy.x - o.x, enemy.y - o.y
                 r = enemy.radius + o.radius + 4
                 if abs(ex) < r and abs(ey) < r:
