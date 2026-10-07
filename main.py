@@ -1455,26 +1455,28 @@ class App:
             self.r.text(scr, "AUDIO", (left_rect.centerx, 135), (92, 226, 218), self.r.menu_small, True)
             self.r.text(scr, "CONTROLES", (right_rect.centerx, 135), (92, 226, 218), self.r.menu_small, True)
 
+            from game.ui_layout import settings_volume_rect, settings_sensitivity_rect, settings_fullscreen_rect, settings_reset_rect, settings_back_rect, settings_binding_rect
             for idx, (label, value, atlas_label) in enumerate((( "EFECTOS", v, "Sonido"), ("MUSICA", mv, "Musica"))):
-                y = 157 + idx * 57
+                row_tuple, bar_tuple = settings_volume_rect(idx)
+                y = row_tuple[1]
                 selected = self.settings_sel == idx
-                row_rect = pygame.Rect(126, y, 266, 45)
+                row_rect = pygame.Rect(row_tuple)
                 if selected:
                     pygame.draw.rect(scr, (20, 35, 45), row_rect, border_radius=6)
                     pygame.draw.rect(scr, (80, 223, 215), row_rect, 1, border_radius=6)
                 self.ui_atlas.draw_button(scr, pygame.Rect(132, y + 7, 96, 26), atlas_label, selected=selected)
                 self.r.text(scr, "%d%%" % round(value * 100), (374, y + 5), (240, 245, 247) if selected else (174, 191, 204), self.r.menu_small, True)
-                bar_rect = pygame.Rect(244, y + 17, 120, 8)
+                bar_rect = pygame.Rect(bar_tuple)
                 pygame.draw.rect(scr, (35, 42, 56), bar_rect, border_radius=4)
                 fill_rect = pygame.Rect(bar_rect.x, bar_rect.y, int(bar_rect.width * value), bar_rect.height)
                 if fill_rect.width:
                     pygame.draw.rect(scr, (73, 221, 211) if selected else (90, 157, 164), fill_rect, border_radius=4)
                 pygame.draw.rect(scr, (126, 151, 171), bar_rect, 1, border_radius=4)
 
-            sens_rect = pygame.Rect(126, 257, 266, 74)
+            sens_rect = pygame.Rect(settings_sensitivity_rect()[0])
             self.r.text(scr, "SENSIBILIDAD MOUSE", (259, 269), (225, 232, 240), self.r.menu_small, True)
             self.r.text(scr, "%.2fx" % sens, (259, 291), (240, 245, 247), self.r.menu_small, True)
-            sens_bar = pygame.Rect(145, 307, 228, 8)
+            sens_bar = pygame.Rect(settings_sensitivity_rect()[1])
             pygame.draw.rect(scr, (35, 42, 56), sens_bar, border_radius=4)
             sens_ratio = max(0.0, min(1.0, (sens - 0.25) / 1.75))
             fill = pygame.Rect(sens_bar.x, sens_bar.y, int(sens_bar.width * sens_ratio), sens_bar.height)
@@ -1482,7 +1484,7 @@ class App:
             pygame.draw.rect(scr, (126, 151, 171), sens_bar, 1, border_radius=4)
 
             fullscreen = bool(settings.get("fullscreen", False))
-            fullscreen_rect = pygame.Rect(126, 338, 266, 32)
+            fullscreen_rect = pygame.Rect(settings_fullscreen_rect())
             if self.settings_sel == 12:
                 pygame.draw.rect(scr, (20, 35, 45), fullscreen_rect, border_radius=6)
                 pygame.draw.rect(scr, (80, 223, 215), fullscreen_rect, 1, border_radius=6)
@@ -1494,18 +1496,19 @@ class App:
                 pygame.draw.line(scr, (105, 235, 180), (147, 358), (155, 347), 2)
             self.r.text(scr, "PANTALLA COMPLETA", (259, 354), (225, 232, 240), self.r.menu_small, True)
 
-            reset_rect = pygame.Rect(126, 383, 266, 32)
+            reset_rect = pygame.Rect(settings_reset_rect())
             self.ui_atlas.draw_button(scr, reset_rect, "Restablecer", selected=self.settings_sel == 13)
 
             control_items = SETTINGS_ITEMS[3:12]
             for offset, item in enumerate(control_items):
                 idx = offset + 3
-                y = 153 + offset * 29
+                rect = settings_binding_rect(offset)
+                y = rect[1]
                 selected = self.settings_sel == idx
                 key_name = k[SETTING_KEYS[item]].upper()
-                self.draw_option_card((438, y, 392, 26), item, selected, key_name, compact=True, use_atlas=False)
+                self.draw_option_card(rect, item, selected, key_name, compact=True, use_atlas=False)
 
-            self.draw_option_card((VIEW_W // 2 - 82, 462, 164, 29), "Volver", self.settings_sel == 14)
+            self.draw_option_card(settings_back_rect(), "Volver", self.settings_sel == 14)
             if self.rebind_action:
                 self.r.text(scr, "PULSA UNA TECLA PARA ASIGNAR · ESC CANCELA", (VIEW_W // 2, 514), (123, 238, 222), self.r.menu_small, True)
             else:
