@@ -853,6 +853,8 @@ class Sim:
                 self.room.items=self.items
                 self.room.pickups=self.pickups
             if near and self.dungeon.transition(side):
+                # La transición se confirma primero en el grafo; _enter_room()
+                # decide después si la sala destino debe cerrar sus puertas.
                 new_arena=self.dungeon.room.arena
                 opp={"N":"S","S":"N","W":"E","E":"W"}[side]
                 d2=new_arena.doors.get(opp)
