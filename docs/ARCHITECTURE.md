@@ -511,9 +511,17 @@ safely host a `game/render/` package beside that module without changing import
 resolution, so the incremental split uses `game/rendering/` as the new package.
 
 The first extracted component is `game/rendering/atlas_geometry.py`, a pure
-helper for alpha-projection runs. `game/render.py` keeps a compatibility alias,
-so behavior and call sites remain unchanged while further renderer components
-are extracted.
+helper for alpha-projection runs and regular grid-frame splitting. `game/render.py`
+keeps compatibility aliases and delegates the regular grid-frame loader to the
+new helper, so behavior and call sites remain unchanged.
+
+Regression coverage now includes alpha-run behavior and row-major grid-frame
+mapping, including transparent cells and invalid atlas dimensions.
+
+The user completed the post-Phase-3/runtime smoke test after the renderer changes
+and reported that the game continues to function correctly. No new crash, room
+transition, door, spritesheet, merchant, ranged-weapon, or invisible-hitbox issue
+was observed during that manual check.
 
 Next renderer extractions will follow dependency boundaries rather than moving
 large blocks blindly.
