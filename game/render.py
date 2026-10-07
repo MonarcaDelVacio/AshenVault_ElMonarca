@@ -360,7 +360,17 @@ class Renderer:
                     components = mask.connected_components(minimum=40)
                     component_rects = []
                     for component in components:
-                        bbox = component.get_bounding_rect()
+                        # pygame-ce 2.5.x devuelve Mask en connected_components().
+                        # Mask expone get_bounding_rects(), no get_bounding_rect().
+                        # Cada componente es una región conectada; aun así unimos
+                        # todos sus rectángulos para mantener compatibilidad con
+                        # posibles componentes fragmentados.
+                        component_rects_for_mask = component.get_bounding_rects()
+                        if not component_rects_for_mask:
+                            continue
+                        bbox = component_rects_for_mask[0].copy()
+                        for component_rect in component_rects_for_mask[1:]:
+                            bbox.union_ip(component_rect)
                         if bbox.width >= 8 and bbox.height >= 8:
                             component_rects.append(bbox)
                     component_rects.sort(key=lambda r: (r.left, r.top))
