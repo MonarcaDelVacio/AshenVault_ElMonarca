@@ -584,7 +584,7 @@ class Renderer:
             "small_demon_ranged": {"walk":"small_demon_ranged/walk.png","attack":"small_demon_ranged/attack.png","death":"small_demon_ranged/death.png","projectile":"small_demon_ranged/projectile.png"},
             "small_demon_melee": {"walk":"small_demon_melee/walk.png","attack":"small_demon_melee/attack.png","death":"small_demon_melee/death.png"},
             "mage2": {"idle":"mage2/idle.png","walk":"mage2/idle.png","attack":"mage2/idle.png"},
-            "ogro": {"idle":"Ogro/ogro_ataquedesendente.png","walk":"Ogro/ogro_ataquedesendente.png","attack":"Ogro/ogro_ataquedesendente.png","attack_heavy":"Ogro/ogro_ataquedesendentepesado.png"},
+            "ogro": {"idle":"Ogro/Ogro.png","walk":"Ogro/Ogro.png","attack":"Ogro/Ogro.png","attack_heavy":"Ogro/Ogro.png"},
             # Este enemigo es un spritesheet 3x4; se carga exclusivamente con
             # _load_grid_frames más abajo para no confundirlo con un atlas libre.
             "new_flyer": {},
