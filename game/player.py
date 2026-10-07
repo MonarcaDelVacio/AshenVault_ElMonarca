@@ -85,6 +85,7 @@ class Player:
         self.ability_cd = 0.0
         self.ability_buff = 0.0
         self.ability_shield_fx = 0.0
+        self.ability_shield_hp = 0.0
         self.drones = []
         self.ability_shot_timer = 0.0
         self.drone_count_bonus = 0
