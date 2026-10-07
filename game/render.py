@@ -766,7 +766,12 @@ class Renderer:
                 for rect, bbox in cells:
                     cell = image.subsurface(rect).copy()
                     if bbox.width and bbox.height and accepted < expected:
-                        frames.append(cell.subsurface(bbox).copy())
+                        frame = cell.subsurface(bbox).copy()
+                        frames.append(frame)
+                        self._register_loaded_frame(
+                            "weapon-ranged", path, accepted, rect, frame,
+                            alpha_bounds=(bbox.x, bbox.y, bbox.width, bbox.height),
+                        )
                         accepted += 1
                     else:
                         # Las celdas posteriores al número real de armas son
@@ -781,7 +786,15 @@ class Renderer:
             rects = [rect for component in components for rect in component.get_bounding_rects()]
             rects = [r for r in rects if r.width >= 2 and r.height >= 2]
             rects.sort(key=lambda r: (r.top, r.left))
-            return [image.subsurface(r).copy() for r in rects]
+            frames = []
+            for frame_index, rect in enumerate(rects):
+                frame = image.subsurface(rect).copy()
+                frames.append(frame)
+                self._register_loaded_frame(
+                    "weapon-ranged", path, frame_index, rect, frame,
+                    alpha_bounds=(0, 0, rect.width, rect.height),
+                )
+            return frames
         except (pygame.error, OSError, ValueError):
             return []
 
