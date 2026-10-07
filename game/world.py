@@ -327,6 +327,13 @@ class Arena:
         tx,ty=self.tile_of(x,y)
         if self.solid_tile(tx,ty):return None
         bd=field[ty][tx];best=None
+        if bd >= INF:
+            finite=[(field[ty+dy][tx+dx],tx+dx,ty+dy) for dx,dy in _NEIGH
+                    if self._can_step(tx,ty,dx,dy) and field[ty+dy][tx+dx] < INF]
+            if finite:
+                _,nx,ny=min(finite,key=lambda q:q[0])
+                return self.tile_center(nx,ny)
+            return None
         for dx,dy in _NEIGH:
             if not self._can_step(tx,ty,dx,dy):
                 continue
