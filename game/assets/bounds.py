@@ -33,5 +33,19 @@ DECORATION_MAX_SIZE = {
 }
 
 
+DECORATION_COLLISION_RADII = {
+    "rock": 18.0, "bush": 16.0, "bench_small": 22.0, "bench_large": 28.0,
+    "barrel_large": 18.0, "signpost": 13.0, "table": 25.0, "counter": 30.0,
+    "crate_stack": 28.0, "crate_pair": 24.0, "wood_chest_decor": 20.0,
+    "biome_red_bush": 18.0, "biome_lava_rock": 24.0,
+    "biome_lava_rock_purple": 24.0, "biome_shared_rock": 22.0,
+    "fountain_active": 24.0, "fountain_inactive": 24.0, "fountain_small": 18.0,
+    "well_empty": 24.0,
+}
+
 def decoration_max_size(kind: str) -> int:
     return DECORATION_MAX_SIZE.get(str(kind), 56)
+
+def decoration_collision_radius(kind: str) -> float | None:
+    value = DECORATION_COLLISION_RADII.get(str(kind))
+    return float(value) if value is not None else None
