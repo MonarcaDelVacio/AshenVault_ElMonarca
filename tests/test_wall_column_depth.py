@@ -92,3 +92,11 @@ def test_atlas_wall_models_use_exact_grid_footprints_and_alpha_bounds():
     assert 'step = max(1, int(round(max(piece.get_width(), piece.get_height()) * 0.72)))' not in source
     assert 'for item in group:\n                draw_horizontal_cell(item, wall_models.get("front"))' in source
     assert 'for item in group:\n                draw_vertical_cell(item, image)' in source
+
+def test_decorations_trim_transparent_borders_and_cache_fountain_pulse():
+    source = (ROOT / "game" / "render.py").read_text(encoding="utf-8")
+    assert "def _trim_alpha_surface(image, threshold=8):" in source
+    assert "self.decoration_images[name] = self._trim_alpha_surface" in source
+    assert "self.chest_images[state] = self._trim_alpha_surface" in source
+    assert 'pulse_key=("decor_pulse",id(draw),pulse_step)' in source
+    assert "pygame.transform.smoothscale(draw" in source
