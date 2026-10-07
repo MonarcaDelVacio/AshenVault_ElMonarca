@@ -101,3 +101,22 @@ def test_registry_from_game_data_uses_declarative_sprite_sources():
     assert registry.require("enemy:grunt").metadata["sprite_set"] == "skeleton"
     assert registry.require("boss:warden").category == "boss"
     assert registry.require("character:soldier").metadata["start_weapon"] == "blade"
+
+
+def test_registry_runtime_frame_preserves_sheet_region_metadata():
+    registry = AssetRegistry()
+    frame = object()
+    record = registry.register_runtime_frame(
+        "frame:sheet:assets/test.png:2",
+        "sheet",
+        source_file="assets/test.png",
+        frame_index=2,
+        source_rect=(40, 0, 20, 20),
+        alpha_bounds=(3, 2, 12, 16),
+        handle=frame,
+    )
+
+    assert record.source_rect == (40, 0, 20, 20)
+    assert record.alpha_bounds == (3, 2, 12, 16)
+    assert record.visual_bounds == (3, 2, 12, 16)
+    assert record.handle is frame
