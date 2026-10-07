@@ -5,6 +5,7 @@ import pygame
 from pathlib import Path
 from .world import TILE, FLOOR, WALL, PILLAR, SECRET, TORCH_PILLAR, bonfire_positions
 from .ui_atlas import UIAtlas
+from .assets import AssetRegistry
 
 VIEW_W, VIEW_H = 960, 540
 
@@ -12,6 +13,9 @@ VIEW_W, VIEW_H = 960, 540
 class Renderer:
     def __init__(self, data):
         self.data = data
+        # Compatibilidad: el renderer conserva sus loaders actuales, pero todas
+        # las definiciones declarativas ya disponen de una identidad central.
+        self.asset_registry = getattr(data, "asset_registry", None) or AssetRegistry()
         # Tipografía incluida con el juego para mantener el mismo aspecto en todos los equipos.
         font_dir = Path(__file__).resolve().parent.parent / "assets" / "fonts"
         try:
