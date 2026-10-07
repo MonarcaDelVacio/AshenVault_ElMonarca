@@ -773,22 +773,23 @@ class Renderer:
 
             if candidates:
                 _, cols, rows, cells, nonempty = min(candidates, key=lambda x: x[0])
+
+                # El índice declarado por cada arma representa la celda física
+                # del atlas, no el ordinal de las celdas que resultaron no vacías.
+                # Mantener las celdas vacías conserva la geometría del spritesheet
+                # y evita que un hueco separador desplace todos los modelos
+                # siguientes.
                 frames = []
-                accepted = 0
-                for rect, bbox in cells:
+                for physical_index, (rect, bbox) in enumerate(cells):
                     cell = image.subsurface(rect).copy()
-                    if bbox.width and bbox.height and accepted < expected:
+                    if bbox.width and bbox.height:
                         frame = cell.subsurface(bbox).copy()
                         frames.append(frame)
                         self._register_loaded_frame(
-                            "weapon-ranged", path, accepted, rect, frame,
+                            "weapon-ranged", path, physical_index, rect, frame,
                             alpha_bounds=(bbox.x, bbox.y, bbox.width, bbox.height),
                         )
-                        accepted += 1
                     else:
-                        # Las celdas posteriores al número real de armas son
-                        # municiones/dardos u otros modelos auxiliares: se
-                        # mantienen transparentes para que jamás se asignen a un arma.
                         frames.append(pygame.Surface((1, 1), pygame.SRCALPHA))
                 return frames
 
