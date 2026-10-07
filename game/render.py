@@ -1654,7 +1654,7 @@ class Renderer:
             fallback_by_biome = {
                 "ruins": 10, "forest": 5, "dungeon": 9,
                 "laboratory": 2, "volcanic": 7, "desert": 10,
-                "swamp": 5, "final": 11,
+                "swamp": 5, "snow": 9, "final": 11,
             }
             floor_img = self.floor_images.get(fallback_by_biome.get(arena.biome, 1))
         wall_models = self._wall_models_for_biome(arena.biome)
