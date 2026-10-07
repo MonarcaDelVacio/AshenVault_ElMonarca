@@ -72,12 +72,13 @@ def chase(enemy, sim, dt, speed):
         for o in sim.enemies:
             if o is not enemy and o.alive:
                 ex, ey = enemy.x - o.x, enemy.y - o.y
-                r = enemy.radius + o.radius + 4
-                if abs(ex) < r and abs(ey) < r:
-                    dd = math.hypot(ex, ey) or 1
-                    if dd < r:
-                        sx += ex / dd * (r - dd) / r
-                        sy += ey / dd * (r - dd) / r
+                desired = enemy.radius + o.radius + 7.0
+                dd = math.hypot(ex, ey)
+                if dd < desired:
+                    inv = 1.0 / (dd or 1.0)
+                    strength = (desired - dd) / desired
+                    sx += ex * inv * strength
+                    sy += ey * inv * strength
         # Separation is stronger near narrow passages so enemies do not
         # stack in a doorway while all pursuing the same target.
         separation_weight = 1.35 if abs(sx) + abs(sy) > 0.12 else 0.8
