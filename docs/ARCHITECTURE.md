@@ -655,3 +655,11 @@ The audit is intentionally validation-only at this stage: the procedural generat
 - This is a defensive runtime check in addition to the procedural topology validator; malformed room graphs cannot silently produce one-way transitions.
 - Regression coverage includes symmetric room-door topology and a transition that deliberately removes the destination door.
 - The next Phase 9 slices should cover room lifecycle/clear-state invariants, door locking/unlocking, and persistent room state across transitions.
+
+
+### Phase 9 — Room lifecycle and persistence
+- Room-local chest state is now retained when leaving and re-entering a cleared room.
+- Shop offers are initialized once per room and then reused, so purchased/sold offers do not reroll when revisiting the same shop.
+- Existing room item/pickup state continues to be owned by the Room object and rebound by Sim on entry.
+- Combat rooms retain their cleared/enemies_spawned/doors_locked state, preventing defeated rooms from spawning a second wave when revisited.
+- A persistent-room-state regression was planned, but the repository test-file write was blocked by the integration safety layer; the runtime code change itself was committed and should be manually smoke-tested.
