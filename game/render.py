@@ -647,6 +647,27 @@ class Renderer:
                 except (pygame.error, OSError):
                     pass
 
+        self._validate_loaded_weapon_assets()
+
+    def _validate_loaded_weapon_assets(self):
+        """Fail fast if a declared weapon model/projectile did not resolve to a runtime asset."""
+        missing = []
+        ranged_frames = self.weapon_variant_frames.get("ranged", [])
+        for wid, wdef in self.data.weapons.items():
+            sprite = getattr(wdef, "weapon_sprite", None)
+            sheet = getattr(wdef, "weapon_sprite_sheet", None)
+            index = getattr(wdef, "weapon_sprite_index", None)
+            if sprite and wid not in self.weapon_images:
+                missing.append(f"arma {wid}: modelo individual no cargado ({sprite})")
+            elif sheet == "ranged":
+                if not isinstance(index, int) or index < 0 or index >= len(ranged_frames):
+                    missing.append(f"arma {wid}: frame ranged {index} no disponible")
+            projectile = getattr(wdef, "projectile_sprite", None)
+            if projectile and not str(projectile).startswith("__weapon_sheet__:") and projectile not in self.projectile_images:
+                missing.append(f"arma {wid}: proyectil no cargado ({projectile})")
+        if missing:
+            raise RuntimeError("Assets de armas no resueltos: " + "; ".join(missing))
+
     def _asset_source_key(self, path):
         try:
             return path.resolve().relative_to(self.asset_root.parent.resolve()).as_posix()
