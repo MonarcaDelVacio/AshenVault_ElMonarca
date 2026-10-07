@@ -588,7 +588,7 @@ class Renderer:
             # rechaza la hoja por dimensiones/márgenes inesperados, intentamos
             # inmediatamente el loader de spritesheet antes de dejar el enemigo
             # sin representación visual.
-            flyer_frames = self._load_grid_frames(flyer_path, 4, 4)
+            flyer_frames = self._load_grid_frames(flyer_path, 3, 4)
             if not flyer_frames:
                 flyer_frames = self._load_sheet_frames(flyer_path)
             if flyer_frames:
@@ -1686,7 +1686,7 @@ class Renderer:
                 ln = 60 + 120 * k
                 pygame.draw.line(screen, (255, 90, 90), (x, y),
                                  (x + math.cos(e.facing) * ln, y + math.sin(e.facing) * ln), 1)
-        if e.hp < e.max_hp:
+        if e.hp < e.max_hp and not getattr(e, "is_boss", False):
             w = 24
             pygame.draw.rect(screen, (40, 0, 0), (x - w // 2, y - e.radius - 9, w, 4))
             pygame.draw.rect(screen, (230, 60, 60), (x - w // 2, y - e.radius - 9, int(w * max(0, e.hp) / e.max_hp), 4))
@@ -1694,7 +1694,9 @@ class Renderer:
     def _draw_player_actor(self, screen, p, ox, oy, t):
         x, y = int(p.x + ox), int(p.y + oy)
         shield_ability_active = getattr(p, "ability_shield_fx", 0.0) > 0
-        pygame.draw.ellipse(screen, (0, 0, 0), (x - p.radius + 2, y + p.radius - 3, p.radius * 2, max(4, p.radius // 2)))
+        shadow = pygame.Surface((p.radius * 2 + 14, max(6, p.radius // 2 + 4)), pygame.SRCALPHA)
+        pygame.draw.ellipse(shadow, (0, 0, 0, 62), shadow.get_rect())
+        screen.blit(shadow, shadow.get_rect(center=(x, y + 27)))
         # No se tintan ni se ocultan los fotogramas del personaje: algunos sprites
         # contienen píxeles de fondo semitransparentes y el blink los hacía visibles.
         # La invulnerabilidad se comunica con un aro translúcido, sin alterar el sprite.
@@ -2209,11 +2211,15 @@ class Renderer:
                 merchant_idle=self.npc_frames.get("merchant_idle", [])
                 merchant_near=self.npc_frames.get("merchant_near", [])
             near = math.hypot(p.x-arena.width/2,p.y-arena.height/2)<155
-            actors.append((arena.height/2-48, "merchant", {
+            merchant_wander_x = math.sin(t * 0.72 + room_key[0] * 0.9 + room_key[1] * 0.4) * 10.0
+            merchant_wander_y = math.sin(t * 1.17 + room_key[0] * 0.3) * 2.0
+            actors.append((arena.height/2-48 + merchant_wander_y, "merchant", {
                 "idle": merchant_idle,
                 "near": merchant_near,
                 "near_active": near,
                 "intro_start": self._merchant_intro_start,
+                "wander_x": merchant_wander_x,
+                "wander_y": merchant_wander_y,
             }))
             # La animación de entrada (capa -> se la quita) solo ocurre una vez por sala.
         actors.sort(key=lambda item:item[0])
@@ -2227,7 +2233,16 @@ class Renderer:
                 frame=frames[int(t*7.0) % len(frames)] if frames else None
                 if frame is not None:
                     frame=self._fit_image(frame,70)
-                    screen.blit(frame,frame.get_rect(midbottom=(int(arena.width/2+ox),int(arena.height/2-48+oy))))
+                    mx = int(arena.width / 2 + ox + float(obj.get("wander_x", 0.0)))
+                    my = int(arena.height / 2 - 48 + oy + float(obj.get("wander_y", 0.0)))
+                    screen.blit(frame,frame.get_rect(midbottom=(mx,my)))
+                    bubble = pygame.Rect(mx + 25, my - 67, 32, 27)
+                    pygame.draw.ellipse(screen, (245, 245, 248), bubble)
+                    pygame.draw.polygon(screen, (245, 245, 248), [(bubble.left + 5, bubble.bottom - 5), (bubble.left + 1, bubble.bottom + 2), (bubble.left + 11, bubble.bottom - 3)])
+                    if self.coin_frames:
+                        coin = self._fit_image(self.coin_frames[int(t * 8.0) % len(self.coin_frames)], 16)
+                        if coin is not None:
+                            screen.blit(coin, coin.get_rect(center=bubble.center))
             elif kind=="coin":
                 frames=self.coin_frames
                 if frames:
@@ -2382,7 +2397,23 @@ class Renderer:
             else:
                 pygame.draw.circle(screen, col, (px, py), 7, 2)
             self.text(screen, str(offer.price), (px, py + 24), (255, 225, 135), self.small, center=True)
-            self.text(screen, str(offer.name)[:12], (px, py + 37), col, self.small, center=True)
+            self.text(screen, str(offer.name)[:16], (px, py + 37), col, self.small, center=True)
+            if offer.kind == "item":
+                item_def = self.data.items.get(offer.id, {})
+                effects = item_def.get("effects", {}) if isinstance(item_def, dict) else getattr(item_def, "effects", {})
+                effect_labels = []
+                for key, value in effects.items():
+                    if key == "damage_mult": effect_labels.append("+%d%% daño" % round(float(value) * 100))
+                    elif key == "move_speed_mult": effect_labels.append("+%d%% velocidad" % round(float(value) * 100))
+                    elif key == "attack_speed_mult": effect_labels.append("+%d%% cadencia" % round(float(value) * 100))
+                    elif key == "max_hp": effect_labels.append("+%d HP" % int(value))
+                    elif key == "max_shield": effect_labels.append("+%d escudo" % int(value))
+                    elif key == "max_energy": effect_labels.append("+%d energía" % int(value))
+                    elif key == "projectile_count": effect_labels.append("+%d proyectil" % int(value))
+                    elif key == "pierce": effect_labels.append("+%d perforación" % int(value))
+                    elif key == "coin_radius": effect_labels.append("+%d radio monedas" % int(value))
+                description = ", ".join(effect_labels) or "Mejora permanente"
+                self.text(screen, description[:25], (px, py + 51), (198, 210, 222), self.small, center=True)
 
         # Rayos láser persistentes: finos al inicio, crecen entre 1 y 3 s,
         # siguen el apuntado del propietario y terminan en la primera colisión.
@@ -2629,11 +2660,11 @@ class Renderer:
             # El minimapa compacto ocupa algo más de pantalla, pero mantiene un
             # margen suficiente para no competir con el HUD. La celda crece de
             # forma proporcional al número de salas y evita amontonamientos.
-            cell=min(18,max(10,int(min(190/cols,92/rows))))
-            width,height=max(200, cols*cell+36),rows*cell+36
-            x,y=VIEW_W-width-10,60
+            cell=min(17,max(9,int(min(170/cols,88/rows))))
+            width,height=max(178, cols*cell+28),rows*cell+32
+            x,y=VIEW_W-width-8,58
             content_x = (width - cols*cell)//2
-            content_y = 10
+            content_y = 8
             origin_y=content_y
             panel=pygame.Surface((width,height),pygame.SRCALPHA)
             pygame.draw.rect(panel,(8,12,22,172),panel.get_rect(),border_radius=6)
@@ -2648,27 +2679,13 @@ class Renderer:
             color=(255,202,102) if current else ((83,174,184) if getattr(room,"entered",False) else (48,58,72)); pygame.draw.rect(panel,color,rect,border_radius=4)
             if current: pygame.draw.rect(panel,(255,232,150),rect.inflate(4,4),1,border_radius=4)
             cx,cy=rect.center; ms=max(12,min(20,int(cell*.34))) if large else max(9,min(13,int(cell*.55)))
-            if getattr(room,"portal_room",False):
-                if self.portal_frames:
+            if room.room_type=="boss":
+                if getattr(room, "portal_room", False) and self.portal_frames:
                     img=pygame.transform.smoothscale(self.portal_frames[0],(ms,ms)); panel.blit(img,img.get_rect(center=(cx,cy)))
                 else:
-                    pts=[(cx,cy-ms//2),(cx+ms//2,cy),(cx,cy+ms//2),(cx-ms//2,cy)]; pygame.draw.polygon(panel,(100,220,255),pts); pygame.draw.polygon(panel,(205,245,255),pts,1)
-            elif room.room_type=="boss":
-                self.ui_atlas.draw_icon(panel, (cx, cy), size=max(14, ms + 4), kind="skull")
-            elif room.room_type=="shop":
-                self.ui_atlas.draw_icon(panel, (cx, cy), size=max(14, ms + 4), kind="key")
-            elif room.room_type=="treasure":
-                self.ui_atlas.draw_icon(panel, (cx, cy), size=max(14, ms + 4), kind="chest")
-            elif room.room_type=="healing":
-                self.ui_atlas.draw_icon(panel, (cx, cy), size=max(14, ms + 4), kind="heal")
-            elif room.room_type in ("elite", "miniboss"):
+                    self.ui_atlas.draw_icon(panel, (cx, cy), size=max(14, ms + 4), kind="skull")
+            elif room.room_type=="miniboss":
                 self.ui_atlas.draw_icon(panel, (cx, cy), size=max(14, ms + 4), kind="white_skull")
-            elif room.room_type=="challenge":
-                self.ui_atlas.draw_icon(panel, (cx, cy), size=max(14, ms + 4), kind="target")
-            elif room.room_type=="event":
-                self.ui_atlas.draw_icon(panel, (cx, cy), size=max(14, ms + 4), kind="exclamation")
-            elif room.room_type=="secret":
-                self.ui_atlas.draw_icon(panel, (cx, cy), size=max(14, ms + 4), kind="pin")
         # La leyenda se eliminó: los iconos de cada sala son autoexplicativos.
         screen.blit(panel,(x,y))
 
