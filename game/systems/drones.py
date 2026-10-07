@@ -119,6 +119,8 @@ def update_drones(sim,dt):
     p=sim.player
     kept=[]
     attack_interval=float(p.ability.get("drone_attack_interval",1.0))
+    burst_size=max(1,int(p.ability.get("drone_burst_size",3)))
+    burst_interval=max(0.05,float(p.ability.get("drone_burst_interval",0.12)))
     damage=float(p.ability.get("drone_damage_mult",1.0))*4.0*p.damage_mult
     soft_leash=270.0
     hard_leash=350.0
@@ -131,6 +133,14 @@ def update_drones(sim,dt):
         d.setdefault("repath_time",0.0)
         d.setdefault("avoid_x",0.0)
         d.setdefault("avoid_y",0.0)
+        d.setdefault("burst_left",0)
+        d.setdefault("burst_cd",0.0)
+        d.setdefault("max_lifetime",20.0)
+        d.setdefault("lifetime",d["max_lifetime"])
+        d["lifetime"]-=dt
+        if d["lifetime"]<=0:
+            sim.emit("drone_expire",d["x"],d["y"])
+            continue
 
         enemies=[e for e in sim.enemies if e.alive and e.spawn_delay<=0.2]
         nearest_enemy=min(
@@ -305,17 +315,31 @@ def update_drones(sim,dt):
         d["burst_cd"]=max(0.0,d["burst_cd"]-dt)
 
         target=nearest_enemy
-        if target is not None and d["shot_cd"]<=0:
-            ang=math.atan2(target.y-d["y"],target.x-d["x"])
-            # Los drones disparan balas convencionales, usando el mismo
-            # proyectil físico del arsenal en lugar de una esfera de energía.
-            sim.spawn_projectile(
-                0,d["x"],d["y"],ang,620.0,damage,3.0,1.1,
-                (205,220,235),"physical",0,0,False,
-                "assets/projectiles/projectile_06.png",False,0,False,0,
-                0.85,0.0
-            )
-            d["shot_cd"]=attack_interval
+        if target is not None:
+            if d["burst_left"]>0 and d["burst_cd"]<=0:
+                ang=math.atan2(target.y-d["y"],target.x-d["x"])
+                sim.spawn_projectile(
+                    0,d["x"],d["y"],ang,620.0,damage,3.0,1.1,
+                    (205,220,235),"physical",0,0,False,
+                    "assets/projectiles/projectile_06.png",False,0,False,0,
+                    0.85,0.0
+                )
+                d["burst_left"]-=1
+                d["burst_cd"]=burst_interval
+                if d["burst_left"]<=0:
+                    d["shot_cd"]=attack_interval
+            elif d["burst_left"]<=0 and d["shot_cd"]<=0:
+                ang=math.atan2(target.y-d["y"],target.x-d["x"])
+                sim.spawn_projectile(
+                    0,d["x"],d["y"],ang,620.0,damage,3.0,1.1,
+                    (205,220,235),"physical",0,0,False,
+                    "assets/projectiles/projectile_06.png",False,0,False,0,
+                    0.85,0.0
+                )
+                d["burst_left"]=max(0,burst_size-1)
+                d["burst_cd"]=burst_interval if d["burst_left"] else 0.0
+                if d["burst_left"]==0:
+                    d["shot_cd"]=attack_interval
         kept.append(d)
     sim.drones=kept
     p.drones=sim.drones
