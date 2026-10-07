@@ -27,7 +27,7 @@ def _headless_pygame():
 def test_application_module_imports_without_starting_runtime():
     module = importlib.import_module("main")
     assert hasattr(module, "App")
-    assert hasattr(module, "main")
+    assert callable(module.App.run)
 
 
 def test_data_to_renderer_contract_is_loadable():
