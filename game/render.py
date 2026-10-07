@@ -317,25 +317,32 @@ class Renderer:
         # Sprites individuales para los ocho segmentos del perímetro de la sala.
         # La pared inferior es baja (32x32); los demás segmentos tienen 32x64.
         # Todas conservan una huella de colisión de una casilla.
+        # Nuevo atlas de paredes: tres modelos completos (izquierda, frente y derecha).
+        # Los modelos antiguos de borde ya no participan en el render.
         self.wall_piece_images = {}
-        wall_piece_files = (
-            "paredinferior.png", "paredsuperior.png",
-            "paredlateralizquierda.png", "paredlateralderecha.png",
-            "esquinainferiorderecha.png", "esquinainferiorizquierda.png",
-            "esquinasuperiorderecha.png", "esquinasuperiorizquierda.png",
-        )
+        self.wall_models = {}
         wall_dir = self.asset_root / "walls"
-        for filename in wall_piece_files:
-            path = wall_dir / filename
-            if path.is_file():
-                try:
-                    image = pygame.image.load(str(path)).convert_alpha()
-                    if image.get_width() > 0 and image.get_height() > 0:
-                        piece_key = filename.removesuffix(".png")
-                        target_size = (TILE, TILE) if piece_key == "paredinferior" else (TILE, TILE * 2)
-                        self.wall_piece_images[piece_key] = pygame.transform.smoothscale(image, target_size)
-                except (pygame.error, OSError, ValueError):
-                    pass
+        new_wall_path = self.asset_root / "walls.png"
+        if new_wall_path.is_file():
+            try:
+                atlas = pygame.image.load(str(new_wall_path)).convert_alpha()
+                atlas = make_background_transparent(atlas, (255, 255, 255), 18)
+                mask = pygame.mask.from_surface(atlas, threshold=8)
+                components = mask.connected_components(minimum=120)
+                rects = []
+                for component in components:
+                    rect = component.get_bounding_rect()
+                    if rect.width >= 30 and rect.height >= 30:
+                        rects.append(rect)
+                rects = sorted(rects, key=lambda rr: rr.width * rr.height, reverse=True)[:3]
+                rects.sort(key=lambda rr: rr.centerx)
+                for name, rect in zip(("left", "front", "right"), rects):
+                    frame = atlas.subsurface(rect).copy()
+                    if frame.get_width() > 0 and frame.get_height() > 0:
+                        self.wall_models[name] = frame
+            except (pygame.error, OSError, ValueError):
+                self.wall_models = {}
+
 
         # Columnas arquitectónicas: huella de una casilla y altura visual de dos.
         # La versión con antorcha reemplaza los faroles decorativos del escenario.
