@@ -278,6 +278,7 @@ class Sim:
         # Loot y monedas pertenecen a la sala actual; nunca se comparten entre habitaciones.
         self.items=room.items
         self.pickups=room.pickups
+        self.chest=getattr(room, "chest", None)
         self.hazards=[]; self.wave_attacks=[]; self.lasers=[]
         # Mira mantiene sus drones entre salas; solo se reposicionan alrededor del jugador.
         if not getattr(room, "props_spawned", False):
@@ -314,7 +315,12 @@ class Sim:
             room_key = tuple(getattr(room, "id", getattr(self.arena, "room_id", (0, 0))))
             if room_key not in self.merchant_variant_by_room:
                 self.merchant_variant_by_room[room_key] = self.rng.randrange(3)
-            self._setup_shop()
+            if not getattr(room, "shop_initialized", False):
+                self._setup_shop()
+                room.shop_offers = self.shop_offers
+                room.shop_initialized = True
+            else:
+                self.shop_offers = room.shop_offers
         else:
             # Las ofertas pertenecen exclusivamente a la tienda actual.
             self.shop_offers=[]
@@ -690,9 +696,11 @@ class Sim:
     def _complete_room(self):
         if self.room.cleared:return
         self.room.cleared=True; self.room.doors_locked=False; self.arena.open_doors(); self.emit("room_clear",self.room.id)
+        self.room.chest=None
         chest_type = self._chest_type_for_room(self.room.room_type)
         if chest_type:
             self._spawn_chest(chest_type)
+            self.room.chest=self.chest
             if self.chest is not None:
                 if math.hypot(self.chest.x-self.player.x,self.chest.y-self.player.y) < TILE*1.35:
                     for ox,oy in ((TILE*2,0),(-TILE*2,0),(0,TILE*2),(0,-TILE*2)):
