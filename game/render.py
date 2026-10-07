@@ -10,6 +10,7 @@ from .assets.bounds import decoration_max_size
 from .rendering.atlas_geometry import alpha_runs, split_grid_frames
 from .rendering.sprite_geometry import fit_dimensions
 from .rendering.weapon_geometry import melee_grip_anchor, weapon_max_dimension
+from .rendering.background_geometry import trim_edge_background
 
 VIEW_W, VIEW_H = 960, 540
 
@@ -849,31 +850,7 @@ class Renderer:
 
     @staticmethod
     def _trim_edge_background(image, white_threshold=248):
-        """Elimina solo el fondo claro conectado a los bordes del PNG."""
-        image = image.copy().convert_alpha()
-        w, h = image.get_size()
-        seen = set()
-        stack = []
-        for x in range(w):
-            stack.append((x, 0)); stack.append((x, h - 1))
-        for y in range(h):
-            stack.append((0, y)); stack.append((w - 1, y))
-        while stack:
-            x, y = stack.pop()
-            if (x, y) in seen or x < 0 or y < 0 or x >= w or y >= h:
-                continue
-            seen.add((x, y))
-            c = image.get_at((x, y))
-            if c.a < 8:
-                for nx, ny in ((x+1,y),(x-1,y),(x,y+1),(x,y-1)):
-                    if (nx, ny) not in seen: stack.append((nx, ny))
-                continue
-            if c.r >= white_threshold and c.g >= white_threshold and c.b >= white_threshold:
-                image.set_at((x, y), (c.r, c.g, c.b, 0))
-                for nx, ny in ((x+1,y),(x-1,y),(x,y+1),(x,y-1)):
-                    if (nx, ny) not in seen: stack.append((nx, ny))
-        bbox = image.get_bounding_rect(min_alpha=8)
-        return image.subsurface(bbox).copy() if bbox.width and bbox.height else image
+        return trim_edge_background(image, white_threshold=white_threshold)
 
     def _load_door_frames(self, path):
         """Carga las dos variantes de puerta, elimina fondo y recorta al modelo real."""
