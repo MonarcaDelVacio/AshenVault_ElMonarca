@@ -537,3 +537,6 @@ Next renderer extractions will continue to target small dependency-safe helpers
 before moving any world-rendering or actor-rendering blocks.
 
 The fourth extraction is `game/rendering/background_geometry.py`, which now owns the connected edge-background trimming algorithm used by door and melee atlas processing. `Renderer._trim_edge_background()` remains as a compatibility wrapper, preserving existing call sites and behavior. Regression coverage verifies that connected white background is removed while isolated internal white pixels are preserved.
+
+
+The fifth Phase 4 extraction is `game/rendering/rotation_geometry.py`, which centralizes the existing 8-degree sprite rotation quantization and horizontal facing decision. Projectile, combat-animation, and death-sprite paths now use the helper while retaining the existing rotation cache keys and visual policy. Targeted tests cover the established buckets and facing behavior.
