@@ -1215,6 +1215,7 @@ class Renderer:
         out=image if size==(w,h) else pygame.transform.smoothscale(image,size)
         self._fit_cache[key]=out
         return out
+    @staticmethod
     def _melee_grip_anchor(weapon_def):
         return melee_grip_anchor(getattr(weapon_def, "weapon_sprite", ""))
 
