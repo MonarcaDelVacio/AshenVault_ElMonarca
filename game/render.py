@@ -460,7 +460,7 @@ class Renderer:
             path = asset_dir / filename
             if path.is_file():
                 try:
-                    self.chest_images[state] = pygame.image.load(str(path)).convert_alpha()
+                    self.chest_images[state] = self._trim_alpha_surface(pygame.image.load(str(path)).convert_alpha())
                 except (pygame.error, OSError):
                     pass
 
@@ -472,7 +472,7 @@ class Renderer:
                 path = decoration_dir / f"chest_{color_name}_{state}.png"
                 if path.is_file():
                     try:
-                        self.chest_type_images[(chest_type, state)] = pygame.image.load(str(path)).convert_alpha()
+                        self.chest_type_images[(chest_type, state)] = self._trim_alpha_surface(pygame.image.load(str(path)).convert_alpha())
                     except (pygame.error, OSError):
                         pass
 
@@ -495,7 +495,7 @@ class Renderer:
                         # Keep the first frame as fallback for code paths that expect an image.
                         self.decoration_images[name] = frames[0]
                 else:
-                    self.decoration_images[name] = pygame.image.load(str(path)).convert_alpha()
+                    self.decoration_images[name] = self._trim_alpha_surface(pygame.image.load(str(path)).convert_alpha())
             except (pygame.error, OSError, ValueError):
                 pass
 
@@ -1105,7 +1105,9 @@ class Renderer:
                     return []
                 frame_w = image.get_width() // 3
                 return [
-                    image.subsurface(pygame.Rect(i * frame_w, 0, frame_w, image.get_height())).copy()
+                    self._trim_alpha_surface(
+                        image.subsurface(pygame.Rect(i * frame_w, 0, frame_w, image.get_height())).copy()
+                    )
                     for i in range(3)
                 ]
             if path.name == "MinotauroGigante_ataque.png" and image.get_width() % 3 == 0 and image.get_height() % 3 == 0:
@@ -1306,6 +1308,18 @@ class Renderer:
             frame = frame.copy()
             frame.set_alpha(max(0, min(255, int(alpha))))
         screen.blit(frame, frame.get_rect(center=(int(x), int(y))))
+
+    @staticmethod
+    def _trim_alpha_surface(image, threshold=8):
+        """Recorta márgenes transparentes una sola vez al cargar una decoración."""
+        if image is None:
+            return None
+        bbox = image.get_bounding_rect(min_alpha=int(threshold))
+        if bbox.width <= 0 or bbox.height <= 0:
+            return None
+        if bbox.x == 0 and bbox.y == 0 and bbox.width == image.get_width() and bbox.height == image.get_height():
+            return image
+        return image.subsurface(bbox).copy()
 
     def _load_trimmed_asset(self, relative_path):
         path = self.asset_root.parent / relative_path
@@ -2354,8 +2368,19 @@ class Renderer:
             image = frames[int(t * 8.0) % len(frames)]
         draw=self._fit_image(image,max_size)
         if kind=="fountain_active":
-            pulse=0.97+0.03*math.sin(t*3.2)
-            draw=pygame.transform.smoothscale(draw,(max(1,int(draw.get_width()*pulse)),max(1,int(draw.get_height()*pulse))))
+            # El pulso se cuantiza a 16 pasos y se cachea para evitar un smoothscale
+            # nuevo en cada frame.
+            pulse_step=int((t * 3.2) * 16.0) & 15
+            pulse=0.97+0.03*math.sin((pulse_step / 16.0) * math.tau)
+            pulse_key=("decor_pulse",id(draw),pulse_step)
+            pulsed=self._fit_cache.get(pulse_key)
+            if pulsed is None:
+                pulsed=pygame.transform.smoothscale(
+                    draw,
+                    (max(1,int(draw.get_width()*pulse)),max(1,int(draw.get_height()*pulse)))
+                )
+                self._fit_cache[pulse_key]=pulsed
+            draw=pulsed
         screen.blit(draw,draw.get_rect(midbottom=(int(x),int(y))))
 
     def _draw_scene_decorations(self, screen, sim, ox, oy, t, front_only=None, min_base_y=None, max_base_y=None):
