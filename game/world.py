@@ -74,10 +74,10 @@ def bonfire_positions(arena):
 
 class Door:
     __slots__=("side","open","locked","x","y","width")
-    def __init__(self,side,x,y): self.side=side; self.open=False; self.locked=False; self.x=x; self.y=y; self.width=2
+    def __init__(self,side,x,y): self.side=side; self.open=False; self.locked=False; self.x=x; self.y=y; self.width=3
     def tiles(self):
-        if self.side in ("N","S"): return ((self.x,self.y),(self.x-1,self.y))
-        return ((self.x,self.y),(self.x,self.y-1))
+        if self.side in ("N","S"): return tuple((xx,self.y) for xx in (self.x-1,self.x,self.x+1))
+        return tuple((self.x,yy) for yy in (self.y-1,self.y,self.y+1))
 
 class Arena:
     def __init__(self, adata, room_id=(0,0)):
