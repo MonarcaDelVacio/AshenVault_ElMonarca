@@ -615,3 +615,12 @@ The post-extraction audit verified that Mira retains the requested 20-second abi
 Rook's shockwave ability now explicitly enables confusion alongside stun; the existing hazard system owns the status application and event emission, so no duplicate effect implementation was introduced.
 
 The remaining Phase 6 work is final regression/integration auditing of player weapon input, reload/ammunition semantics, special projectiles, and laser edge cases before moving to Movement/AI.
+
+
+## Phase 7 status — Movement / AI
+
+Phase 7 has started with the first cohesive AI extraction: `game/systems/enemy_movement.py` now owns the existing enemy steering primitives, including collision-aware step movement, angular escape when an enemy is blocked, and chase behavior using direct line-of-sight or the room flow-field. `game/enemies.py` retains `_step()` and `_chase()` compatibility facades, so the existing brain/state machine remains unchanged.
+
+Regression tests cover obstacle escape and direct line-of-sight chasing. No movement speed, pathfinding, detection range, attack range, or AI decision probabilities were intentionally changed.
+
+The next Movement/AI slice should audit target selection, confusion behavior, dodge/defensive reactions, flying movement, and flow-field edge cases before changing procedural generation or room lifecycle code.
