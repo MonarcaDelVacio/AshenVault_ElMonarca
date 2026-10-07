@@ -12,6 +12,7 @@ from .statues import STATUE_BUFFS, statue_cost, statue_offer
 from .systems.status_effects import damage_shield, apply_dot, update_dot_effects, apply_freeze, freeze_duration
 from .systems.pickups import update_pickups\nfrom .systems.hazards import update_hazards
 from .systems.shop import setup_shop, buy_shop_offer
+from .systems.rewards import spawn_chest, open_chest, drop_room_reward
 
 class Input:
     def __init__(self):
@@ -1033,44 +1034,7 @@ class Sim:
             "treasure": "common",
         }.get(room_type)
 
-    def _spawn_chest(self, chest_type="common"):
-        cx, cy = self.arena.width / 2, self.arena.height / 2
-        if self.chest is not None:
-            return
-        self.chest = Chest(chest_type, cx, cy)
-        self.emit("chest_spawn", cx, cy, chest_type)
-
-    def _open_chest(self):
-        if self.chest is None or self.chest.is_open:
-            return False
-        if not self.chest.open():
-            return False
-        self.emit("chest_open", self.chest.x, self.chest.y, self.chest.chest_type)
-        # Los cofres de sala despejada entregan un arma y monedas. El antiguo
-        # objeto genérico (dibujado como un orbe amarillo) ya no se usa aquí.
-        choices=[w for w in self.data.weapons if w not in {x.d.id for x in self.player.inventory}]
-        if choices:
-            wid=self.rng.choice(choices)
-            wx,wy=self._safe_drop_position(self.chest.x+42,self.chest.y,10.0)
-            it=type("WeaponPickup",(),{"id":wid,"name":self.data.weapons[wid].name,"kind":"weapon","weapon_id":wid,"x":wx,"y":wy})()
-            self.items.append(it); self.stats["items"]+=1; self.emit("weapon_drop",it.x,it.y,wid)
-        self.emit("chest_coins",self.chest.x,self.chest.y,0)
-        return True
-
-    def _drop_room_reward(self,guaranteed=False,quality=0,position=None):
-        cx,cy=position if position is not None else (self.arena.width/2,self.arena.height/2)
-        cx,cy=self._safe_drop_position(cx,cy,10.0)
-        chance=1.0 if guaranteed else .65
-        if self.rng.random()<chance:
-            ids=list(self.data.items)
-            if quality>=2: ids=[i for i in ids if i not in ("magnetic","swift")] or ids
-            ident=self.rng.choice(ids); it=make_item(self.data.items,ident); it.x,it.y=cx,cy; self.items.append(it); self.stats["items"]+=1; self.emit("item_drop",cx,cy,ident)
-        if guaranteed or self.rng.random()<.35:self.keys+=1; self.emit("key_drop",cx,cy)
-        if guaranteed or self.rng.random()<.30:
-            choices=[w for w in self.data.weapons if w not in {x.d.id for x in self.player.inventory}]
-            if choices:
-                wid=self.rng.choice(choices); wx,wy=self._safe_drop_position(cx+42,cy,10.0); it=type('WeaponPickup',(object,),{'id':wid,'name':self.data.weapons[wid].name,'kind':'weapon','weapon_id':wid,'x':wx,'y':wy})(); self.items.append(it); self.emit('weapon_drop',it.x,it.y,wid)
-    def _active_statue(self):
+    def _spawn_chest(self, chest_type="common"):\n        """Compatibility facade for the extracted reward/chest system."""\n        return spawn_chest(self, chest_type)\n    def _open_chest(self):\n        """Compatibility facade for the extracted chest opening system."""\n        return open_chest(self)\n    def _drop_room_reward(self, guaranteed=False, quality=0, position=None):\n        """Compatibility facade for the extracted room reward system."""\n        return drop_room_reward(self, guaranteed, quality, position)\n    def _active_statue(self):
         for deco in getattr(self.arena, "decorations", []):
             kind=deco.get("kind")
             statue_key=(tuple(self.room.id), int(deco.get("x",0)), int(deco.get("y",0)))
