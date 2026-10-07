@@ -331,7 +331,13 @@ class Renderer:
                 components = mask.connected_components(minimum=120)
                 rects = []
                 for component in components:
-                    rect = component.get_bounding_rect()
+                    # pygame-ce 2.5.x devuelve objetos Mask en connected_components().
+                    # Mask no expone get_bounding_rect(); la API compatible es
+                    # get_bounding_rects(), que devuelve los rectángulos de sus regiones.
+                    component_rects = component.get_bounding_rects()
+                    if not component_rects:
+                        continue
+                    rect = component_rects[0]
                     if rect.width >= 30 and rect.height >= 30:
                         rects.append(rect)
                 rects = sorted(rects, key=lambda rr: rr.width * rr.height, reverse=True)[:3]
