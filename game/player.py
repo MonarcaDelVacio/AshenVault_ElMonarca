@@ -57,13 +57,24 @@ class Player:
             self.ability["drone_lifetime"] = 20.0
         self.weapon = WeaponState(wdef)
         if getattr(cdef, "start_weapon", None) == getattr(wdef, "id", None):
-            # Arma inicial única del personaje: cargadores infinitos (pero
-            # cada cargador sigue consumiéndose y recargándose).
-            self.weapon.unlimited_ammo = True
-            self.weapon.reserve_magazines = 0
-            self.weapon.max_reserve_magazines = 0
-            # Se reduce el daño para compensar la munición/reserva infinita.
-            self.weapon.damage_mult = 0.70
+            weapon_class = getattr(wdef, "class", "")
+            if weapon_class in ("melee", "magic"):
+                # Melee y magia conservan USOS reales; no reciben reservas infinitas.
+                self.weapon.unlimited_ammo = False
+                self.weapon.reserve_magazines = 0
+                self.weapon.max_reserve_magazines = 0
+                self.weapon.durability = min(30, max(1, int(getattr(wdef, "durability", getattr(wdef, "magazine", 30)))))
+                self.weapon.max_durability = self.weapon.durability
+                self.weapon.ammo = self.weapon.durability
+            else:
+                # Las armas iniciales a distancia tienen reservas infinitas,
+                # pero cada cargador sigue consumiéndose y recargándose.
+                self.weapon.unlimited_ammo = True
+                self.weapon.reserve_magazines = 0
+                self.weapon.max_reserve_magazines = 0
+            # Se reduce ligeramente el daño de las armas iniciales a distancia
+            # para compensar la reserva infinita.
+            self.weapon.damage_mult = 0.70 if weapon_class not in ("melee", "magic") else 1.0
         self.inventory = [self.weapon]
         self.selected_slot = 0
         self.items = []
