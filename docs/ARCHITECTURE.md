@@ -535,3 +535,5 @@ placement behavior are unchanged. Regression tests cover the established values.
 
 Next renderer extractions will continue to target small dependency-safe helpers
 before moving any world-rendering or actor-rendering blocks.
+
+The fourth extraction is `game/rendering/background_geometry.py`, which now owns the connected edge-background trimming algorithm used by door and melee atlas processing. `Renderer._trim_edge_background()` remains as a compatibility wrapper, preserving existing call sites and behavior. Regression coverage verifies that connected white background is removed while isolated internal white pixels are preserved.
