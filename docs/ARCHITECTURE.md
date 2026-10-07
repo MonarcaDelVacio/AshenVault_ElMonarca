@@ -577,3 +577,6 @@ The second Phase 5 extraction targets the coin pickup/magnet simulation path. Ad
 
 
 The third Phase 5 extraction targets environmental hazards and expanding wave attacks. Added `game/systems/hazards.py`, which owns the existing prop-fade cleanup, hazard particle simulation, periodic player/enemy/drone damage, fire/poison DoT application, electric status application, and radial wave propagation/LOS handling. `Sim._update_hazards()` remains as a compatibility facade, so existing update-loop call sites and gameplay state remain unchanged. Focused regression tests cover fire damage/DoT, electric drone damage, single-hit wave behavior, and freeze-wave behavior. No hazard timing, damage, range, particle, or wave semantics were intentionally changed.
+
+
+The fourth Phase 5 extraction targets chest and room-reward generation. Added `game/systems/rewards.py`, which owns chest spawning/opening and the existing room reward rolls for items, keys, and weapon drops. `Sim._spawn_chest()`, `_open_chest()`, and `_drop_room_reward()` remain compatibility facades. Focused tests cover chest creation, weapon reward generation, and one-time opening. No reward probabilities, inventory rules, item selection, or event semantics were intentionally changed.
