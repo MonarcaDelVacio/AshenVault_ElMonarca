@@ -10,6 +10,7 @@ from .items import make_item, apply_item_bonuses
 from .chests import Chest
 from .statues import STATUE_BUFFS, statue_cost, statue_offer
 from .systems.status_effects import damage_shield, apply_dot, update_dot_effects, apply_freeze, freeze_duration
+from .systems.pickups import update_pickups
 
 class Input:
     def __init__(self):
@@ -1806,33 +1807,7 @@ class Sim:
                         if self.player.take_damage(wave["damage"], math.atan2(wave["y"]-self.player.y,wave["x"]-self.player.x)): self.on_player_hit(wave["x"],wave["y"],wave["damage"])
         self.wave_attacks=[w for w in self.wave_attacks if w["life"]>0]
 
-    def _update_pickups(self,dt):
-        """Actualiza monedas físicas y las recoge al acercarse el jugador."""
-        p=self.player
-        kept=[]
-        for pickup in self.pickups:
-            if pickup.get("kind") != "coin":
-                kept.append(pickup)
-                continue
-            dx,dy=pickup["x"]-p.x,pickup["y"]-p.y
-            dist=math.hypot(dx,dy)
-            magnet=64.0+float(getattr(p,"coin_radius",0))  # 2 bloques (TILE=32)
-            if dist <= magnet:
-                pickup_radius=float(pickup.get("radius",7.0))
-                collect_radius=float(getattr(p,"radius",10.0))+pickup_radius
-                if dist > collect_radius:
-                    pull=520.0*dt
-                    step=min(dist-collect_radius,max(0.0,pull))
-                    if dist > 0.001:
-                        pickup["x"] -= dx/dist*step
-                        pickup["y"] -= dy/dist*step
-                    kept.append(pickup)
-                    continue
-                # Cada item de moneda representa una sola moneda.
-                p.coins += 1
-                self.stats["coins"] += 1
-                self.emit("coin_pickup",pickup["x"],pickup["y"],1)
-            else:
-                kept.append(pickup)
-        self.pickups=kept
+    def _update_pickups(self, dt):
+        """Compatibility facade for the extracted pickup system."""
+        return update_pickups(self, dt)
 
