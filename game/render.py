@@ -659,13 +659,14 @@ class Renderer:
             index = getattr(wdef, "weapon_sprite_index", None)
             if sprite and wid not in self.weapon_images:
                 missing.append(f"arma {wid}: modelo individual no cargado ({sprite})")
-            elif sheet == "ranged":
-                if not isinstance(index, int) or index < 0 or index >= len(ranged_frames):
-                    missing.append(f"arma {wid}: frame ranged {index} no disponible")
+            elif sheet in ("ranged", "melee"):
+                frames = self.weapon_variant_frames.get(sheet, [])
+                if not isinstance(index, int) or index < 0 or index >= len(frames):
+                    missing.append(f"arma {wid}: frame {sheet} {index} no disponible")
                 else:
-                    frame = ranged_frames[index]
+                    frame = frames[index]
                     if frame.get_width() <= 1 or frame.get_height() <= 1:
-                        missing.append(f"arma {wid}: frame ranged {index} vacío")
+                        missing.append(f"arma {wid}: frame {sheet} {index} vacío")
             projectile = getattr(wdef, "projectile_sprite", None)
             if projectile and not str(projectile).startswith("__weapon_sheet__:") and projectile not in self.projectile_images:
                 missing.append(f"arma {wid}: proyectil no cargado ({projectile})")
@@ -859,7 +860,12 @@ class Renderer:
                 cell = self._trim_edge_background(cell, white_threshold=248)
                 bbox = cell.get_bounding_rect(min_alpha=8)
                 if bbox.width and bbox.height:
-                    frames.append(cell.subsurface(bbox).copy())
+                    frame = cell.subsurface(bbox).copy()
+                    frames.append(frame)
+                    self._register_loaded_frame(
+                        "weapon-melee", path, index, pygame.Rect(left, top, max(1, right - left), max(1, bottom - top)),
+                        frame, alpha_bounds=(bbox.x, bbox.y, bbox.width, bbox.height),
+                    )
                 else:
                     frames.append(pygame.Surface((1, 1), pygame.SRCALPHA))
 
