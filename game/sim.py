@@ -309,7 +309,7 @@ class Sim:
             room.enemies_spawned=True; room.doors_locked=True
         else:
             self.arena.open_doors()
-            self.chest=None
+            self.chest=getattr(room, "chest", None)
             if not room.special_resolved and not initial: self._resolve_special_room(room)
         if room.room_type == "shop":
             room_key = tuple(getattr(room, "id", getattr(self.arena, "room_id", (0, 0))))
