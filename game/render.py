@@ -2274,19 +2274,17 @@ class Renderer:
         self._draw_dynamic_shadows(screen, arena, sim, ox, oy)
         self._draw_decor_lights(screen, decor_lights, ox, oy, t)
         self.cam = (ox, oy)
-        # Puertas arquitectónicas de exactamente 2 bloques de ancho.
+        # Puertas arquitectónicas de 3 bloques, centradas en el eje de la sala.
         for d in arena.doors.values():
             horizontal=d.side in ("N","S")
             if horizontal:
                 x=(d.x-1)*TILE+int(ox)
-                # La puerta inferior conserva 1 bloque de altura. La superior
-                # ocupa toda la altura visual de la muralla: 2 bloques.
                 door_h = TILE*2 if d.side=="N" else TILE
                 y=(d.y-door_h//TILE+1)*TILE+int(oy) if d.side=="N" else d.y*TILE+int(oy)
-                span=pygame.Rect(x,y,TILE*2,door_h); cx,cy=span.center
+                span=pygame.Rect(x,y,TILE*3,door_h); cx,cy=span.center
             else:
                 x=d.x*TILE+int(ox); y=(d.y-1)*TILE+int(oy)
-                span=pygame.Rect(x,y,TILE,TILE*2); cx,cy=span.center
+                span=pygame.Rect(x,y,TILE,TILE*3); cx,cy=span.center
             frame=self.column_image
             if frame is not None and horizontal:
                 narrow=self._fit_cache.get(("door_narrow",id(frame)))
