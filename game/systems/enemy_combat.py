@@ -1,4 +1,12 @@
-"""Enemy attack execution extracted from Enemy without changing combat contracts.\n\nThe Enemy instance remains the state owner; this module only orchestrates\nmelee contact, projectile patterns, enemy weapon visuals and attack events.\n"""\nimport math\n\n\ndef attack(enemy, sim, dist):
+"""Enemy attack execution extracted from Enemy without changing combat contracts.
+
+The Enemy instance remains the state owner; this module only orchestrates
+melee contact, projectile patterns, enemy weapon visuals and attack events.
+"""
+import math
+
+
+def attack(enemy, sim, dist):
     d = enemy.d
     p = sim.player
     enemy.cooldown = d.cooldown
@@ -81,4 +89,4 @@
                              d.projectile_radius, 4.0, color,
                              dtype, 0, 0, False, projectile_sprite,
                              explosive, explosion_radius, False, 0.0, visual_scale)
-    sim.emit("enemy_shoot", enemy.x, enemy.y, pattern)\n
+    sim.emit("enemy_shoot", enemy.x, enemy.y, pattern)
