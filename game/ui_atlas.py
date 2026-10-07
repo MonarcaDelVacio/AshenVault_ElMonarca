@@ -179,7 +179,6 @@ class UIAtlas:
         "estadisticas": "char_estadisticas",
         "historia": "char_historia",
         "reanudar": "pause_reanudar",
-        "continuar": "pause_reanudar",
         "reiniciar run": "restart",
         "reiniciar": "restart",
         "salir al menu": "pause_abandonar",
@@ -244,7 +243,9 @@ class UIAtlas:
                 alpha[black_pixels] = 0
                 del rgb, alpha
                 self.regions = dict(self.REGIONS)
-                self.available = self.atlas.get_width() == 1536 and self.atlas.get_height() == 1024
+                # El atlas puede conservar el mismo layout aunque su PNG haya cambiado de
+                # compresion/resolucion. Validamos las regiones individualmente en _crop().
+                self.available = self.atlas.get_width() >= 1536 and self.atlas.get_height() >= 1024
         except (pygame.error, OSError, ValueError):
             self.atlas = None
             self.available = False
