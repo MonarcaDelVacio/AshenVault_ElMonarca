@@ -1450,303 +1450,80 @@ class Renderer:
 
 
     def _wall_boundary_orientation(self, arena, tx, ty):
-        """Clasifica una pared según la geometría real de la sala.
-
-        Las paredes exteriores del rectángulo lógico no se dibujan por defecto:
-        solo se consideran pared visual las celdas WALL que realmente tocan el
-        suelo de la silueta de la habitación. Esto permite que octágonos,
-        chaflanes y diamantes tengan una envolvente visual que siga su forma.
-
-        Retorna:
-            "horizontal" -> modelo frontal de 90° horizontal.
-            "diagonal"  -> modelo de 45°.
-            "vertical"   -> modelo de 90° vertical.
-            None         -> no es una pared visible de la silueta.
-        """
-        if arena.grid[ty][tx] != WALL:
+        """Detecta la orientación real de una pared a partir de la geometría de la sala."""
+        if not (0 <= tx < arena.cols and 0 <= ty < arena.rows) or arena.grid[ty][tx] != WALL:
             return None
-
         def floor(x, y):
-            return (
-                0 <= x < arena.cols
-                and 0 <= y < arena.rows
-                and arena.grid[y][x] == FLOOR
-            )
-
-        n, e, s, w = floor(tx, ty - 1), floor(tx + 1, ty), floor(tx, ty + 1), floor(tx - 1, ty)
-        cardinal = (n, e, s, w)
-
-        if not any(cardinal):
-            # En un chaflán/octágono algunos escalones de la frontera solo
-            # quedan conectados visualmente por una diagonal.
-            diagonals = (
-                floor(tx - 1, ty - 1), floor(tx + 1, ty - 1),
-                floor(tx - 1, ty + 1), floor(tx + 1, ty + 1),
-            )
-            return "diagonal" if any(diagonals) else None
-
-        # Dos caras perpendiculares del mismo borde forman la transición
-        # diagonal de 45°. No se debe dibujar como dos paredes cuadradas.
-        if (n and e) or (e and s) or (s and w) or (w and n):
-            return "diagonal"
-
+            return 0 <= x < arena.cols and 0 <= y < arena.rows and arena.grid[y][x] == FLOOR
+        n, e, s, w = floor(tx,ty-1), floor(tx+1,ty), floor(tx,ty+1), floor(tx-1,ty)
         if n or s:
-            return "horizontal"
+            return "diagonal" if e or w else "horizontal"
         if e or w:
             return "vertical"
+        if any((floor(tx-1,ty-1),floor(tx+1,ty-1),floor(tx-1,ty+1),floor(tx+1,ty+1))):
+            return "diagonal"
         return None
 
     def _draw_room_wall_models(self, target, arena, wall_models, ox=0, oy=0):
-        """Renderiza SOLO la frontera real de la sala con los tres modelos del atlas.
-
-        walls.png está compuesto por tres modelos: izquierda, frente y derecha.
-        La frontera se obtiene de las celdas WALL que tocan suelo real; por tanto,
-        el margen rectangular de la cuadrícula nunca recibe una pared visual.
-
-        Cada celda de frontera recibe como máximo un modelo. Los modelos se
-        escalan únicamente en su eje longitudinal a un bloque TILE, conservando
-        su proporción y su profundidad visual. Esto evita tanto el estiramiento
-        de un modelo sobre toda una sala como la duplicación accidental de una
-        misma pared sobre el mismo tramo.
-        """
+        """Delimita cada sala siguiendo su frontera real y su ángulo."""
         if not wall_models:
             return
-
         def floor(x, y):
-            return (
-                0 <= x < arena.cols
-                and 0 <= y < arena.rows
-                and arena.grid[y][x] == FLOOR
-            )
-
-        def side(tx, ty):
-            # A wall cell belongs to the visible room boundary only when it
-            # directly borders a floor cell. The floor direction determines
-            # which architectural model is used.
-            north, east, south, west = (
-                floor(tx, ty - 1), floor(tx + 1, ty),
-                floor(tx, ty + 1), floor(tx - 1, ty),
-            )
-            if not (north or east or south or west):
-                return None
-            # Bottom/front edge: floor is immediately north of the wall.
-            if north:
-                return "front"
-            # Left edge: floor is immediately east of the wall.
-            if east:
-                return "left"
-            # Right edge: floor is immediately west of the wall.
-            if west:
-                return "right"
-            # Back edge has no dedicated model. Reuse the front model mirrored
-            # vertically so it remains the same architectural family without
-            # inventing a fourth asset.
-            if south:
-                return "back"
-            return None
+            return 0 <= x < arena.cols and 0 <= y < arena.rows and arena.grid[y][x] == FLOOR
 
         boundary = {}
         for ty in range(arena.rows):
             for tx in range(arena.cols):
                 if arena.grid[ty][tx] != WALL:
                     continue
-                kind = side(tx, ty)
-                if kind:
-                    boundary[(tx, ty)] = kind
+                normals = [(dx,dy) for dx,dy in ((0,-1),(1,0),(0,1),(-1,0)) if floor(tx+dx,ty+dy)]
+                if normals:
+                    boundary[(tx,ty)] = (sum(x for x,_ in normals),sum(y for _,y in normals))
+                    continue
+                diagonals = [(dx,dy) for dx,dy in ((-1,-1),(1,-1),(-1,1),(1,1)) if floor(tx+dx,ty+dy)]
+                if diagonals:
+                    boundary[(tx,ty)] = (sum(x for x,_ in diagonals),sum(y for _,y in diagonals))
 
-        def piece_for(kind):
-            if kind == "left":
-                return wall_models.get("left")
-            if kind == "right":
-                return wall_models.get("right")
-            return wall_models.get("front")
-
-        def scaled_piece(image, horizontal):
-            if image is None:
-                return None
-            # Cache by image identity and orientation. The long axis occupies
-            # exactly one logical room block; the depth axis keeps its native ratio.
-            key = ("wall_piece", id(image), bool(horizontal))
-            cached = self._fit_cache.get(key)
-            if cached is not None:
-                return cached
-            if horizontal:
-                target_w = TILE
-                target_h = max(1, int(round(image.get_height() * TILE / max(1, image.get_width()))))
+        def fit(image):
+            if image is None: return None
+            key=("wall_piece_angle",id(image))
+            cached=self._fit_cache.get(key)
+            if cached is not None: return cached
+            if image.get_width() >= image.get_height():
+                size=(TILE,max(1,int(round(image.get_height()*TILE/image.get_width()))))
             else:
-                target_h = TILE
-                target_w = max(1, int(round(image.get_width() * TILE / max(1, image.get_height()))))
-            cached = pygame.transform.smoothscale(image, (target_w, target_h))
-            self._fit_cache[key] = cached
+                size=(max(1,int(round(image.get_width()*TILE/image.get_height()))),TILE)
+            cached=pygame.transform.smoothscale(image,size)
+            self._fit_cache[key]=cached
             return cached
 
-        # Draw in deterministic order. A wall cell is consumed exactly once,
-        # even at corners of non-rectangular rooms.
-        for ty in range(arena.rows):
-            for tx in range(arena.cols):
-                kind = boundary.get((tx, ty))
-                if kind is None:
-                    continue
-                image = piece_for(kind)
-                if image is None:
-                    continue
-
-                if kind in ("front", "back"):
-                    piece = scaled_piece(image, True)
-                    if piece is None:
-                        continue
-                    if kind == "front":
-                        # Front wall: its base sits on the south edge of the
-                        # logical WALL cell and the body rises toward the room.
-                        dest = piece.get_rect(
-                            midbottom=(int(ox + tx * TILE + TILE / 2),
-                                       int(oy + (ty + 1) * TILE))
-                        )
-                    else:
-                        # Back wall: mirror the same model so its depth projects
-                        # toward the exterior instead of into the room.
-                        piece = pygame.transform.flip(piece, False, True)
-                        dest = piece.get_rect(
-                            midtop=(int(ox + tx * TILE + TILE / 2),
-                                    int(oy + ty * TILE))
-                        )
-                else:
-                    piece = scaled_piece(image, False)
-                    if piece is None:
-                        continue
-                    if kind == "left":
-                        dest = piece.get_rect(
-                            midright=(int(ox + (tx + 1) * TILE),
-                                      int(oy + ty * TILE + TILE / 2))
-                        )
-                    else:
-                        dest = piece.get_rect(
-                            midleft=(int(ox + tx * TILE),
-                                     int(oy + ty * TILE + TILE / 2))
-                        )
-                target.blit(piece, dest)
-
-
-    def _background(self, arena):
-        key = (arena.biome, arena.room_id, arena.cols, arena.rows, getattr(arena, "floor_surface", None))
-        if self._bg_key == key:
-            return self._bg_cache
-        b = self.data.biomes[arena.biome]
-        surf = pygame.Surface((arena.width, arena.height + 10), pygame.SRCALPHA)
-        # Cada sala tiene una única superficie de suelo. La textura elegida se
-        # repite dentro de la sala, pero jamás se mezclan dos superficies.
-        floor_name = getattr(arena, "floor_surface", None)
-        floor_img = self.named_floor_images.get(floor_name) if floor_name else None
-        if str(arena.biome) == "snow" and floor_img is not None:
-            # El bioma nevado no necesita un atlas adicional: reutiliza la textura
-            # rocosa existente con una capa fría de nieve, manteniendo el patrón.
-            snow_key = ("snow_floor", id(floor_img))
-            snow_floor = self._fit_cache.get(snow_key)
-            if snow_floor is None:
-                snow_floor = floor_img.copy()
-                frost = pygame.Surface(snow_floor.get_size(), pygame.SRCALPHA)
-                frost.fill((205, 225, 248, 92))
-                snow_floor.blit(frost, (0, 0), special_flags=pygame.BLEND_RGBA_ADD)
-                self._fit_cache[snow_key] = snow_floor
-            floor_img = snow_floor
-
-        if floor_img is None:
-            fallback_by_biome = {
-                "ruins": 10, "forest": 5, "dungeon": 9,
-                "laboratory": 2, "volcanic": 7, "desert": 10,
-                "swamp": 5, "snow": 9, "final": 11,
-            }
-            floor_img = self.floor_images.get(fallback_by_biome.get(arena.biome, 1))
-        wall_models = self._wall_models_for_biome(arena.biome)
-        # Las texturas antiguas quedan únicamente como fallback para geometría
-        # interior excepcional; el perímetro principal usa walls.png.
-        wall_band = (sum(ord(ch) for ch in str(arena.biome)) % 3)
-        wall_fill = self.wall_fill_images.get(str(wall_band)) or self.wall_fill_images.get("0")
-        wall_cap = self.wall_top_images.get("default")
-        for ty in range(arena.rows):
-            for tx in range(arena.cols):
-                t = arena.grid[ty][tx]
-                r = pygame.Rect(tx * TILE, ty * TILE, TILE, TILE)
-                if t == FLOOR:
-                    if floor_img is not None:
-                        surf.blit(floor_img, r)
-                    else:
-                        pygame.draw.rect(surf, b["floor_a"] if (tx + ty) % 2 == 0 else b["floor_b"], r)
-                elif t == WALL:
-                    # Las celdas WALL que no tocan el suelo de la silueta son
-                    # solo el margen técnico de la cuadrícula y no forman parte
-                    # visual de la sala.
-                    if self._wall_boundary_orientation(arena, tx, ty) is None:
-                        continue
-                    piece_key = self._wall_piece_key(arena, tx, ty)
-                    piece = self.wall_piece_images.get(piece_key) if piece_key else None
-                    if piece is None:
-                        if wall_fill is not None:
-                            surf.blit(wall_fill, r)
-                        else:
-                            pygame.draw.rect(surf, b["wall"], r)
-                        # Compatibilidad con los atlas antiguos cuando no hay sprite individual.
-                        below_is_floor = ty + 1 < arena.rows and arena.grid[ty + 1][tx] == FLOOR
-                        if wall_cap is not None and below_is_floor:
-                            surf.blit(wall_cap, r)
-                        else:
-                            pygame.draw.rect(surf, b["wall_top"], (r.x, r.y, TILE, 4))
-                        pygame.draw.rect(surf, (30, 26, 34), r, 1)
-                elif t in (PILLAR, TORCH_PILLAR):
-                    pillar_image = self.torch_column_image if t == TORCH_PILLAR else self.column_image
-                    if pillar_image is None:
-                        if wall_fill is not None:
-                            surf.blit(wall_fill, r)
-                        else:
-                            pygame.draw.rect(surf, b["pillar"], r)
-                        pygame.draw.rect(surf, b["pillar_top"], (r.x, r.y, TILE, 5))
-                        pygame.draw.rect(surf, (40, 30, 24), r, 1)
-                elif t == SECRET:
-                    if wall_fill is not None:
-                        surf.blit(wall_fill, r)
-                    else:
-                        pygame.draw.rect(surf, b["wall"], r)
-                    pygame.draw.rect(surf, (145, 90, 165), r, 2)
-                    pygame.draw.line(surf, (175, 115, 190), (r.x+7,r.y+7), (r.right-7,r.bottom-7), 2)
-                    pygame.draw.line(surf, (175, 115, 190), (r.right-7,r.y+7), (r.x+7,r.bottom-7), 2)
-        # La envolvente visual sigue la silueta real de la sala.
-        # No se dibuja el borde rectangular exterior de la cuadrícula.
-        self._draw_room_wall_models(surf, arena, wall_models)
-
-        # Dibuja las paredes altas en una segunda pasada para que el suelo no tape
-        # la mitad que sobresale de la casilla. Las paredes superiores crecen hacia
-        # abajo dentro de la sala; las inferiores y laterales se apoyan por la base.
-        # Las formas internas no rectangulares conservan el relleno del bioma;
-        # los modelos de walls.png quedan reservados al perímetro principal.
-
-        # Las columnas interiores usan columna.png. Se dibujan en el fondo y se
-        # vuelven a dibujar por delante de los actores que estén detrás de ellas.
-        for ty, row in enumerate(arena.grid):
-            for tx, tile in enumerate(row):
-                if tile not in (PILLAR, TORCH_PILLAR):
-                    continue
-                pillar_image = self.torch_column_image if tile == TORCH_PILLAR else self.column_image
-                if pillar_image is not None:
-                    rect = pillar_image.get_rect(midbottom=(tx * TILE + TILE // 2, (ty + 1) * TILE))
-                    surf.blit(pillar_image, rect)
-        shape = getattr(arena, "shape", "rectangle")
-        if shape in ("octagon", "diamond", "chamfer"):
-            edge = max(6, TILE // 3)
-            if shape == "diamond":
-                pts = [(arena.width/2, 0), (arena.width, arena.height/2),
-                       (arena.width/2, arena.height), (0, arena.height/2)]
+        for (tx,ty),(nx,ny) in boundary.items():
+            if not (nx or ny): continue
+            diagonal=abs(nx)==abs(ny)
+            if diagonal:
+                image=wall_models.get("front")
+            elif abs(nx)>abs(ny):
+                image=wall_models.get("left" if nx>0 else "right")
             else:
-                cut = 4 * TILE
-                pts = [(cut, 0), (arena.width-cut, 0), (arena.width, cut),
-                       (arena.width, arena.height-cut), (arena.width-cut, arena.height),
-                       (cut, arena.height), (0, arena.height-cut), (0, cut)]
-            edge_color = self.data.biomes[arena.biome]["wall_top"]
-            for a, z in zip(pts, pts[1:] + pts[:1]):
-                pygame.draw.line(surf, edge_color, a, z, edge)
-                pygame.draw.line(surf, tuple(min(255, c + 18) for c in edge_color), a, z, 2)
-        self._bg_cache, self._bg_key = surf, key
-        return surf
+                image=wall_models.get("front")
+            piece=fit(image)
+            if piece is None: continue
 
+            if diagonal:
+                # El mismo modelo existente sirve para ambos sentidos del chaflán.
+                piece=pygame.transform.rotate(piece,-45 if nx*ny>0 else 45)
+                if nx+ny<0:
+                    piece=pygame.transform.flip(piece,True,False)
+            elif abs(nx)>abs(ny):
+                if nx<0:
+                    piece=pygame.transform.flip(piece,True,False)
+            elif ny>0:
+                piece=pygame.transform.flip(piece,False,True)
+
+            length=max(1.0,math.hypot(nx,ny))
+            cx=ox+tx*TILE+TILE/2-(nx/length)*TILE*0.18
+            cy=oy+ty*TILE+TILE/2-(ny/length)*TILE*0.18
+            target.blit(piece,piece.get_rect(center=(int(cx),int(cy))))
     def _draw_architecture_foreground(self, screen, arena, sim, decor_lights, ox, oy):
         """Oculta las paredes de la silueta cuando el jugador está junto a ellas.
 
