@@ -6,6 +6,7 @@ from pathlib import Path
 from .world import TILE, FLOOR, WALL, PILLAR, SECRET, TORCH_PILLAR, bonfire_positions
 from .ui_atlas import UIAtlas
 from .assets import AssetRegistry
+from .assets.bounds import decoration_max_size
 
 VIEW_W, VIEW_H = 960, 540
 
@@ -1969,15 +1970,7 @@ class Renderer:
                 image=self.decoration_images.get(f"{kind}_{variant%6+1}")
             if image is None:
                 return False
-            max_size={
-                "fountain_active":104,"fountain_inactive":104,"fountain_small":68,"well_empty":104,
-                "bench_large":92,"bench_small":66,"barrel_large":62,"signpost":70,"crate_stack":76,
-                "crate_pair":68,"table":72,"counter":84,"wood_chest_decor":68,
-                "statue_goddess":640,"statue_archer":640,"statue_assassin":640,
-                "statue_knight":640,"statue_mage":640,"bush":56,"rock":58,
-                "biome_red_bush":86,"biome_lava_rock":88,
-                "biome_lava_rock_purple":82,"biome_shared_rock":88,
-            }.get(kind,56)
+        max_size=decoration_max_size(kind)
             image=self._fit_image(image,max_size)
             if image is None:
                 return False
@@ -2027,15 +2020,7 @@ class Renderer:
             bbox=image.get_bounding_rect(min_alpha=8)
             if not bbox.width or not bbox.height:
                 return None
-            max_size={
-                "fountain_active":104,"fountain_inactive":104,"fountain_small":68,"well_empty":104,
-                "bench_large":92,"bench_small":66,"barrel_large":62,"signpost":70,"crate_stack":76,
-                "crate_pair":68,"table":72,"counter":84,"wood_chest_decor":68,
-                "statue_goddess":640,"statue_archer":640,"statue_assassin":640,"statue_knight":640,"statue_mage":640,
-                "bush":56,"rock":58,
-                "biome_red_bush":86,"biome_lava_rock":88,
-                "biome_lava_rock_purple":82,"biome_shared_rock":88,
-            }.get(kind,56)
+        max_size=decoration_max_size(kind)
             scale=max_size/max(1,image.get_width(),image.get_height())
             visible_w=bbox.width*scale; visible_h=bbox.height*scale
             # El tamaño físico de la estatua deriva del mismo PNG y escala
@@ -2064,17 +2049,7 @@ class Renderer:
         base_y=float(deco.get("y",0))*TILE+TILE
         x=float(deco.get("x",0))*TILE+TILE/2+ox
         y=base_y+oy
-        max_size={
-            "fountain_active":104,"fountain_inactive":104,"fountain_small":68,
-            "well_empty":104,"bench_large":92,"bench_small":66,"barrel_large":62,
-            "signpost":70,"crate_stack":76,"crate_pair":68,"table":72,"counter":84,
-            "wood_chest_decor":68,
-            "statue_goddess":510,"statue_archer":510,"statue_assassin":510,
-            "statue_knight":510,"statue_mage":510,
-            "bush":56,"rock":58,
-            "biome_red_bush":86,"biome_lava_rock":88,
-            "biome_lava_rock_purple":82,"biome_shared_rock":88,
-        }.get(kind,56)
+        max_size=decoration_max_size(kind)
         frames = self.decoration_frames.get(kind)
         if frames:
             if kind.startswith("biome_"):
