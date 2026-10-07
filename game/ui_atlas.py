@@ -432,28 +432,18 @@ class UIAtlas:
         if image is None:
             return False
 
-        # Conserva la proporción real del PNG. El rectángulo visible resultante
-        # es el que se utiliza para calcular la posición del track.
-        iw, ih = image.get_size()
-        scale = min(
-            target.width / max(1, iw),
-            target.height / max(1, ih),
-        )
-        rendered_size = (
-            max(1, round(iw * scale)),
-            max(1, round(ih * scale)),
-        )
-        rendered_rect = pygame.Rect(0, 0, rendered_size[0], rendered_size[1])
-        rendered_rect.center = target.center
-        if rendered_size == image.get_size():
-            screen.blit(image, rendered_rect)
-        else:
-            screen.blit(pygame.transform.smoothscale(image, rendered_size), rendered_rect)
+        # Todas las barras del HUD utilizan exactamente el mismo rectángulo de
+        # destino. El atlas contiene marcos con alturas originales diferentes,
+        # por lo que aquí se normalizan a un tamaño común en pantalla.
+        rendered_rect = target.copy()
+        if image.get_size() != rendered_rect.size:
+            image = pygame.transform.smoothscale(image, rendered_rect.size)
+        screen.blit(image, rendered_rect)
 
         ratio = max(0.0, min(1.0, float(ratio)))
 
-        # Para las barras completas, la posición del track se obtiene directamente
-        # de REGIONS: track_rect - full_bar_rect. No se usan proporciones antiguas.
+        # La geometría del track sigue saliendo de REGIONS. Sus offsets se
+        # transforman independientemente en X/Y hacia el tamaño común.
         if source_key == full_key:
             full_rect = pygame.Rect(self.regions[full_key])
             track_rect = pygame.Rect(self.regions[track_key])
@@ -462,7 +452,6 @@ class UIAtlas:
             sw = track_rect.width / max(1, full_rect.width)
             sh = track_rect.height / max(1, full_rect.height)
         else:
-            source_rect = pygame.Rect(self.regions[source_key])
             sx, sy, sw, sh = 0.0, 0.0, 1.0, 1.0
 
         tx = rendered_rect.x + round(rendered_rect.width * sx)
