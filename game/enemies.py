@@ -268,11 +268,35 @@ class Enemy:
             sim.emit("enemy_dodge",self.x,self.y)
             return True
         if self.rng.random()<float(getattr(self.d,"cover_chance",0.12)):
-            props=[q for q in getattr(sim,"props",[]) if not q.get("broken") and math.hypot(q["x"]-self.x,q["y"]-self.y)<150]
+            # Buscar cobertura real contra el proyectil, no simplemente el prop
+            # más cercano. El enemigo debe colocarse en el lado opuesto al
+            # proyectil para que el obstáculo quede entre ambos.
+            vx,vy=pr.vx,pr.vy
+            vn=math.hypot(vx,vy) or 1.0
+            ux,uy=vx/vn,vy/vn
+            props=[]
+            for q in getattr(sim,"props",()):
+                if q.get("broken"):
+                    continue
+                qx,qy=float(q.get("x",0)),float(q.get("y",0))
+                ex,ey=qx-self.x,qy-self.y
+                along=ex*ux+ey*uy
+                if along <= 0 or along > 180:
+                    continue
+                lateral=abs(ex*uy-ey*ux)
+                qr=float(q.get("radius",16.0))
+                if lateral <= qr + self.radius + 18:
+                    # Punto protegido: el prop queda entre el enemigo y la
+                    # dirección de llegada del proyectil.
+                    cover_x=qx+ux*(qr+self.radius+10.0)
+                    cover_y=qy+uy*(qr+self.radius+10.0)
+                    distance=math.hypot(cover_x-self.x,cover_y-self.y)
+                    if distance <= 220:
+                        props.append((distance,q,cover_x,cover_y))
             if props:
-                q=min(props,key=lambda o:math.hypot(o["x"]-self.x,o["y"]-self.y))
-                self._step(sim,q["x"]-self.x,q["y"]-self.y,self.d.speed*0.9,dt)
-                sim.emit("enemy_cover",self.x,self.y)
+                _,q,cx,cy=min(props,key=lambda item:item[0])
+                self._step(sim,cx-self.x,cy-self.y,self.d.speed*1.15,dt)
+                sim.emit("enemy_cover",self.x,self.y,q.get("kind","prop"))
                 return True
         return False
 
