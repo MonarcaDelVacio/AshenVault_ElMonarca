@@ -37,6 +37,8 @@ def validate_data_graph(data):
     errors.extend(_ref_errors("enemigo", enemies, weapons, "weapon_id"))
 
     for ident, raw in enemies.items():
+        if raw.get("sprite_set") is not None and not isinstance(raw.get("sprite_set"), str):
+            errors.append(f"enemigo {ident}: sprite_set inválido")
         for field in ("summon_ids",):
             for target in raw.get(field, []) or []:
                 if target not in enemies:
