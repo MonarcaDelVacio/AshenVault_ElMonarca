@@ -10,9 +10,11 @@ from .items import make_item, apply_item_bonuses
 from .chests import Chest
 from .statues import STATUE_BUFFS, statue_cost, statue_offer
 from .systems.status_effects import damage_shield, apply_dot, update_dot_effects, apply_freeze, freeze_duration
-from .systems.pickups import update_pickups\nfrom .systems.hazards import update_hazards
+from .systems.pickups import update_pickups
+from .systems.hazards import update_hazards
 from .systems.shop import setup_shop, buy_shop_offer
 from .systems.rewards import spawn_chest, open_chest, drop_room_reward
+from .systems.interaction import try_interact
 
 class Input:
     def __init__(self):
@@ -1034,7 +1036,16 @@ class Sim:
             "treasure": "common",
         }.get(room_type)
 
-    def _spawn_chest(self, chest_type="common"):\n        """Compatibility facade for the extracted reward/chest system."""\n        return spawn_chest(self, chest_type)\n    def _open_chest(self):\n        """Compatibility facade for the extracted chest opening system."""\n        return open_chest(self)\n    def _drop_room_reward(self, guaranteed=False, quality=0, position=None):\n        """Compatibility facade for the extracted room reward system."""\n        return drop_room_reward(self, guaranteed, quality, position)\n    def _active_statue(self):
+    def _spawn_chest(self, chest_type="common"):
+        """Compatibility facade for the extracted reward/chest system."""
+        return spawn_chest(self, chest_type)
+    def _open_chest(self):
+        """Compatibility facade for the extracted chest opening system."""
+        return open_chest(self)
+    def _drop_room_reward(self, guaranteed=False, quality=0, position=None):
+        """Compatibility facade for the extracted room reward system."""
+        return drop_room_reward(self, guaranteed, quality, position)
+    def _active_statue(self):
         for deco in getattr(self.arena, "decorations", []):
             kind=deco.get("kind")
             statue_key=(tuple(self.room.id), int(deco.get("x",0)), int(deco.get("y",0)))
@@ -1111,71 +1122,12 @@ class Sim:
         self.emit("weapon_break",player.x,player.y)
         return True
 
+    def _distance(self, x0, y0, x1, y1):
+        return math.hypot(x0 - x1, y0 - y1)
+
     def _try_interact(self):
-        p=self.player
-        if self.portal:
-            px,py=self.portal_position
-            if math.hypot(px-p.x,py-p.y) < 78:
-                self._enter_next_dungeon()
-                return True
-        if self._open_statue_menu():
-            return True
-        if self.chest is not None and not self.chest.is_open:
-            if math.hypot(self.chest.x-p.x, self.chest.y-p.y) < 72:
-                if self._open_chest(): return
-        if self.room.room_type == "shop":
-            for offer in self.shop_offers:
-                if math.hypot(offer.x-p.x,offer.y-p.y)<55 and self._buy_shop_offer(offer): return
-        # pickup nearest item/key represented in the pure simulation list
-        for item in list(self.items):
-            if hasattr(item,'x'): ix,iy=item.x,item.y
-            else: ix,iy=self.arena.width/2,self.arena.height/2
-            if math.hypot(ix-p.x,iy-p.y)<48:
-                if getattr(item,'kind','item')=='weapon':
-                    weapon_id = item.weapon_id
-                    existing = next((w for w in p.inventory if w.d.id == weapon_id), None)
-                    if existing is not None:
-                        incoming = WeaponState(self.data.weapons[weapon_id])
-                        if getattr(existing.d,"class","") == "melee":
-                            existing.durability=min(existing.max_durability, existing.durability+incoming.durability)
-                        else:
-                            existing.ammo=min(existing.d.magazine, existing.ammo+incoming.ammo)
-                            existing.reserve_magazines=min(existing.max_reserve_magazines,
-                                existing.reserve_magazines+incoming.reserve_magazines)
-                        self.items.remove(item)
-                    elif len(p.inventory) < 3:
-                        new_weapon = WeaponState(self.data.weapons[weapon_id])
-                        p.inventory.append(new_weapon)
-                        p.selected_slot=len(p.inventory)-1
-                        p.weapon = new_weapon
-                        self.items.remove(item)
-                    else:
-                        # Con el inventario lleno se cambia el arma seleccionada
-                        # por la del suelo y se deja caer la anterior en ese lugar.
-                        selected_index = p.inventory.index(p.weapon)
-                        old_weapon = p.inventory[selected_index]
-                        p.inventory[selected_index] = WeaponState(self.data.weapons[weapon_id])
-                        p.weapon = p.inventory[selected_index]
-                        item.weapon_id = old_weapon.d.id
-                        item.id = old_weapon.d.id
-                        item.name = old_weapon.d.name
-                        item.x, item.y = self._safe_drop_position(ix + 28, iy, 10.0)
-                    self.emit('weapon_pickup',p.x,p.y,weapon_id); return
-                if getattr(item,'kind',None)=='heal':
-                    old_hp=p.hp; p.hp=min(p.max_hp,p.hp+2)
-                    if p.hp>old_hp: p.set_status("heal",1.8); p.feedback_flash("heal",.26); self.emit('heal_pickup',p.x,p.y,p.hp-old_hp)
-                    self.items.remove(item); self.emit('item_pickup',p.x,p.y,'heal'); return
-                if getattr(item,'kind',None)=='energy':
-                    old_energy=p.energy; p.energy=min(p.max_energy,p.energy+30)
-                    if p.energy>old_energy: p.feedback_flash("energy",.26); self.emit('energy_pickup',p.x,p.y,p.energy-old_energy)
-                    self.items.remove(item); self.emit('item_pickup',p.x,p.y,'energy'); return
-                if getattr(item,'kind',None)=='ammo':
-                    magazines=max(1,int(getattr(item,'magazines',1)))
-                    target=p.weapon if p.weapon is not None and getattr(p.weapon.d,"class","")!="melee" else next((w for w in p.inventory if getattr(w.d,"class","")!="melee"),None)
-                    if target is not None:
-                        target.reserve_magazines=min(target.max_reserve_magazines,target.reserve_magazines+magazines)
-                        self.items.remove(item); self.emit('ammo_pickup',p.x,p.y,magazines); return
-                apply_item_bonuses(p,item); self.items.remove(item); self.emit('item_pickup',p.x,p.y,getattr(item,'id',getattr(item,'kind','item'))); return
+        """Compatibility facade for the extracted interaction system."""
+        return try_interact(self)
     def _enter_next_dungeon(self):
         """Usa el portal de la sala final y encadena otra dungeon mas dificil."""
         self.room.items=self.items; self.room.pickups=self.pickups
