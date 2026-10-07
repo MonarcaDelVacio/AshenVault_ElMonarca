@@ -639,3 +639,12 @@ Regression coverage in `tests/test_generation_validation.py` audits a seed batch
 The next Phase 8 slice expanded this contract into large deterministic seed batches. Room validation now covers all 16 combinations of active door sides, verifies every door has a floor route to the player spawn, checks duplicate/out-of-floor spawns and rejects perimeter openings that do not correspond to a door. Dungeon-level validation also checks start/final room types, the six-boss structure and spacing between special/no-enemy rooms and minibosses.
 
 The audit is intentionally validation-only at this stage: the procedural generator was not changed because no concrete generation defect was established by static inspection. The expanded tests cover 128 layout seeds, 64 seeds across all supported room types and door combinations, and 64 constructed dungeons. These tests have been added but have not been executed in the available GitHub environment.
+
+
+### Phase 8/9 continuation — generation spacing, physical clearance and room topology
+- Boss placement now rejects cardinally adjacent boss rooms while preserving the six-boss structure and the minimum path-index spacing between zones.
+- Generation validation now treats only FLOOR (0) as walkable; pillar/torch-pillar cells remain solid, matching Arena.solid_tile().
+- Room validation audits physical decoration clearance against the shared decoration collision radii for player/item/enemy spawns and immediate door volume.
+- Room topology validation begins Phase 9: every dungeon-room adjacency must have symmetric doors, and every non-adjacent direction must remain closed/nonexistent.
+- Regression coverage was added for boss spatial spacing, pillar solidity, room-door topology and decoration/spawn clearance.
+- These tests are prepared but not runtime-executed through the available GitHub integration.
