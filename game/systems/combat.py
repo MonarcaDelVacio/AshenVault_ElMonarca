@@ -141,11 +141,6 @@ def _update_projectiles(sim,dt):
                         pr.active=False
                     sim.emit("wall_hit",pr.x,pr.y,pr.color);break
                 pr.x,pr.y=nx,ny
-                if sim._chest_collision(pr.x,pr.y,pr.radius):
-                    if pr.explosive: sim._explode_projectile(pr)
-                    else: pr.active=False
-                    sim.emit("chest_hit",pr.x,pr.y,pr.color)
-                    break
                 hit_prop=sim._damage_props(pr.x,pr.y,pr.damage,pr.explosive,pr.color)
                 if hit_prop:
                     if pr.explosive: sim._explode_projectile(pr)
