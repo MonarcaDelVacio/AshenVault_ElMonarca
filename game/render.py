@@ -342,7 +342,7 @@ class Renderer:
                         rects.append(rect)
                 rects = sorted(rects, key=lambda rr: rr.width * rr.height, reverse=True)[:3]
                 rects.sort(key=lambda rr: rr.centerx)
-                for name, rect in zip(("left", "front", "right"), rects):
+                for name, rect in zip(("diagonal", "horizontal", "vertical"), rects):
                     frame = atlas.subsurface(rect).copy()
                     if frame.get_width() > 0 and frame.get_height() > 0:
                         self.wall_models[name] = frame
@@ -1361,6 +1361,135 @@ class Renderer:
         self._fit_cache[key] = strip
         return strip
 
+    def _wall_boundary_orientation(self, arena, tx, ty):
+        """Clasifica una pared según la geometría real de la sala.
+
+        Las paredes exteriores del rectángulo lógico no se dibujan por defecto:
+        solo se consideran pared visual las celdas WALL que realmente tocan el
+        suelo de la silueta de la habitación. Esto permite que octágonos,
+        chaflanes y diamantes tengan una envolvente visual que siga su forma.
+
+        Retorna:
+            "horizontal" -> modelo frontal de 90° horizontal.
+            "diagonal"  -> modelo de 45°.
+            "vertical"   -> modelo de 90° vertical.
+            None         -> no es una pared visible de la silueta.
+        """
+        if arena.grid[ty][tx] != WALL:
+            return None
+
+        def floor(x, y):
+            return (
+                0 <= x < arena.cols
+                and 0 <= y < arena.rows
+                and arena.grid[y][x] == FLOOR
+            )
+
+        n, e, s, w = floor(tx, ty - 1), floor(tx + 1, ty), floor(tx, ty + 1), floor(tx - 1, ty)
+        cardinal = (n, e, s, w)
+
+        if not any(cardinal):
+            # En un chaflán/octágono algunos escalones de la frontera solo
+            # quedan conectados visualmente por una diagonal.
+            diagonals = (
+                floor(tx - 1, ty - 1), floor(tx + 1, ty - 1),
+                floor(tx - 1, ty + 1), floor(tx + 1, ty + 1),
+            )
+            return "diagonal" if any(diagonals) else None
+
+        # Dos caras perpendiculares del mismo borde forman la transición
+        # diagonal de 45°. No se debe dibujar como dos paredes cuadradas.
+        if (n and e) or (e and s) or (s and w) or (w and n):
+            return "diagonal"
+
+        if n or s:
+            return "horizontal"
+        if e or w:
+            return "vertical"
+        return None
+
+    def _draw_room_wall_models(self, target, arena, wall_models, ox=0, oy=0):
+        """Dibuja las paredes siguiendo exclusivamente el borde de la sala.
+
+        No utiliza el perímetro rectangular completo. Agrupa tramos horizontales
+        y verticales para que los modelos se repitan de forma continua y usa el
+        modelo de 45° únicamente en las transiciones diagonales.
+        """
+        if not wall_models:
+            return
+
+        boundary = {}
+        for ty in range(arena.rows):
+            for tx in range(arena.cols):
+                orientation = self._wall_boundary_orientation(arena, tx, ty)
+                if orientation:
+                    boundary[(tx, ty)] = orientation
+
+        # Tramos horizontales: una única tira por segmento continuo.
+        horizontal = sorted((tx, ty) for (tx, ty), kind in boundary.items() if kind == "horizontal")
+        used = set()
+        for tx, ty in horizontal:
+            if (tx, ty) in used or (tx - 1, ty) in boundary and boundary[(tx - 1, ty)] == "horizontal":
+                continue
+            run = []
+            x = tx
+            while (x, ty) in boundary and boundary[(x, ty)] == "horizontal":
+                run.append(x)
+                used.add((x, ty))
+                x += 1
+            image = wall_models.get("horizontal")
+            if image is None:
+                continue
+            strip = self._tiled_wall_strip(image, True, len(run) * TILE)
+            # Si el suelo está al sur, la pared está sobre el suelo; si está al
+            # norte, queda debajo. El modelo conserva la misma lectura frontal.
+            has_south = any(
+                0 <= y + 1 < arena.rows and arena.grid[y + 1][xx] == FLOOR
+                for xx in run for y in (ty,)
+            )
+            y_pos = ty * TILE - TILE if has_south else ty * TILE
+            target.blit(strip, (int(ox + run[0] * TILE), int(oy + y_pos)))
+
+        # Tramos verticales.
+        vertical = sorted((tx, ty) for (tx, ty), kind in boundary.items() if kind == "vertical")
+        used.clear()
+        for tx, ty in vertical:
+            if (tx, ty) in used or (tx, ty - 1) in boundary and boundary[(tx, ty - 1)] == "vertical":
+                continue
+            run = []
+            y = ty
+            while (tx, y) in boundary and boundary[(tx, y)] == "vertical":
+                run.append(y)
+                used.add((tx, y))
+                y += 1
+            image = wall_models.get("vertical")
+            if image is None:
+                continue
+            strip = self._tiled_wall_strip(image, False, len(run) * TILE)
+            has_east = any(
+                0 <= tx + 1 < arena.cols and arena.grid[yy][tx + 1] == FLOOR
+                for yy in run
+            )
+            x_pos = tx * TILE - TILE if has_east else tx * TILE
+            target.blit(strip, (int(ox + x_pos), int(oy + run[0] * TILE)))
+
+        # Transiciones/cortes a 45°. Se dibujan una sola vez por celda para
+        # evitar que las esquinas se conviertan en bloques rectangulares.
+        diagonal = wall_models.get("diagonal")
+        if diagonal is not None:
+            for (tx, ty), kind in boundary.items():
+                if kind != "diagonal":
+                    continue
+                scaled_w = TILE * 2
+                scaled_h = max(1, int(round(
+                    diagonal.get_height() * scaled_w / max(1, diagonal.get_width())
+                )))
+                sprite = pygame.transform.smoothscale(diagonal, (scaled_w, scaled_h))
+                rect = sprite.get_rect(
+                    center=(int(ox + tx * TILE + TILE / 2), int(oy + ty * TILE + TILE / 2))
+                )
+                target.blit(sprite, rect)
+
     def _background(self, arena):
         key = (arena.biome, arena.room_id, arena.cols, arena.rows, getattr(arena, "floor_surface", None))
         if self._bg_key == key:
@@ -1425,18 +1554,9 @@ class Renderer:
                     pygame.draw.rect(surf, (145, 90, 165), r, 2)
                     pygame.draw.line(surf, (175, 115, 190), (r.x+7,r.y+7), (r.right-7,r.bottom-7), 2)
                     pygame.draw.line(surf, (175, 115, 190), (r.right-7,r.y+7), (r.x+7,r.bottom-7), 2)
-        # Perímetro principal: un modelo horizontal y dos laterales forman
-        # toda la envolvente de la sala. Se escala a la dimensión real del room.
-        if wall_models.get("front") is not None:
-            front = self._tiled_wall_strip(wall_models["front"], True, arena.width)
-            surf.blit(front, (0, -TILE))
-            surf.blit(front, (0, arena.height - TILE * 2))
-        if wall_models.get("left") is not None:
-            left = self._tiled_wall_strip(wall_models["left"], False, arena.height)
-            surf.blit(left, (-TILE, 0))
-        if wall_models.get("right") is not None:
-            right = self._tiled_wall_strip(wall_models["right"], False, arena.height)
-            surf.blit(right, (arena.width - TILE, 0))
+        # La envolvente visual sigue la silueta real de la sala.
+        # No se dibuja el borde rectangular exterior de la cuadrícula.
+        self._draw_room_wall_models(surf, arena, wall_models)
 
         # Dibuja las paredes altas en una segunda pasada para que el suelo no tape
         # la mitad que sobresale de la casilla. Las paredes superiores crecen hacia
@@ -1490,19 +1610,20 @@ class Renderer:
                                 midbottom=(int(tx * TILE + TILE // 2 + ox), int(base_y + oy)))
                             screen.blit(pillar_image, rect)
                 elif tile == WALL:
-                    wall_models = self._wall_models_for_biome(arena.biome)
-                    if ty == 0 and player_y < TILE * 1.5 and wall_models.get("front") is not None:
-                        top = self._tiled_wall_strip(wall_models["front"], True, arena.width)
-                        screen.blit(top, (int(ox), int(oy - TILE)))
-                    elif ty == arena.rows - 1 and player_y > arena.height - TILE * 1.5 and wall_models.get("front") is not None:
-                        bottom = self._tiled_wall_strip(wall_models["front"], True, arena.width)
-                        screen.blit(bottom, (int(ox), int(oy + arena.height - TILE * 2)))
-                    elif tx == 0 and sim.player.x < TILE * 1.5 and wall_models.get("left") is not None:
-                        left = self._tiled_wall_strip(wall_models["left"], False, arena.height)
-                        screen.blit(left, (int(ox - TILE), int(oy)))
-                    elif tx == arena.cols - 1 and sim.player.x > arena.width - TILE * 1.5 and wall_models.get("right") is not None:
-                        right = self._tiled_wall_strip(wall_models["right"], False, arena.height)
-                        screen.blit(right, (int(ox + arena.width - TILE), int(oy)))
+                    # Las paredes ya no se consideran un rectángulo exterior.
+                    # Solo se superponen las piezas de la silueta real cuando
+                    # están cerca del jugador, conservando la oclusión local.
+                    if self._wall_boundary_orientation(arena, tx, ty):
+                        wall_models = self._wall_models_for_biome(arena.biome)
+                        near = math.hypot(
+                            sim.player.x - (tx * TILE + TILE / 2),
+                            sim.player.y - (ty * TILE + TILE / 2),
+                        ) <= TILE * 1.75
+                        if near:
+                            self._draw_room_wall_models(
+                                screen, arena, wall_models, ox, oy
+                            )
+                            break
 
     def _draw_dynamic_shadows(self, screen, arena, sim, ox, oy):
         """Sombras dinamicas con una sola capa reutilizable y posiciones de pilares cacheadas."""
