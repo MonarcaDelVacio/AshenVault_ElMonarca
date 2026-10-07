@@ -333,25 +333,51 @@ def _update_lasers(sim,dt):
         sim.lasers=active
 
 
+def _ray_circle_hit_distance(ox, oy, ux, uy, cx, cy, radius):
+        """Distance from a ray origin to the first intersection with a circle."""
+        dx, dy = cx - ox, cy - oy
+        projection = dx * ux + dy * uy
+        if projection < 0.0:
+            return None
+        perpendicular_sq = dx * dx + dy * dy - projection * projection
+        radius_sq = radius * radius
+        if perpendicular_sq > radius_sq:
+            return None
+        offset = math.sqrt(max(0.0, radius_sq - perpendicular_sq))
+        distance = projection - offset
+        if distance < 0.0:
+            distance = projection + offset
+        return distance if distance >= 0.0 else None
+
+
 def _laser_hit_target(sim, laser, dt):
         owner=laser["owner"]; angle=laser["angle"]; ux,uy=math.cos(angle),math.sin(angle)
         max_range=laser["range"]; width=laser["width"]
-        # The beam stops at the first solid/prop/decoration or actor in its path.
+        # Geometry is still sampled at the existing 6 px resolution so wall,
+        # prop and PNG-decoration collision semantics remain unchanged. Actor
+        # intersection is solved analytically once per target instead of testing
+        # every target at every sample point.
         length=max_range; hit_enemy=None; hit_point=None; blocked=False
         steps=max(1,int(max_range/6))
         for i in range(1,steps+1):
             d=i*max_range/steps; x=owner.x+ux*d; y=owner.y+uy*d
             if sim.arena.point_solid(x,y) or sim._crate_collision(x,y,width) or sim._decoration_collision(x,y,width):
                 length=d; hit_point=(x,y); blocked=True; break
-            if laser["team"]==0:
-                candidates=[e for e in sim.enemies if e.alive and e.spawn_delay<=0]
-            else:
-                candidates=[sim.player] if sim.player.alive else []
-            for target in candidates:
-                if target is owner: continue
-                if math.hypot(target.x-x,target.y-y) <= target.radius+width*0.75:
-                    length=d; hit_enemy=target; hit_point=(x,y); blocked=True; break
-            if hit_enemy is not None: break
+        if laser["team"]==0:
+            candidates=(e for e in sim.enemies if e.alive and e.spawn_delay<=0 and e is not owner)
+        else:
+            candidates=(sim.player,) if sim.player.alive and sim.player is not owner else ()
+        actor_length=max_range
+        for target in candidates:
+            hit_radius=float(getattr(target,"radius",0.0))+width*0.75
+            distance=_ray_circle_hit_distance(owner.x,owner.y,ux,uy,target.x,target.y,hit_radius)
+            if distance is not None and distance <= max_range and distance < actor_length:
+                actor_length=distance
+                hit_enemy=target
+        if hit_enemy is not None and actor_length < length:
+            length=actor_length
+            hit_point=(owner.x+ux*length,owner.y+uy*length)
+            blocked=True
         if hit_point is None:
             hit_point=(owner.x+ux*length,owner.y+uy*length)
         if blocked and laser["tick"]<=0 and dt>0.0 and float(laser.get("travel",length)) >= length-8.0:
@@ -370,5 +396,3 @@ def _laser_hit_target(sim, laser, dt):
         laser["_render_length"]=visible_length
         laser["_render_point"]=visible_point
         return visible_length,visible_point,hit_enemy
-
-
