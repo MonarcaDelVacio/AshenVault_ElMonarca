@@ -1,5 +1,6 @@
 """Validación independiente de invariantes de generación procedural."""
 from collections import deque
+from .assets.bounds import decoration_collision_radius
 
 _SPECIAL_NO_ENEMY = {"shop", "treasure", "event", "healing", "secret", "boss"}
 
@@ -149,6 +150,40 @@ def validate_room(room_data):
     if spawn in set(enemy_spawns) or spawn in set(item_spawns):
         errors.append("spawn del jugador comparte casilla con otro spawn")
 
+    # La decoración física no puede ocupar el centro de un spawn ni el volumen
+    # inmediato de una entrada. Usamos los radios compartidos de Bounds para que
+    # esta auditoría tenga la misma referencia que Arena.
+    for deco in room_data.get("decorations", ()):
+        radius=decoration_collision_radius(deco.get("kind"))
+        if radius is None:
+            continue
+        dx=(float(deco.get("x",0))-spawn[0])*32.0
+        dy=(float(deco.get("y",0))-spawn[1])*32.0
+        if (dx*dx+dy*dy) ** 0.5 < radius:
+            errors.append("decoración invade el spawn del jugador")
+            break
+        for ex,ey in enemy_spawns[:10] + item_spawns[:8]:
+            ddx=(float(deco.get("x",0))-ex)*32.0
+            ddy=(float(deco.get("y",0))-ey)*32.0
+            if (ddx*ddx+ddy*ddy) ** 0.5 < radius:
+                errors.append("decoración invade un spawn")
+                break
+        if errors and errors[-1] == "decoración invade un spawn":
+            break
+    door_centers=_door_tiles(room_data)
+    for deco in room_data.get("decorations", ()):
+        radius=decoration_collision_radius(deco.get("kind"))
+        if radius is None:
+            continue
+        for tx,ty in door_centers:
+            dx=(float(deco.get("x",0))-tx)*32.0
+            dy=(float(deco.get("y",0))-ty)*32.0
+            if (dx*dx+dy*dy) ** 0.5 < radius + 16.0:
+                errors.append("decoración invade el volumen inmediato de una puerta")
+                break
+        if errors and errors[-1] == "decoración invade el volumen inmediato de una puerta":
+            break
+
     if not room_data.get("floor_surface"):
         errors.append("sala sin floor_surface")
     if not room_data.get("room_type"):
@@ -190,6 +225,19 @@ def validate_dungeon(dungeon):
             errors.append(f"sala {rid} inválida")
             break
 
+    # Phase 9: la topología de puertas debe reflejar exactamente la adyacencia
+    # del grafo de rooms. Esto evita transiciones unidireccionales o puertas
+    # abiertas hacia espacios que no existen.
+    side_delta={"N":(0,-1),"S":(0,1),"W":(-1,0),"E":(1,0)}
+    opposite={"N":"S","S":"N","W":"E","E":"W"}
+    for rid, room in rooms.items():
+        for side,(dx,dy) in side_delta.items():
+            neighbor=(rid[0]+dx,rid[1]+dy)
+            has_door=side in room.arena.doors
+            if (neighbor in rooms) != has_door:
+                errors.append(f"puerta inconsistente en {rid}: {side}")
+            if neighbor in rooms and opposite[side] not in rooms[neighbor].arena.doors:
+                errors.append(f"puertas no simétricas entre {rid} y {neighbor}")
     for rid, room in rooms.items():
         x, y = rid
         if room.room_type not in _SPECIAL_NO_ENEMY and room.room_type != "miniboss":
