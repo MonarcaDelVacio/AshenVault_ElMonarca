@@ -1813,7 +1813,14 @@ class Renderer:
                 weapon_class = getattr(weapon_def, "class", "")
                 sprite_path = str(getattr(weapon_def, "weapon_sprite", "")).lower()
                 is_melee_asset = weapon_class == "melee" or weapon_class == "throwable" or "/melee/" in sprite_path
-                base_angle = 0.0 if is_melee_asset and "lanza" in sprite_path else (-35.0 if is_melee_asset else {"magic": -32, "special": -25}.get(weapon_class, 0))
+                # modelosarmas.png fue dibujado con el cañón apuntando a la
+                # derecha; por eso su orientación base es exactamente 0° y el
+                # cursor define la rotación final, sin correcciones heredadas.
+                base_angle = (
+                    0.0
+                    if sheet_key == "ranged"
+                    else (0.0 if is_melee_asset and "lanza" in sprite_path else (-35.0 if is_melee_asset else {"magic": -32, "special": -25}.get(weapon_class, 0)))
+                )
                 flipped = math.cos(p.aim) < 0
                 if flipped:
                     # El PNG se dibuja mirando al lado opuesto cuando el cursor
