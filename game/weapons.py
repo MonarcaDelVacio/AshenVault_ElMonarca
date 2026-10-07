@@ -13,13 +13,13 @@ class WeaponState:
         self.ammo = wdef.magazine
         self.reserve_magazines = int(getattr(wdef, "max_magazines", 5))
         self.max_reserve_magazines = self.reserve_magazines
-        # Las armas cuerpo a cuerpo nunca pueden superar 30 usos.
-        # Esto también corrige definiciones antiguas que quedaron con valores
-        # como 999 en el JSON.
-        if getattr(wdef, "class", "") == "melee":
-            melee_uses = min(30, max(1, int(getattr(wdef, "durability", getattr(wdef, "magazine", 30)))))
-            self.durability = melee_uses
-            self.max_durability = melee_uses
+        # Melee y magia de bastón/orbe consumen USOS, no cargadores.
+        # Se conserva el valor de magazine como fuente de compatibilidad para
+        # definiciones antiguas que aún no declaran durability explícita.
+        if getattr(wdef, "class", "") in ("melee", "magic"):
+            uses = min(30, max(1, int(getattr(wdef, "durability", getattr(wdef, "magazine", 30)))))
+            self.durability = uses
+            self.max_durability = uses
         else:
             self.durability = int(getattr(wdef, "durability", wdef.magazine))
             self.max_durability = int(getattr(wdef, "durability", wdef.magazine))
@@ -34,7 +34,7 @@ class WeaponState:
         return self.reload_left > 0
 
     def start_reload(self):
-        if getattr(self.d, "class", "") == "melee":
+        if getattr(self.d, "class", "") in ("melee", "magic"):
             return False
         # Las armas iniciales tienen cargadores infinitos, pero siguen
         # consumiendo la munición del cargador y recargando normalmente.
@@ -59,7 +59,11 @@ class WeaponState:
 
 def _fire_projectiles(sim, p, w, charge_ratio=0.0):
     d = w.d
-    if w.ammo <= 0:
+    uses_weapon = getattr(d, "class", "") == "magic"
+    if uses_weapon:
+        if w.durability <= 0:
+            return False
+    elif w.ammo <= 0:
         if w.start_reload():
             sim.emit("reload_start", p.x, p.y)
         return False
@@ -73,9 +77,13 @@ def _fire_projectiles(sim, p, w, charge_ratio=0.0):
     speed_mult = 1.0 + (getattr(d, "charge_speed_mult", 1.8) - 1.0) * charge_ratio
     range_mult = 1.0 + (getattr(d, "charge_range_mult", 2.0) - 1.0) * charge_ratio
     damage_mult = 1.0 + (getattr(d, "charge_damage_mult", 2.2) - 1.0) * charge_ratio
-    # Incluso las armas iniciales consumen la munición del cargador.
-    # Lo infinito son los cargadores de reserva, no el cargador actual.
-    w.ammo -= 1
+    if uses_weapon:
+        w.durability = max(0, w.durability - 1)
+        w.ammo = w.durability
+    else:
+        # Incluso las armas iniciales consumen la munición del cargador.
+        # Lo infinito son los cargadores de reserva, no el cargador actual.
+        w.ammo -= 1
     sim.stats.setdefault("weapon_usage", {})[d.id] = sim.stats.get("weapon_usage", {}).get(d.id, 0) + 1
     w.cooldown = d.fire_interval / max(0.1, getattr(p, "attack_speed_mult", 1.0))
     p.energy -= d.energy_cost
@@ -128,8 +136,10 @@ def _fire_projectiles(sim, p, w, charge_ratio=0.0):
     sim.emit("shoot", mx, my, p.aim, d.color)
     if getattr(d, "charged_projectile", False):
         sim.emit("charge_release", p.x, p.y, charge_ratio)
-    if w.ammo <= 0 and w.start_reload():
+    if not uses_weapon and w.ammo <= 0 and w.start_reload():
         sim.emit("reload_start", p.x, p.y)
+    if uses_weapon and w.durability <= 0 and getattr(p, "weapon", None) is w:
+        sim.break_weapon(p, w)
     return True
 
 
@@ -228,6 +238,14 @@ def try_fire(sim, p, inp, dt):
         p.melee_attack_timer = max(0.08, min(0.18, float(getattr(d, "fire_interval", 0.25)) * 0.45))
         sim.emit("melee_swing", p.x, p.y, p.aim, d.color, d.range)
         return True
+    if getattr(d, "class", "") == "magic":
+        if not w.unlimited_ammo and w.durability <= 0:
+            return False
+        p.fire_buffer = 0.0
+        fired = _fire_projectiles(sim, p, w, 0.0)
+        # La magia usa el mismo flujo de proyectiles que las armas a distancia,
+        # pero nunca entra en recarga: cada lanzamiento consume un USO.
+        return fired
     p.fire_buffer = 0.0
     fired = _fire_projectiles(sim, p, w, 0.0)
     if fired and getattr(d, "class", "") == "throwable" and w.ammo <= 0 and getattr(p, "weapon", None) is w:
