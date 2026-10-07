@@ -599,3 +599,10 @@ Regression coverage was added in `tests/test_combat_system.py` for projectile sp
 The combat refactor now also separates enemy attack execution into `game/systems/enemy_combat.py`. The extracted layer owns melee contact/effects, prop damage from enemy swings, projectile pattern generation, enemy weapon/projectile visual selection, explosive attack metadata, and combat events. `game/enemies.py` remains the AI/state owner and exposes `_attack()` as a compatibility facade.
 
 The player weapon layer (`game/weapons.py`) and character ability layer (`game/abilities.py`) remain intentionally separate for the next audit slice because they own input/cooldown/ammunition and character-specific orchestration respectively. No balance changes were introduced by this extraction.
+
+
+### Phase 6 — Mira drone combat layer
+
+Mira's drone lifecycle has been extracted to `game/systems/drones.py`. The extracted layer owns drone spawning, safe positioning, collision/path checks, formation steering, projectile avoidance, combat positioning, ranged fire, damage and destruction. `Sim` remains the world-state owner and exposes compatibility facades for the existing callers.
+
+The weapon firing path in `game/weapons.py` and active-character ability dispatcher in `game/abilities.py` are already standalone modules with relatively low coupling, so they are being audited rather than mechanically split again. This avoids creating indirection where no architectural boundary is gained.
