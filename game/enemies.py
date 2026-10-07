@@ -94,7 +94,6 @@ class Enemy:
         self.dodge_cd = max(0.0, self.dodge_cd - dt)
         self.target_lock_timer = max(0.0, self.target_lock_timer - dt)
         self.confused = max(0.0, getattr(self, "confused", 0.0) - dt)
-        self.target_lock_timer = max(0.0, self.target_lock_timer - dt)
         if self.shield_active:
             self.shield_timer = max(0.0, self.shield_timer - dt)
             if self.shield_timer <= 0:
@@ -129,6 +128,16 @@ class Enemy:
         dist = math.hypot(dx, dy) or 0.001
         self.facing = math.atan2(dy, dx)
         sees = dist < d.detect_range and sim.arena.line_of_sight(self.x, self.y, tx, ty)
+
+        # Confusion is intentionally different from stun/freeze: the enemy can
+        # still move, but loses reliable pursuit/attack direction for its
+        # duration.  This gives Rook's confusion effect real gameplay impact
+        # without adding another immobilizing status.
+        confused = getattr(self, "confused", 0.0) > 0.0
+        if confused and sees:
+            dx, dy = -dx, -dy
+            self.facing = math.atan2(dy, dx)
+            dist = math.hypot(dx, dy) or 0.001
         if self._defensive_reaction(sim, dt):
             return
         if (not self.is_boss and not self.is_miniboss and float(getattr(d,"radius",0)) >= 22
