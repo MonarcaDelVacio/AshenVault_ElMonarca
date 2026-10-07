@@ -1314,6 +1314,24 @@ class Renderer:
             r.topleft = pos
         surf.blit(img, r)
 
+    def _wall_models_for_biome(self, biome):
+        key = ("wall_models", str(biome))
+        cached = self._fit_cache.get(key)
+        if cached is not None:
+            return cached
+        if not self.wall_models:
+            return {}
+        b = self.data.biomes.get(str(biome), {})
+        target = tuple(b.get("wall", (130, 125, 120)))
+        models = {}
+        for name, image in self.wall_models.items():
+            factors = tuple(max(0, min(255, int(255 * (0.62 + channel / 255.0 * 0.38)))) for channel in target)
+            tinted = image.copy()
+            tinted.fill((*factors, 255), special_flags=pygame.BLEND_RGBA_MULT)
+            models[name] = tinted
+        self._fit_cache[key] = models
+        return models
+
     def _background(self, arena):
         key = (arena.biome, arena.room_id, arena.cols, arena.rows, getattr(arena, "floor_surface", None))
         if self._bg_key == key:
@@ -1331,7 +1349,9 @@ class Renderer:
                 "swamp": 5, "final": 11,
             }
             floor_img = self.floor_images.get(fallback_by_biome.get(arena.biome, 1))
-        # Las texturas de piedra cambian con el bioma cuando están disponibles.
+        wall_models = self._wall_models_for_biome(arena.biome)
+        # Las texturas antiguas quedan únicamente como fallback para geometría
+        # interior excepcional; el perímetro principal usa walls.png.
         wall_band = (sum(ord(ch) for ch in str(arena.biome)) % 3)
         wall_fill = self.wall_fill_images.get(str(wall_band)) or self.wall_fill_images.get("0")
         wall_cap = self.wall_top_images.get("default")
@@ -1376,22 +1396,24 @@ class Renderer:
                     pygame.draw.rect(surf, (145, 90, 165), r, 2)
                     pygame.draw.line(surf, (175, 115, 190), (r.x+7,r.y+7), (r.right-7,r.bottom-7), 2)
                     pygame.draw.line(surf, (175, 115, 190), (r.right-7,r.y+7), (r.x+7,r.bottom-7), 2)
+        # Perímetro principal: un modelo horizontal y dos laterales forman
+        # toda la envolvente de la sala. Se escala a la dimensión real del room.
+        if wall_models.get("front") is not None:
+            front = pygame.transform.smoothscale(wall_models["front"], (arena.width, TILE * 2))
+            surf.blit(front, (0, -TILE))
+            surf.blit(front, (0, arena.height - TILE * 2))
+        if wall_models.get("left") is not None:
+            left = pygame.transform.smoothscale(wall_models["left"], (TILE * 2, arena.height))
+            surf.blit(left, (-TILE, 0))
+        if wall_models.get("right") is not None:
+            right = pygame.transform.smoothscale(wall_models["right"], (TILE * 2, arena.height))
+            surf.blit(right, (arena.width - TILE, 0))
+
         # Dibuja las paredes altas en una segunda pasada para que el suelo no tape
         # la mitad que sobresale de la casilla. Las paredes superiores crecen hacia
         # abajo dentro de la sala; las inferiores y laterales se apoyan por la base.
-        for ty, row in enumerate(arena.grid):
-            for tx, tile in enumerate(row):
-                if tile != WALL:
-                    continue
-                piece_key = self._wall_piece_key(arena, tx, ty)
-                piece = self.wall_piece_images.get(piece_key) if piece_key else None
-                if piece is None:
-                    continue
-                # Todas las piezas altas se anclan por la base a su casilla sólida.
-                # Así, la mitad superior es solo altura visual y la colisión queda
-                # en el bloque inferior, donde el personaje no debe atravesar el muro.
-                dest = (tx * TILE, (ty + 1) * TILE - piece.get_height())
-                surf.blit(piece, dest)
+        # Las formas internas no rectangulares conservan el relleno del bioma;
+        # los modelos de walls.png quedan reservados al perímetro principal.
 
         # Las columnas interiores usan columna.png. Se dibujan en el fondo y se
         # vuelven a dibujar por delante de los actores que estén detrás de ellas.
