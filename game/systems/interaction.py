@@ -1,5 +1,7 @@
 """Player interaction and inventory pickup helpers extracted from Sim."""
 
+import math
+
 from ..weapons import WeaponState
 from ..items import apply_item_bonuses
 
@@ -10,7 +12,7 @@ def try_interact(sim):
 
     if sim.portal:
         px, py = sim.portal_position
-        if sim._distance(px, py, p.x, p.y) < 78:
+        if math.hypot(px - p.x, py - p.y) < 78:
             sim._enter_next_dungeon()
             return True
 
@@ -18,13 +20,13 @@ def try_interact(sim):
         return True
 
     if sim.chest is not None and not sim.chest.is_open:
-        if sim._distance(sim.chest.x, sim.chest.y, p.x, p.y) < 72:
+        if math.hypot(sim.chest.x - p.x, sim.chest.y - p.y) < 72:
             if sim._open_chest():
                 return True
 
     if sim.room.room_type == "shop":
         for offer in sim.shop_offers:
-            if sim._distance(offer.x, offer.y, p.x, p.y) < 55 and sim._buy_shop_offer(offer):
+            if math.hypot(offer.x - p.x, offer.y - p.y) < 55 and sim._buy_shop_offer(offer):
                 return True
 
     for item in list(sim.items):
@@ -33,7 +35,7 @@ def try_interact(sim):
         else:
             ix, iy = sim.arena.width / 2, sim.arena.height / 2
 
-        if sim._distance(ix, iy, p.x, p.y) >= 48:
+        if math.hypot(ix - p.x, iy - p.y) >= 48:
             continue
 
         if getattr(item, "kind", "item") == "weapon":
