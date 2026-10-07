@@ -575,7 +575,7 @@ class Renderer:
             "small_demon_melee": {"walk":"small_demon_melee/walk.png","attack":"small_demon_melee/attack.png","death":"small_demon_melee/death.png"},
             "mage2": {"idle":"mage2/idle.png","walk":"mage2/idle.png","attack":"mage2/idle.png"},
             "ogro": {"idle":"Ogro/ogro_ataquedesendente.png","walk":"Ogro/ogro_ataquedesendente.png","attack":"Ogro/ogro_ataquedesendente.png","attack_heavy":"Ogro/ogro_ataquedesendentepesado.png"},
-            # Este enemigo es un spritesheet 4x4; se carga exclusivamente con
+            # Este enemigo es un spritesheet 3x4; se carga exclusivamente con
             # _load_grid_frames más abajo para no confundirlo con un atlas libre.
             "new_flyer": {},
         }
@@ -591,7 +591,7 @@ class Renderer:
                 self.enemy_sprites[key] = loaded
         flyer_path = enemy_dir / "flying" / "enemigovolador_spritesheet.png"
         if flyer_path.is_file():
-            # Este asset es una cuadrícula 4x4. Si el detector de cuadrícula
+            # Este asset es una cuadrícula 3x4. Si el detector de cuadrícula
             # rechaza la hoja por dimensiones/márgenes inesperados, intentamos
             # inmediatamente el loader de spritesheet antes de dejar el enemigo
             # sin representación visual.
