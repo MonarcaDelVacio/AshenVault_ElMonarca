@@ -1624,11 +1624,16 @@ class Renderer:
             nx = sum(item[2] for item in group)
             draw_vertical_group(group, wall_models.get("vertical_a" if nx > 0 else "vertical_b"))
 
+        # Una esquina aislada no es una pared diagonal: conserva el modelo
+        # horizontal/vertical. Los modelos diagonales se reservan para tramos
+        # diagonales reales (dos o más celdas consecutivas).
         for group in runs_diag(diag_rising, 1):
-            draw_repeated_diagonal(group, wall_models.get("diag_rising"), rising=True)
+            if len(group) >= 2:
+                draw_repeated_diagonal(group, wall_models.get("diag_rising"), rising=True)
 
         for group in runs_diag(diag_falling, -1):
-            draw_repeated_diagonal(group, wall_models.get("diag_falling"), rising=False)
+            if len(group) >= 2:
+                draw_repeated_diagonal(group, wall_models.get("diag_falling"), rising=False)
 
     def _background(self, arena):
         key = (arena.biome, arena.room_id, arena.cols, arena.rows, getattr(arena, "floor_surface", None))
