@@ -299,10 +299,16 @@ def update_player_laser(sim, charge_time, dt):
 
 
 def start_enemy_laser(sim, owner, angle, duration=2.2, color=None, damage=14.0, width=2.0, max_width=12.0, range_=760.0, explosion_radius=24.0):
-        sim.lasers.append({"owner":owner,"team":1,"angle":angle,"charge":1.0,"duration":float(duration),"tick":0.0,
+        # Todos los rayos tienen un telegráfico de carga antes de que exista el
+        # hitbox del haz. Esto permite leer el ataque y buscar cobertura.
+        charge_duration = 1.0
+        sim.lasers.append({"owner":owner,"team":1,"angle":angle,"charge":0.0,
+                            "charge_left":charge_duration,"charge_duration":charge_duration,
+                            "duration":float(duration),"tick":0.0,
                             "color":tuple(color or getattr(owner.d,"color",(255,100,100))),"damage":float(damage),
-                            "width":float(width),"max_width":float(max_width),"range":float(range_),
-                            "explosion_radius":float(explosion_radius),"travel":0.0,"travel_speed":620.0,"turn_speed":1.65})
+                            "width":float(width),"base_width":float(width),"max_width":float(max_width),"range":float(range_),
+                            "explosion_radius":float(explosion_radius),"travel":0.0,"travel_speed":620.0,
+                            "turn_speed":1.65,"beam_elapsed":0.0})
         sim.emit("laser_start",owner.x,owner.y,angle,tuple(color or getattr(owner.d,"color",(255,100,100))))
 
 
@@ -316,12 +322,23 @@ def _update_lasers(sim,dt):
                 laser["angle"]=owner.aim
                 laser["charge"]=min(3.0,float(owner.weapon.charge_time))
             else:
-                laser["duration"]-=dt
                 target_angle=getattr(owner,"facing",laser.get("angle",0.0))
                 current=float(laser.get("angle",target_angle))
                 delta=(target_angle-current+math.pi)%(2*math.pi)-math.pi
                 max_turn=float(laser.get("turn_speed",1.65))*dt
                 laser["angle"]=current+max(-max_turn,min(max_turn,delta))
+                charge_left=float(laser.get("charge_left",0.0))
+                if charge_left > 0.0:
+                    charge_left=max(0.0,charge_left-dt)
+                    laser["charge_left"]=charge_left
+                    duration=float(laser.get("charge_duration",1.0))
+                    laser["charge"]=min(1.0,1.0-charge_left/max(0.001,duration))
+                    laser["travel"]=0.0
+                    active.append(laser)
+                    continue
+                laser["beam_elapsed"]=float(laser.get("beam_elapsed",0.0))+dt
+                laser["charge"]=min(3.0,1.0+laser["beam_elapsed"]/1.0)
+                laser["duration"]-=dt
                 if laser["duration"]<=0: continue
             laser["tick"]=max(0.0,laser.get("tick",0.0)-dt)
             laser["travel"]=min(float(laser.get("range",760.0)),float(laser.get("travel",0.0))+float(laser.get("travel_speed",620.0))*dt)
