@@ -17,7 +17,7 @@ ATLAS_PATH = ROOT / "assets" / "ui" / "AshenVault_UI_Atlas.png"
 
 
 class UIAtlas:
-    # Coordinates are in the 1536x1024 source atlas.
+    # Coordinates are in the 1536x1128 source atlas.
     REGIONS = {
         # Main menu
         "menu_jugar": (21, 63, 274, 66),
@@ -67,10 +67,10 @@ class UIAtlas:
         "close": (252, 660, 196, 49),
 
         # In-game HUD actions
-        "hud_usar": (484, 497, 238, 52),
-        "hud_recargar": (484, 553, 238, 50),
-        "hud_interactuar": (484, 607, 238, 51),
-        "hud_recoger": (484, 661, 238, 51),
+        "hud_usar": (480, 505, 243, 63),
+        "hud_recargar": (485, 577, 232, 45),
+        "hud_interactuar": (485, 632, 232, 45),
+        "hud_recoger": (486, 686, 231, 45),
 
         # Inventory/equipment
         "inv_objetos": (21, 781, 194, 43),
@@ -107,51 +107,51 @@ class UIAtlas:
         "special_creditos": (1277, 922, 223, 41),
 
         # Neutral scalable frames at the bottom of the atlas.
-        "frame_blue": (951, 976, 123, 30),
-        "frame_gold": (1096, 977, 124, 30),
-        "frame_gray": (1241, 978, 123, 30),
-        "frame_red": (1385, 978, 122, 30),
+        "frame_blue": (943, 1028, 128, 33),
+        "frame_gold": (1089, 1030, 128, 32),
+        "frame_gray": (1235, 1031, 126, 32),
+        "frame_red": (1379, 1031, 125, 32),
 
         # HUD status icons.
-        "icon_health": (1111, 489, 48, 45),
-        "icon_shield": (1176, 489, 48, 45),
-        "icon_energy": (1240, 489, 47, 45),
-        "icon_poison": (1302, 489, 46, 45),
-        "icon_fire": (1363, 489, 47, 45),
-        "icon_freeze": (1420, 489, 46, 45),
-        "icon_skull": (1474, 489, 46, 45),
-        "icon_potion": (787, 489, 59, 55),
-        "icon_medkit": (862, 489, 57, 56),
-        "icon_key": (934, 489, 56, 55),
-        "icon_chest": (1004, 489, 55, 55),
-        "icon_refresh": (787, 557, 59, 56),
-        "icon_purple_shield": (862, 557, 57, 57),
-        "icon_white_skull": (934, 557, 56, 56),
-        "icon_debuff": (1371, 567, 40, 46),
-        "icon_buff": (1421, 567, 41, 46),
-        "icon_star": (1473, 567, 41, 46),
-        "icon_left": (794, 627, 51, 41),
-        "icon_right": (863, 627, 49, 41),
-        "icon_target": (931, 627, 48, 41),
-        "icon_star_small": (997, 627, 48, 41),
-        "icon_pin": (797, 677, 45, 42),
-        "icon_exclamation": (866, 677, 44, 42),
-        "icon_question": (933, 677, 43, 42),
-        "icon_heart_small": (1000, 677, 43, 42),
+        "icon_health": (1106, 510, 56, 48),
+        "icon_shield": (1167, 509, 61, 48),
+        "icon_energy": (1231, 510, 57, 48),
+        "icon_poison": (1298, 510, 51, 46),
+        "icon_fire": (1358, 509, 57, 48),
+        "icon_freeze": (1418, 509, 44, 48),
+        "icon_skull": (1468, 509, 46, 49),
+        "icon_potion": (783, 510, 63, 57),
+        "icon_medkit": (858, 510, 63, 57),
+        "icon_key": (933, 509, 58, 58),
+        "icon_chest": (1000, 510, 58, 57),
+        "icon_refresh": (783, 577, 63, 59),
+        "icon_purple_shield": (857, 577, 68, 61),
+        "icon_white_skull": (925, 577, 64, 61),
+        "icon_debuff": (1368, 588, 44, 42),
+        "icon_buff": (1418, 587, 43, 43),
+        "icon_star": (1468, 587, 46, 43),
+        "icon_left": (790, 646, 55, 29),
+        "icon_right": (860, 647, 51, 28),
+        "icon_target": (926, 646, 53, 29),
+        "icon_star_small": (993, 648, 51, 27),
+        "icon_pin": (790, 670, 54, 60),
+        "icon_exclamation": (861, 694, 49, 36),
+        "icon_question": (928, 670, 51, 60),
+        "icon_heart_small": (993, 670, 51, 60),
 
         # Five authored empty equipment slots.
         "equipment_slot": (1377, 627, 27, 47),
 
         # Full status bars: icon + authored bar frame.
-        "bar_health": (1111, 550, 221, 43),
-        "bar_shield": (1111, 593, 221, 31),
-        "bar_energy": (1111, 624, 221, 43),
+        "bar_health": (1106, 558, 225, 51),
+        "bar_shield": (1107, 611, 224, 45),
+        "bar_energy": (1108, 665, 224, 42),
         "bar_mana": (1111, 668, 221, 41),
 
         # Inner bar-only portions for compact bars (bosses, etc.).
-        "track_health": (1147, 558, 151, 22),
-        "track_shield": (1148, 595, 150, 20),
-        "track_energy": (1148, 634, 150, 21),
+        "track_health": (1147, 566, 151, 22),
+        "track_shield": (1148, 625, 150, 20),
+        "track_energy": (1149, 676, 150, 21),
         "track_mana": (1149, 678, 147, 22),
     }
 
@@ -457,14 +457,12 @@ class UIAtlas:
             "hp": "bar_health",
             "shield": "bar_shield",
             "energy": "bar_energy",
-            "mana": "bar_mana",
         }.get(kind, "bar_health")
         track_key = {
             "health": "track_health",
             "hp": "track_health",
             "shield": "track_shield",
             "energy": "track_energy",
-            "mana": "track_mana",
         }.get(kind, "track_health")
 
         target = pygame.Rect(*map(int, rect))
@@ -484,7 +482,6 @@ class UIAtlas:
             "hp": (36/221, 8/43, 151/221, 22/43),
             "shield": (37/221, 2/31, 150/221, 20/31),
             "energy": (37/221, 10/43, 150/221, 21/43),
-            "mana": (38/221, 10/41, 147/221, 22/41),
         }.get(kind, (36/221, 8/43, 151/221, 22/43))
         tx = target.x + round(target.width * track[0])
         ty = target.y + round(target.height * track[1])
