@@ -27,14 +27,19 @@ def step(enemy, sim, ux, uy, speed, dt):
         # dirección. Prueba desvíos angulares y elige el que más conserva el
         # rumbo original. Esto permite rodear cajas, columnas y esquinas.
         candidates = []
+        side = 1 if getattr(enemy, "strafe", 1) >= 0 else -1
         for deg in (22, -22, 45, -45, 68, -68, 90, -90, 115, -115, 145, -145):
             a = math.atan2(uy, ux) + math.radians(deg)
             cx, cy = math.cos(a), math.sin(a)
             tx, ty = sim.move_actor(enemy.x, enemy.y, cx * distance, cy * distance, enemy.radius)
             progress = math.hypot(tx - ox, ty - oy)
             alignment = cx * ux + cy * uy
-            # Penaliza desvíos extremos, pero prioriza salir del atasco.
-            score = progress * (0.72 + 0.28 * max(0.0, alignment))
+            lateral = (-uy) * cx + ux * cy
+            # Penaliza desvíos extremos, pero da una pequeña preferencia al
+            # lado actual de la maniobra. Al cambiar strafe cuando queda
+            # bloqueado, el enemigo no repite siempre la misma esquina.
+            score = progress * (0.68 + 0.32 * max(0.0, alignment))
+            score += max(0.0, lateral * side) * min(distance * 0.08, 3.0)
             candidates.append((score, progress, tx, ty))
         if candidates:
             _, best_progress, bx, by = max(candidates, key=lambda q: q[0])
