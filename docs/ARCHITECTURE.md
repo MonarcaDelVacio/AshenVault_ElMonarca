@@ -574,3 +574,6 @@ application. No gameplay values were intentionally changed.
 
 
 The second Phase 5 extraction targets the coin pickup/magnet simulation path. Added `game/systems/pickups.py`, which owns the existing two-block coin attraction, movement toward the player, collection radius, coin/stat updates, and pickup event emission. `Sim._update_pickups()` remains as a compatibility facade and delegates to the extracted system. Focused regression tests cover attraction boundaries, collection, and the existing `coin_radius` upgrade behavior. No pickup speed, range, reward, or event semantics were intentionally changed.
+
+
+The third Phase 5 extraction targets environmental hazards and expanding wave attacks. Added `game/systems/hazards.py`, which owns the existing prop-fade cleanup, hazard particle simulation, periodic player/enemy/drone damage, fire/poison DoT application, electric status application, and radial wave propagation/LOS handling. `Sim._update_hazards()` remains as a compatibility facade, so existing update-loop call sites and gameplay state remain unchanged. Focused regression tests cover fire damage/DoT, electric drone damage, single-hit wave behavior, and freeze-wave behavior. No hazard timing, damage, range, particle, or wave semantics were intentionally changed.
