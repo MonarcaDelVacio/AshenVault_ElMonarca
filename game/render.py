@@ -1524,6 +1524,104 @@ class Renderer:
             cx=ox+tx*TILE+TILE/2-(nx/length)*TILE*0.18
             cy=oy+ty*TILE+TILE/2-(ny/length)*TILE*0.18
             target.blit(piece,piece.get_rect(center=(int(cx),int(cy))))
+    def _background(self, arena):
+        key = (arena.biome, arena.room_id, arena.cols, arena.rows, getattr(arena, "floor_surface", None))
+        if self._bg_key == key:
+            return self._bg_cache
+        b = self.data.biomes[arena.biome]
+        surf = pygame.Surface((arena.width, arena.height + 10), pygame.SRCALPHA)
+        floor_name = getattr(arena, "floor_surface", None)
+        floor_img = self.named_floor_images.get(floor_name) if floor_name else None
+        if str(arena.biome) == "snow" and floor_img is not None:
+            snow_key = ("snow_floor", id(floor_img))
+            snow_floor = self._fit_cache.get(snow_key)
+            if snow_floor is None:
+                snow_floor = floor_img.copy()
+                frost = pygame.Surface(snow_floor.get_size(), pygame.SRCALPHA)
+                frost.fill((205, 225, 248, 92))
+                snow_floor.blit(frost, (0, 0), special_flags=pygame.BLEND_RGBA_ADD)
+                self._fit_cache[snow_key] = snow_floor
+            floor_img = snow_floor
+        if floor_img is None:
+            fallback_by_biome = {
+                "ruins": 10, "forest": 5, "dungeon": 9,
+                "laboratory": 2, "volcanic": 7, "desert": 10,
+                "swamp": 5, "snow": 9, "final": 11,
+            }
+            floor_img = self.floor_images.get(fallback_by_biome.get(arena.biome, 1))
+        wall_models = self._wall_models_for_biome(arena.biome)
+        wall_band = (sum(ord(ch) for ch in str(arena.biome)) % 3)
+        wall_fill = self.wall_fill_images.get(str(wall_band)) or self.wall_fill_images.get("0")
+        wall_cap = self.wall_top_images.get("default")
+        for ty in range(arena.rows):
+            for tx in range(arena.cols):
+                t = arena.grid[ty][tx]
+                r = pygame.Rect(tx * TILE, ty * TILE, TILE, TILE)
+                if t == FLOOR:
+                    if floor_img is not None:
+                        surf.blit(floor_img, r)
+                    else:
+                        pygame.draw.rect(surf, b["floor_a"] if (tx + ty) % 2 == 0 else b["floor_b"], r)
+                elif t == WALL:
+                    if self._wall_boundary_orientation(arena, tx, ty) is None:
+                        continue
+                    piece_key = self._wall_piece_key(arena, tx, ty)
+                    piece = self.wall_piece_images.get(piece_key) if piece_key else None
+                    if piece is None:
+                        if wall_fill is not None:
+                            surf.blit(wall_fill, r)
+                        else:
+                            pygame.draw.rect(surf, b["wall"], r)
+                        below_is_floor = ty + 1 < arena.rows and arena.grid[ty + 1][tx] == FLOOR
+                        if wall_cap is not None and below_is_floor:
+                            surf.blit(wall_cap, r)
+                        else:
+                            pygame.draw.rect(surf, b["wall_top"], (r.x, r.y, TILE, 4))
+                        pygame.draw.rect(surf, (30, 26, 34), r, 1)
+                elif t in (PILLAR, TORCH_PILLAR):
+                    pillar_image = self.torch_column_image if t == TORCH_PILLAR else self.column_image
+                    if pillar_image is None:
+                        if wall_fill is not None:
+                            surf.blit(wall_fill, r)
+                        else:
+                            pygame.draw.rect(surf, b["pillar"], r)
+                        pygame.draw.rect(surf, b["pillar_top"], (r.x, r.y, TILE, 5))
+                        pygame.draw.rect(surf, (40, 30, 24), r, 1)
+                elif t == SECRET:
+                    if wall_fill is not None:
+                        surf.blit(wall_fill, r)
+                    else:
+                        pygame.draw.rect(surf, b["wall"], r)
+                    pygame.draw.rect(surf, (145, 90, 165), r, 2)
+                    pygame.draw.line(surf, (175, 115, 190), (r.x+7,r.y+7), (r.right-7,r.bottom-7), 2)
+                    pygame.draw.line(surf, (175, 115, 190), (r.right-7,r.y+7), (r.x+7,r.bottom-7), 2)
+        self._draw_room_wall_models(surf, arena, wall_models)
+        for ty, row in enumerate(arena.grid):
+            for tx, tile in enumerate(row):
+                if tile not in (PILLAR, TORCH_PILLAR):
+                    continue
+                pillar_image = self.torch_column_image if tile == TORCH_PILLAR else self.column_image
+                if pillar_image is not None:
+                    rect = pillar_image.get_rect(midbottom=(tx * TILE + TILE // 2, (ty + 1) * TILE))
+                    surf.blit(pillar_image, rect)
+        shape = getattr(arena, "shape", "rectangle")
+        if shape in ("octagon", "diamond", "chamfer"):
+            edge = max(6, TILE // 3)
+            if shape == "diamond":
+                pts = [(arena.width/2, 0), (arena.width, arena.height/2),
+                       (arena.width/2, arena.height), (0, arena.height/2)]
+            else:
+                cut = 4 * TILE
+                pts = [(cut, 0), (arena.width-cut, 0), (arena.width, cut),
+                       (arena.width, arena.height-cut), (arena.width-cut, arena.height),
+                       (cut, arena.height), (0, arena.height-cut), (0, cut)]
+            edge_color = self.data.biomes[arena.biome]["wall_top"]
+            for a, z in zip(pts, pts[1:] + pts[:1]):
+                pygame.draw.line(surf, edge_color, a, z, edge)
+                pygame.draw.line(surf, tuple(min(255, c + 18) for c in edge_color), a, z, 2)
+        self._bg_cache, self._bg_key = surf, key
+        return surf
+
     def _draw_architecture_foreground(self, screen, arena, sim, decor_lights, ox, oy):
         """Oculta las paredes de la silueta cuando el jugador está junto a ellas.
 
