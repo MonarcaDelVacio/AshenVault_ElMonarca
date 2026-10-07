@@ -1970,7 +1970,7 @@ class Renderer:
                 image=self.decoration_images.get(f"{kind}_{variant%6+1}")
             if image is None:
                 return False
-        max_size=decoration_max_size(kind)
+            max_size=decoration_max_size(kind)
             image=self._fit_image(image,max_size)
             if image is None:
                 return False
@@ -2020,7 +2020,7 @@ class Renderer:
             bbox=image.get_bounding_rect(min_alpha=8)
             if not bbox.width or not bbox.height:
                 return None
-        max_size=decoration_max_size(kind)
+            max_size=decoration_max_size(kind)
             scale=max_size/max(1,image.get_width(),image.get_height())
             visible_w=bbox.width*scale; visible_h=bbox.height*scale
             # El tamaño físico de la estatua deriva del mismo PNG y escala
