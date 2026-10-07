@@ -13,6 +13,7 @@ from .rendering.weapon_geometry import melee_grip_anchor, weapon_max_dimension
 from .rendering.background_geometry import trim_edge_background
 from .rendering.rotation_geometry import quantized_facing_flip, quantized_sprite_angle
 from .rendering.atlas_background import make_background_transparent
+from .rendering.animation_geometry import animation_frame_index
 
 VIEW_W, VIEW_H = 960, 540
 
@@ -1126,7 +1127,7 @@ class Renderer:
 
     def _draw_projectile_sheet(self, screen, frames, pr, ox, oy, size):
         if not frames: return
-        idx=int(pr.age*len(frames)/0.42)%len(frames)
+        idx=animation_frame_index(pr.age, len(frames), 0.42, loop=True)
         frame=self._fit_effect_frame(frames[idx],size)
         angle=math.degrees(math.atan2(pr.vy,pr.vx))
         angle_key=quantized_sprite_angle(math.radians(angle))
@@ -1169,11 +1170,7 @@ class Renderer:
     def _draw_combat_sprite_animation(self, screen, frames, elapsed, x, y, size, angle=None, alpha=255, loop=False, duration=0.24):
         if not frames:
             return
-        frame_index = int(max(0.0, elapsed) * len(frames) / max(0.001, duration))
-        if loop:
-            frame_index %= len(frames)
-        else:
-            frame_index = min(len(frames) - 1, frame_index)
+        frame_index = animation_frame_index(elapsed, len(frames), duration, loop=loop)
         frame = frames[frame_index]
         frame = self._fit_effect_frame(frame, size)
         if frame is None:
