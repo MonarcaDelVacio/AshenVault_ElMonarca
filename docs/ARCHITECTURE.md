@@ -546,3 +546,6 @@ The sixth Phase 4 extraction is `game/rendering/atlas_background.py`, which cent
 
 
 The seventh Phase 4 extraction is `game/rendering/animation_geometry.py`, which centralizes frame-index calculation for timed combat animations and projectile sheets. Existing durations and looping/clamping behavior are preserved; the renderer now delegates only the timing arithmetic. Targeted tests cover clamping, looping, empty animations, and invalid durations.
+
+
+The eighth Phase 4 extraction is `game/rendering/wall_geometry.py`, which centralizes wall-edge/corner classification. `Renderer._wall_piece_key` remains as a compatibility wrapper so all existing world-rendering call sites keep their contract while the classification logic becomes independently testable.
