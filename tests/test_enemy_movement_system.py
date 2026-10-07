@@ -171,3 +171,20 @@ def test_chase_rejects_flow_step_without_enemy_clearance():
     assert moved
     assert moved[0][0] > 0.0
 
+
+
+def test_chase_uses_physical_target_visibility_when_available():
+    player = SimpleNamespace(x=200.0, y=100.0)
+    enemy = SimpleNamespace(
+        x=100.0, y=100.0, radius=10.0, d=SimpleNamespace(ai="ranged"),
+        strafe=1, _step=lambda sim, ux, uy, speed, dt: setattr(enemy, "stepped", (ux, uy)),
+    )
+    sim = SimpleNamespace(
+        player=player,
+        arena=SimpleNamespace(line_of_sight=lambda *args: True),
+        _target_line_clear=lambda *args: False,
+        enemies=[enemy],
+        flow=[],
+    )
+    movement.chase(enemy, sim, 0.1, 10.0)
+    assert enemy.stepped[0] < 0.99
