@@ -59,3 +59,17 @@ def test_generation_validator_treats_pillars_as_solid():
     assert pillar is not None
     from game.generation_validation import _walkable_tiles
     assert pillar not in _walkable_tiles(room)
+
+def test_dungeon_room_doors_match_topology():
+    for seed in range(64):
+        dungeon = Dungeon(seed)
+        for rid, room in dungeon.rooms.items():
+            for side, delta in {"N":(0,-1),"S":(0,1),"W":(-1,0),"E":(1,0)}.items():
+                neighbor=(rid[0]+delta[0],rid[1]+delta[1])
+                assert (side in room.arena.doors) == (neighbor in dungeon.rooms)
+
+
+def test_room_validation_rejects_decoration_over_player_spawn():
+    room = generate_room(11, "combat", "ruins", ("N",))
+    room["decorations"] = [{"kind":"rock","x":room["player_spawn"][0],"y":room["player_spawn"][1],"variant":0}]
+    assert "decoración invade el spawn del jugador" in validate_room(room)
