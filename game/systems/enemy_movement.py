@@ -58,7 +58,9 @@ def step(enemy, sim, ux, uy, speed, dt):
 
 def chase(enemy, sim, dt, speed):
         p = sim.player
-        if sim.arena.line_of_sight(enemy.x, enemy.y, p.x, p.y):
+        if (sim._target_line_clear(enemy.x, enemy.y, p.x, p.y)
+        if hasattr(sim, "_target_line_clear")
+        else sim.arena.line_of_sight(enemy.x, enemy.y, p.x, p.y)):
             tx, ty = p.x, p.y
         else:
             step = sim.arena.best_step(sim.flow, enemy.x, enemy.y, enemy.radius)
