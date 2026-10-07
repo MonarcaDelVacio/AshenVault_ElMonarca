@@ -146,13 +146,11 @@ class UIAtlas:
         "bar_health": (1106, 558, 225, 51),
         "bar_shield": (1107, 611, 224, 45),
         "bar_energy": (1108, 665, 224, 42),
-        "bar_mana": (1111, 668, 221, 41),
 
         # Inner bar-only portions for compact bars (bosses, etc.).
         "track_health": (1147, 566, 151, 22),
         "track_shield": (1148, 625, 150, 20),
         "track_energy": (1149, 676, 150, 21),
-        "track_mana": (1149, 678, 147, 22),
     }
 
     BUTTONS = {
