@@ -20,6 +20,22 @@
                     "death": flyer_frames,
                 }
 
+        # Ningún enemigo/boss declarado puede llegar al runtime con un sprite_set que no haya producido al menos una animación utilizable.
+        # Evita que _draw_enemy_sprite() falle silenciosamente y deje un enemigo físicamente presente pero visualmente invisible.
+        missing_enemy_models = []
+        for entity_id, entity in self.data.enemies.items():
+            key = getattr(entity, "sprite_set", None)
+            anims = self.enemy_sprites.get(key, {}) if key else {}
+            if not key or not any(anims.get(name) for name in ("idle", "walk", "run", "attack", "attack_heavy")):
+                missing_enemy_models.append(f"enemy:{entity_id}:{key}")
+        for boss_id, boss in self.data.bosses.items():
+            key = getattr(boss, "sprite_set", None)
+            anims = self.enemy_sprites.get(key, {}) if key else {}
+            if not key or not any(anims.get(name) for name in ("idle", "walk", "run", "attack", "attack_heavy")):
+                missing_enemy_models.append(f"boss:{boss_id}:{key}")
+        if missing_enemy_models:
+            raise RuntimeError("Modelos de enemigos no cargados: " + ", ".join(missing_enemy_models))
+
         self.misc_images = {}
         for wid, wdef in self.data.weapons.items():
             sprite_path = getattr(wdef, "weapon_sprite", None)
