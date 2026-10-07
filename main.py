@@ -57,7 +57,7 @@ class App:
         self.r.key_bindings = self.save.data["settings"].get("keys", {})
         self.menu_visuals = MenuVisuals((VIEW_W, VIEW_H))
         self.ui_atlas = UIAtlas()
-        self.intro = IntroPlayer((VIEW_W, VIEW_H), music_volume=self.audio.music_volume)
+        self.intro = IntroPlayer((VIEW_W, VIEW_H), music_volume=1.0)
         self.fx = Fx()
         self.inp = Input()
         self.state = INTRO if not self.intro.done else MENU
@@ -923,10 +923,9 @@ class App:
         # Se mantiene 1.00x como referencia y el rango 0.25x-2.00x se conserva,
         # pero se calcula una única vez para que el ajuste afecte realmente al aim.
         sensitivity=max(0.25,min(2.0,float(self.save.data["settings"].get("mouse_sensitivity",1.0))))
-        if sensitivity < 1.0:
-            gain=0.45 + sensitivity*0.55
-        else:
-            gain=1.0 + (sensitivity-1.0)*1.0
+        # El rango conserva 1.00x como referencia, pero los extremos ahora
+        # producen una diferencia claramente perceptible al apuntar.
+        gain = 0.25 + (sensitivity - 0.25) * (2.75 / 1.75)
         mx=VIEW_W*0.5+(mx-VIEW_W*0.5)*gain
         my=VIEW_H*0.5+(my-VIEW_H*0.5)*gain
         return mx - ox, my - oy
@@ -1066,30 +1065,6 @@ class App:
         self.r.text(scr,"SCORE",(VIEW_W//2,48),(240,195,105),self.r.menu_title,True)
         self.r.text(scr,cname.upper(),(VIEW_W//2,84),(105,230,218),self.r.menu_font,True)
 
-        # En la pantalla de EXP se muestra el frame del spritesheet del
-        # personaje usado. No usamos el retrato estático: así queda garantizado
-        # que el recurso corresponde al mismo personaje jugado y que el sheet
-        # se está separando por sus ocho índices correctamente.
-        score_frames = self.r.player_walk_frames.get(self.char_id, [])
-        if score_frames:
-            frame_index = int(self.t * 7.0) % len(score_frames)
-            score_frame = score_frames[frame_index]
-            bbox = score_frame.get_bounding_rect(min_alpha=8)
-            if bbox.width and bbox.height:
-                score_frame = score_frame.subsurface(bbox).copy()
-            max_w, max_h = 94, 112
-            scale = min(
-                max_w / max(1, score_frame.get_width()),
-                max_h / max(1, score_frame.get_height()),
-            )
-            score_size = (
-                max(1, int(score_frame.get_width() * scale)),
-                max(1, int(score_frame.get_height() * scale)),
-            )
-            score_frame = pygame.transform.smoothscale(score_frame, score_size)
-            # Encima de la barra, dentro del panel de EXP.
-            scr.blit(score_frame, score_frame.get_rect(center=(VIEW_W // 2, 202)))
-
         if self.score_phase in ("stats","fade"):
             st=self.sim.stats if self.sim else {}
             panel=pygame.Surface((720,330),pygame.SRCALPHA)
@@ -1132,6 +1107,28 @@ class App:
             panel=pygame.Rect(145,105,670,365)
             pygame.draw.rect(scr,(9,13,23,242),panel,border_radius=14)
             pygame.draw.rect(scr,(76,95,122,220),panel,2,border_radius=14)
+
+            # El spritesheet se dibuja después del panel; antes quedaba por debajo
+            # del fondo semitransparente y parecía no haberse cargado.
+            score_frames = self.r.player_walk_frames.get(self.char_id, [])
+            if score_frames:
+                frame_index = int(self.t * 7.0) % len(score_frames)
+                score_frame = score_frames[frame_index]
+                bbox = score_frame.get_bounding_rect(min_alpha=8)
+                if bbox.width and bbox.height:
+                    score_frame = score_frame.subsurface(bbox).copy()
+                max_w, max_h = 94, 112
+                scale = min(
+                    max_w / max(1, score_frame.get_width()),
+                    max_h / max(1, score_frame.get_height()),
+                )
+                score_size = (
+                    max(1, int(score_frame.get_width() * scale)),
+                    max(1, int(score_frame.get_height() * scale)),
+                )
+                score_frame = pygame.transform.smoothscale(score_frame, score_size)
+                scr.blit(score_frame, score_frame.get_rect(center=(VIEW_W // 2, 202)))
+
             # La pantalla de EXP no muestra un texto central previo al boton.
 
             from game.save import xp_to_next
