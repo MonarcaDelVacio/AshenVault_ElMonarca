@@ -323,7 +323,7 @@ class Arena:
                 if self._can_step(x,y,dx,dy) and dist[y+dy][x+dx]>nd:
                     dist[y+dy][x+dx]=nd;q.append((x+dx,y+dy))
         return dist
-    def best_step(self,field,x,y):
+    def best_step(self,field,x,y,radius=0.0):
         tx,ty=self.tile_of(x,y)
         if self.solid_tile(tx,ty):return None
         bd=field[ty][tx];best=None
@@ -337,7 +337,10 @@ class Arena:
         for dx,dy in _NEIGH:
             if not self._can_step(tx,ty,dx,dy):
                 continue
-            value=field[ty+dy][tx+dx]
+            nx, ny = tx + dx, ty + dy
+            if radius > 0.0 and self.box_hits(*self.tile_center(nx, ny), radius):
+                continue
+            value=field[ny][nx]
             if value < bd:
                 bd=value; best=(tx+dx,ty+dy)
         return self.tile_center(*best) if best else None
