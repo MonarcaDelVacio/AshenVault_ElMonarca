@@ -425,25 +425,50 @@ class UIAtlas:
         target = pygame.Rect(*map(int, rect))
         if target.height <= 15:
             image = self._crop(track_key)
+            source_key = track_key
         else:
             image = self._crop(full_key)
+            source_key = full_key
         if image is None:
             return False
-        # Draw the authored frame unchanged. Only the colored fill track is
-        # masked by the current value; the heart/shield/lightning and frame stay put.
-        self._blit_fit(screen, image, target)
+
+        # Conserva la proporción real del PNG. El rectángulo visible resultante
+        # es el que se utiliza para calcular la posición del track.
+        iw, ih = image.get_size()
+        scale = min(
+            target.width / max(1, iw),
+            target.height / max(1, ih),
+        )
+        rendered_size = (
+            max(1, round(iw * scale)),
+            max(1, round(ih * scale)),
+        )
+        rendered_rect = pygame.Rect(0, 0, rendered_size[0], rendered_size[1])
+        rendered_rect.center = target.center
+        if rendered_size == image.get_size():
+            screen.blit(image, rendered_rect)
+        else:
+            screen.blit(pygame.transform.smoothscale(image, rendered_size), rendered_rect)
+
         ratio = max(0.0, min(1.0, float(ratio)))
-        # Track coordinates measured within each authored full-bar sprite.
-        track = {
-            "health": (36/221, 8/43, 151/221, 22/43),
-            "hp": (36/221, 8/43, 151/221, 22/43),
-            "shield": (37/221, 2/31, 150/221, 20/31),
-            "energy": (37/221, 10/43, 150/221, 21/43),
-        }.get(kind, (36/221, 8/43, 151/221, 22/43))
-        tx = target.x + round(target.width * track[0])
-        ty = target.y + round(target.height * track[1])
-        tw = round(target.width * track[2])
-        th = max(1, round(target.height * track[3]))
+
+        # Para las barras completas, la posición del track se obtiene directamente
+        # de REGIONS: track_rect - full_bar_rect. No se usan proporciones antiguas.
+        if source_key == full_key:
+            full_rect = pygame.Rect(self.regions[full_key])
+            track_rect = pygame.Rect(self.regions[track_key])
+            sx = (track_rect.x - full_rect.x) / max(1, full_rect.width)
+            sy = (track_rect.y - full_rect.y) / max(1, full_rect.height)
+            sw = track_rect.width / max(1, full_rect.width)
+            sh = track_rect.height / max(1, full_rect.height)
+        else:
+            source_rect = pygame.Rect(self.regions[source_key])
+            sx, sy, sw, sh = 0.0, 0.0, 1.0, 1.0
+
+        tx = rendered_rect.x + round(rendered_rect.width * sx)
+        ty = rendered_rect.y + round(rendered_rect.height * sy)
+        tw = max(1, round(rendered_rect.width * sw))
+        th = max(1, round(rendered_rect.height * sh))
         remaining_x = tx + round(tw * ratio)
         if ratio < 1.0 and remaining_x < tx + tw:
             cover = pygame.Surface((tx + tw - remaining_x, th), pygame.SRCALPHA)
