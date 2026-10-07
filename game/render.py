@@ -339,7 +339,7 @@ class Renderer:
                 # espaciales más grandes para separar izquierda/frente/derecha.
                 alpha = pygame.surfarray.array_alpha(atlas)
                 occupied = alpha.max(axis=0) > 8
-                runs = self._alpha_runs(occupied)
+                runs = alpha_runs(occupied)
                 runs = [
                     (int(x0), int(x1))
                     for x0, x1 in runs
@@ -388,7 +388,7 @@ class Renderer:
                         # Recortar también verticalmente al alpha real de ese modelo.
                         group_alpha = alpha[:, x0:x1 + 1]
                         y_mask = group_alpha.max(axis=1) > 8
-                        y_runs = self._alpha_runs(y_mask)
+                        y_runs = alpha_runs(y_mask)
                         if not y_runs:
                             continue
                         y0 = int(y_runs[0][0])
@@ -1043,8 +1043,8 @@ class Renderer:
             image = pygame.image.load(str(path)).convert_alpha()
             alpha = pygame.surfarray.array_alpha(image)
             # Detectar los limites reales de columnas/filas mediante proyecciones de alpha.
-            col_runs = self._alpha_runs(alpha.max(axis=0) > 8)
-            row_runs = self._alpha_runs(alpha.max(axis=1) > 8)
+            col_runs = alpha_runs(alpha.max(axis=0) > 8)
+            row_runs = alpha_runs(alpha.max(axis=1) > 8)
             if len(col_runs) != cols or len(row_runs) != rows:
                 # Fallback a una rejilla uniforme si el margen transparente hace ambiguas
                 # las proyecciones. Esto mantiene el orden esperado del spritesheet.
@@ -1150,8 +1150,8 @@ class Renderer:
                     for row in range(3) for col in range(3)
                 ]
             alpha = pygame.surfarray.array_alpha(image)
-            cols = self._alpha_runs(alpha.max(axis=1) > 8)
-            rows = self._alpha_runs(alpha.max(axis=0) > 8)
+            cols = alpha_runs(alpha.max(axis=1) > 8)
+            rows = alpha_runs(alpha.max(axis=0) > 8)
             frames=[]
             for y0,y1 in rows:
                 for x0,x1 in cols:
