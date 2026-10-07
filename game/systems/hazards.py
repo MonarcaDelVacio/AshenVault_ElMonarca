@@ -7,7 +7,7 @@ def update_hazards(sim, dt):
     for prop in sim.props:
         if prop.get("broken") and prop.get("fade", 0) > 0:
             prop["fade"] -= dt
-    sim.props = [p for p in sim.props if not p.get("broken") or p.get("fade", 0) > 0]
+    sim.props[:] = [p for p in sim.props if not p.get("broken") or p.get("fade", 0) > 0]
 
     for h in sim.hazards:
         h["life"] -= dt
