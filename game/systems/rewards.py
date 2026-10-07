@@ -15,18 +15,25 @@ def spawn_chest(sim, chest_type="common"):
 def open_chest(sim):
     if sim.chest is None or sim.chest.is_open:
         return False
-    if not sim.chest.open():
+    chest = sim.chest
+    if not chest.open():
         return False
-    sim.emit("chest_open", sim.chest.x, sim.chest.y, sim.chest.chest_type)
+    sim.emit("chest_open", chest.x, chest.y, chest.chest_type)
+    # El cofre consumido pertenece a esta sala; eliminar la referencia persistente
+    # evita que reaparezca al volver a entrar.
+    room = getattr(sim, "room", None)
+    if room is not None and getattr(room, "chest", None) is chest:
+        room.chest = None
     choices = [w for w in sim.data.weapons if w not in {x.d.id for x in sim.player.inventory}]
     if choices:
         wid = sim.rng.choice(choices)
-        wx, wy = sim._safe_drop_position(sim.chest.x + 42, sim.chest.y, 10.0)
+        wx, wy = sim._safe_drop_position(chest.x + 42, chest.y, 10.0)
         it = type("WeaponPickup", (), {"id":wid, "name":sim.data.weapons[wid].name,
             "kind":"weapon", "weapon_id":wid, "x":wx, "y":wy})()
         sim.items.append(it); sim.stats["items"] += 1
         sim.emit("weapon_drop", it.x, it.y, wid)
-    sim.emit("chest_coins", sim.chest.x, sim.chest.y, 0)
+    sim.emit("chest_coins", chest.x, chest.y, 0)
+    sim.chest = None
     return True
 
 
