@@ -339,13 +339,12 @@ class App:
                     pass
 
     def _menu_rects(self):
-        if self.state == MENU and not self.info:
-            return [(VIEW_W // 2 - 92, 220 + n * 57, 184, 42) for n in range(len(MENU_ITEMS))]
-        if self.state == PAUSE:
-            return [(VIEW_W // 2 - 105, 190 + n * 62, 210, 52) for n in range(len(PAUSE_ITEMS))]
-        if self.state == HUB and not self.info:
+        if self.info:
             return []
-        return []
+        from game.ui_layout import menu_rects
+        state = "menu" if self.state == MENU else "pause" if self.state == PAUSE else "hub"
+        count = len(MENU_ITEMS) if self.state == MENU else len(PAUSE_ITEMS) if self.state == PAUSE else 0
+        return menu_rects(state, count)
 
     def handle_menu_mouse(self, pos, click=False):
         """Permite navegar y activar las opciones con el ratón."""
