@@ -41,3 +41,11 @@ def test_chase_separates_from_other_enemy_without_self_reference_error():
     chase(enemy, sim, 0.1, 50)
     assert moved
     assert moved[0][0] > 0
+
+
+def test_flying_enemy_stays_inside_room_bounds():
+    enemy=SimpleNamespace(x=495.0,y=495.0,radius=10.0,d=SimpleNamespace(ai="flying"),strafe=1)
+    sim=SimpleNamespace(arena=SimpleNamespace(width=500,height=500))
+    step(enemy,sim,1,1,100,1.0)
+    assert 12.0 <= enemy.x <= 488.0
+    assert 12.0 <= enemy.y <= 488.0
