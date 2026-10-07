@@ -340,8 +340,12 @@ class Renderer:
                     rect = component_rects[0]
                     if rect.width >= 30 and rect.height >= 30:
                         rects.append(rect)
-                rects = sorted(rects, key=lambda rr: rr.width * rr.height, reverse=True)[:3]
-                rects.sort(key=lambda rr: rr.centerx)
+                # walls.png is a three-model atlas, not a tile sheet:
+                # left = 45°, center = 90° horizontal, right = 90° vertical.
+                # Sort only by physical X position; never by component area.
+                rects.sort(key=lambda rr: (rr.centerx, rr.centery))
+                if len(rects) >= 3:
+                    rects = rects[:3]
                 for name, rect in zip(("diagonal", "horizontal", "vertical"), rects):
                     frame = atlas.subsurface(rect).copy()
                     if frame.get_width() > 0 and frame.get_height() > 0:
@@ -1339,27 +1343,30 @@ class Renderer:
         return models
 
     def _tiled_wall_strip(self, image, horizontal, length):
-        key = ("wall_strip", id(image), bool(horizontal), int(length))
+        """Fits ONE complete wall model to one room-edge segment.
+
+        walls.png contains finished wall models, not repeatable tiles. Repeating
+        the sprite per tile was the source of the duplicated-wall bug. The model
+        is therefore scaled once to the requested segment length while retaining
+        its original aspect ratio in the wall-depth direction.
+        """
+        length = max(1, int(length))
+        key = ("wall_segment", id(image), bool(horizontal), length)
         cached = self._fit_cache.get(key)
         if cached is not None:
             return cached
-        length = max(1, int(length))
+
         if horizontal:
-            target_h = TILE * 2
-            target_w = max(1, int(round(image.get_width() * target_h / max(1, image.get_height()))))
-            scaled = pygame.transform.smoothscale(image, (target_w, target_h))
-            strip = pygame.Surface((length, target_h), pygame.SRCALPHA)
-            for x in range(0, length, target_w):
-                strip.blit(scaled, (x, 0))
-        else:
-            target_w = TILE * 2
+            target_w = length
             target_h = max(1, int(round(image.get_height() * target_w / max(1, image.get_width()))))
-            scaled = pygame.transform.smoothscale(image, (target_w, target_h))
-            strip = pygame.Surface((target_w, length), pygame.SRCALPHA)
-            for y in range(0, length, target_h):
-                strip.blit(scaled, (0, y))
-        self._fit_cache[key] = strip
-        return strip
+        else:
+            target_h = length
+            target_w = max(1, int(round(image.get_width() * target_h / max(1, image.get_height()))))
+
+        scaled = pygame.transform.smoothscale(image, (target_w, target_h))
+        self._fit_cache[key] = scaled
+        return scaled
+
 
     def _wall_boundary_orientation(self, arena, tx, ty):
         """Clasifica una pared según la geometría real de la sala.
@@ -1473,22 +1480,57 @@ class Renderer:
             x_pos = tx * TILE - TILE if has_east else tx * TILE
             target.blit(strip, (int(ox + x_pos), int(oy + run[0] * TILE)))
 
-        # Transiciones/cortes a 45°. Se dibujan una sola vez por celda para
-        # evitar que las esquinas se conviertan en bloques rectangulares.
+        # Tramos diagonales: agrupar celdas consecutivas de la misma
+        # pendiente y colocar UN modelo 45° por tramo.
         diagonal = wall_models.get("diagonal")
         if diagonal is not None:
-            for (tx, ty), kind in boundary.items():
-                if kind != "diagonal":
+            diagonal_cells = sorted(
+                (tx, ty) for (tx, ty), kind in boundary.items()
+                if kind == "diagonal"
+            )
+            used = set()
+            for cell in diagonal_cells:
+                if cell in used:
                     continue
-                scaled_w = TILE * 2
-                scaled_h = max(1, int(round(
-                    diagonal.get_height() * scaled_w / max(1, diagonal.get_width())
-                )))
-                sprite = pygame.transform.smoothscale(diagonal, (scaled_w, scaled_h))
-                rect = sprite.get_rect(
-                    center=(int(ox + tx * TILE + TILE / 2), int(oy + ty * TILE + TILE / 2))
+
+                tx, ty = cell
+                run = [cell]
+                used.add(cell)
+
+                # Grow along both diagonal directions, allowing only directly
+                # adjacent diagonal boundary cells.
+                changed = True
+                while changed:
+                    changed = False
+                    for cx, cy in list(run):
+                        for nx, ny in ((cx + 1, cy + 1), (cx - 1, cy - 1),
+                                       (cx + 1, cy - 1), (cx - 1, cy + 1)):
+                            if (nx, ny) in boundary and boundary[(nx, ny)] == "diagonal" and (nx, ny) not in used:
+                                used.add((nx, ny))
+                                run.append((nx, ny))
+                                changed = True
+
+                # A single model spans the complete diagonal run. Its long axis
+                # follows the 45° edge; the atlas model itself is already drawn
+                # in the correct orientation and is not rotated.
+                min_x = min(x for x, _ in run)
+                max_x = max(x for x, _ in run)
+                min_y = min(y for _, y in run)
+                max_y = max(y for _, y in run)
+                span = max(max_x - min_x + 1, max_y - min_y + 1) * TILE
+                sprite = self._tiled_wall_strip(diagonal, True, span)
+                if max_y != min_y:
+                    # Scale the finished model along its long axis and rotate it
+                    # exactly 45° for a multi-cell diagonal boundary.
+                    sprite = pygame.transform.rotate(sprite, -45 if max_y > min_y else 45)
+
+                center_x = (min_x + max_x + 1) * TILE / 2
+                center_y = (min_y + max_y + 1) * TILE / 2
+                target.blit(
+                    sprite,
+                    sprite.get_rect(center=(int(ox + center_x), int(oy + center_y))),
                 )
-                target.blit(sprite, rect)
+
 
     def _background(self, arena):
         key = (arena.biome, arena.room_id, arena.cols, arena.rows, getattr(arena, "floor_surface", None))
