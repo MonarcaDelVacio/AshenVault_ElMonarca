@@ -139,3 +139,23 @@ def test_data_graph_rejects_unknown_arena_biome():
     }
     errors = validate_data_graph(graph)
     assert any("arena arena: bioma desconocido missing" in error for error in errors)
+
+
+def test_data_graph_rejects_duplicate_enemy_variant_ids():
+    graph = {
+        "weapons": {}, "enemies": {}, "characters": {}, "bosses": {}, "biomes": {}, "biome_bosses": {},
+        "arenas": {}, "rooms": {}, "chests": {}, "items": {}, "modifiers": {}, "synergies": {}, "shops": {},
+        "enemy_variants": {"families": {"goblin": [{"id": "same"}, {"id": "same"}]}},
+    }
+    errors = validate_data_graph(graph)
+    assert any("id duplicado same" in error for error in errors)
+
+
+def test_data_graph_rejects_invalid_enemy_variant_asset_field():
+    graph = {
+        "weapons": {}, "enemies": {}, "characters": {}, "bosses": {}, "biomes": {}, "biome_bosses": {},
+        "arenas": {}, "rooms": {}, "chests": {}, "items": {}, "modifiers": {}, "synergies": {}, "shops": {},
+        "enemy_variants": {"families": {"golem": [{"id": "bomb", "projectile_asset_sheet": 123}]}},
+    }
+    errors = validate_data_graph(graph)
+    assert any("projectile_asset_sheet inválido" in error for error in errors)
