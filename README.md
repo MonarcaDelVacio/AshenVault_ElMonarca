@@ -146,15 +146,14 @@ El script genera `dist\AshenVault.exe` con PyInstaller e incluye `data`, `assets
 
 ## Mantenimiento y verificación
 
-- Suite completa: **181/181 tests OK** en el entorno de desarrollo.
-- `py_compile`: OK.
-- Validación de contenido: armas, enemigos, biomas, jefes y referencias de sprites/proyectiles.
-- Validación de pools de enemigos por bioma e invocaciones.
-- Validación de progresión, portales entre dungeons y minimapa.
-- Validación de loot y monedas por sala.
+- La suite de pruebas se mantiene en `tests/`, incluyendo cobertura de integración de Fase 13, estrés de Fase 14 y auditoría estructural de Fase 16.
+- La validación de contenido cubre armas, enemigos, personajes, biomas, jefes, arenas, salas, cofres, objetos, modificadores, sinergias, tiendas y variantes de enemigos.
+- La validación de pools de enemigos, invocaciones, sprites y proyectiles se realiza antes de permitir referencias inválidas durante el runtime.
+- La progresión, portales entre dungeons, minimapa, loot y monedas cuentan con cobertura de regresión.
 - Los drops se corrigen a posiciones seguras dentro de la sala.
-- Se eliminaron caches de Python/pruebas y no se incluyen artefactos generados en el paquete fuente.
-- La compilación Windows/PyInstaller debe verificarse en Windows.
+- No se incluyen caches de Python ni artefactos generados en el paquete fuente.
+- La ejecución completa de la suite y la compilación Windows/PyInstaller deben verificarse en un entorno local compatible con las dependencias del proyecto.
+- La auditoría final de Fase 16 no sustituye la prueba manual completa del juego.
 
 ## Estructura
 
