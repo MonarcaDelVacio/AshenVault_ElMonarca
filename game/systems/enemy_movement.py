@@ -35,9 +35,14 @@ def step(enemy, sim, ux, uy, speed, dt):
             progress = math.hypot(tx - ox, ty - oy)
             alignment = cx * ux + cy * uy
             lateral = (-uy) * cx + ux * cy
-            # Penaliza desvíos extremos, pero da una pequeña preferencia al
-            # lado actual de la maniobra. Al cambiar strafe cuando queda
-            # bloqueado, el enemigo no repite siempre la misma esquina.
+            clear = True
+            if hasattr(sim, "_obstacle_clear_to"):
+                clear = sim._obstacle_clear_to(enemy.x, enemy.y, tx, ty, enemy.radius)
+            # A steering candidate that immediately intersects a physical
+            # obstacle is not a useful escape route, even if collision sliding
+            # produced a small amount of progress.
+            if not clear:
+                continue
             score = progress * (0.68 + 0.32 * max(0.0, alignment))
             score += max(0.0, lateral * side) * min(distance * 0.08, 3.0)
             candidates.append((score, progress, tx, ty))
