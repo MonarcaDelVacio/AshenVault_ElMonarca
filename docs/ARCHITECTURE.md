@@ -584,3 +584,11 @@ The fourth Phase 5 extraction targets chest and room-reward generation. Added `g
 The fifth Phase 5 extraction targets player interaction and floor-item inventory handling. Added `game/systems/interaction.py`, which owns the existing portal/statue/chest/shop interaction order plus weapon pickup/merge/swap logic, healing, energy, ammunition, and generic item pickup behavior. `Sim._try_interact()` remains a compatibility facade, preserving the original call site and event/return semantics. Focused regression tests cover healing, energy, ammunition, and adding a weapon to inventory. No pickup range, inventory capacity, weapon merge, replacement, or reward values were intentionally changed.
 
 Phase 5 is now complete. The extracted simulation systems are deliberately small and dependency-safe; `Sim` remains the gameplay facade while the systems package owns isolated state transitions. Room transitions, combat orchestration, enemy lifecycle, and the main update ordering remain in `Sim` because extracting them at this stage would create higher coupling and regression risk.
+
+## Phase 6 status — Combat systems
+
+Phase 6 has begun with the core combat simulation extraction. Added `game/systems/combat.py`, which now owns the existing projectile spawning/update/hit pipeline, explosive impacts, melee/fist hit detection, destructible-prop damage, and player/enemy laser lifecycle and beam collision.
+
+The legacy `Sim` methods remain compatibility facades, so the existing player/enemy/weapons call sites keep their contracts. Combat behavior, damage formulas, projectile pooling, status application, shields, melee knockback, laser travel, and event emission were preserved rather than redesigned.
+
+Regression coverage was added in `tests/test_combat_system.py` for projectile spawning, melee hit detection, projectile damage/consumption, and laser energy/beam state. Further Phase 6 work should focus on auditing the weapon-fire and ability layers and their interaction with this extracted combat core before declaring the phase complete.
