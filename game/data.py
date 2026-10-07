@@ -128,3 +128,19 @@ class GameData:
         for biome_id, boss_id in self.biome_bosses.items():
             if biome_id not in self.biomes: raise ValueError(f"Bioma de jefe desconocido: {biome_id}")
             if boss_id not in self.bosses: raise ValueError(f"Jefe de bioma desconocido: {biome_id}:{boss_id}")
+        # El renderer mantiene un catálogo explícito de modelos enemigos. Esta
+        # validación evita que un NPC llegue al runtime sin sprite conocido.
+        known_enemy_sprites = {
+            "esbirromago", "gargola", "minigolem", "nomuerto", "nomuerto2",
+            "monodehielo", "minotaurogigante", "skeleton", "ghost", "goblin",
+            "orc", "demon", "slime", "dead_knight", "small_demon_assassin",
+            "small_demon_ranged", "small_demon_melee", "mage2", "ogro", "new_flyer",
+        }
+        for eid, enemy in self.enemies.items():
+            sprite_set = getattr(enemy, "sprite_set", None)
+            if sprite_set and sprite_set not in known_enemy_sprites:
+                raise ValueError(f"Enemigo {eid}: sprite_set sin modelo conocido {sprite_set}")
+        for bid, boss in self.bosses.items():
+            sprite_set = getattr(boss, "sprite_set", None)
+            if not isinstance(sprite_set, str) or not sprite_set:
+                raise ValueError(f"Jefe {bid}: falta sprite_set")
