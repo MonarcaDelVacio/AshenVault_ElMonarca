@@ -662,6 +662,10 @@ class Renderer:
             elif sheet == "ranged":
                 if not isinstance(index, int) or index < 0 or index >= len(ranged_frames):
                     missing.append(f"arma {wid}: frame ranged {index} no disponible")
+                else:
+                    frame = ranged_frames[index]
+                    if frame.get_width() <= 1 or frame.get_height() <= 1:
+                        missing.append(f"arma {wid}: frame ranged {index} vacío")
             projectile = getattr(wdef, "projectile_sprite", None)
             if projectile and not str(projectile).startswith("__weapon_sheet__:") and projectile not in self.projectile_images:
                 missing.append(f"arma {wid}: proyectil no cargado ({projectile})")
