@@ -52,6 +52,9 @@ class Player:
             self.ability["drone_damage_mult"] = self.drone_damage_mult
             self.ability["drone_attack_interval"] = 1.0 / max(0.1,self.drone_attack_speed_mult)
             self.ability["drone_hp"] = 12 + self.drone_hp_bonus
+            self.ability["drone_burst_size"] = 3
+            self.ability["drone_burst_interval"] = 0.12
+            self.ability["drone_lifetime"] = 20.0
         self.weapon = WeaponState(wdef)
         if getattr(cdef, "start_weapon", None) == getattr(wdef, "id", None):
             # Arma inicial única del personaje: cargadores infinitos (pero
