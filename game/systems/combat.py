@@ -5,6 +5,7 @@ existing combat contracts while making projectile, melee, explosive, and laser
 logic independently testable.
 """
 import math
+from ..world import TILE
 
 def spawn_projectile(sim,*a):return sim.pool.spawn(*a)
 
