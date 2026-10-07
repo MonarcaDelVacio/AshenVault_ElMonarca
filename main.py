@@ -14,7 +14,11 @@ from game.ui_atlas import UIAtlas
 from game.intro import IntroPlayer
 from game.sim import Sim, Input
 
-from game.ui_state import (\n    INTRO, MENU, PLAY, PAUSE, MAP, DEAD, VICTORY, SCORE, SETTINGS, CHAR_SELECT, HUB, STATUE,\n    MENU_ITEMS, PAUSE_ITEMS, SETTINGS_ITEMS, SETTING_KEYS, HUB_ITEMS,\n)\n
+from game.ui_state import (
+    INTRO, MENU, PLAY, PAUSE, MAP, DEAD, VICTORY, SCORE, SETTINGS, CHAR_SELECT, HUB, STATUE,
+    MENU_ITEMS, PAUSE_ITEMS, SETTINGS_ITEMS, SETTING_KEYS, HUB_ITEMS,
+)
+
 
 class App:
     def __init__(self):
