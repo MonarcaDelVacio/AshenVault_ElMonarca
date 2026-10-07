@@ -498,5 +498,14 @@ class Dungeon:
         x,y=rid; return {"N":(x,y-1),"S":(x,y+1),"W":(x-1,y),"E":(x+1,y)}[side]
     def transition(self,side):
         nxt=self.neighbor(self.current,side)
-        if nxt not in self.rooms or not self.room.arena.doors.get(side,Door(side,0,0)).open:return False
-        self.current=nxt; return True
+        if nxt not in self.rooms:
+            return False
+        door=self.room.arena.doors.get(side)
+        if door is None or not door.open:
+            return False
+        opposite={"N":"S","S":"N","W":"E","E":"W"}[side]
+        destination=self.rooms[nxt]
+        if opposite not in destination.arena.doors:
+            return False
+        self.current=nxt
+        return True
