@@ -80,7 +80,7 @@ def chase(enemy, sim, dt, speed):
                         sy += ey / dd * (r - dd) / r
         # Separation is stronger near narrow passages so enemies do not
         # stack in a doorway while all pursuing the same target.
-        separation_weight = 1.05 if abs(sx) + abs(sy) > 0.12 else 0.8
+        separation_weight = 1.35 if abs(sx) + abs(sy) > 0.12 else 0.8
         ux, uy = dx / n + sx * separation_weight, dy / n + sy * separation_weight
         m = math.hypot(ux, uy) or 1
         enemy._step(sim, ux / m, uy / m, speed, dt)
