@@ -9,6 +9,14 @@ import math
 def attack(enemy, sim, dist):
     d = enemy.d
     p = sim.player
+    # Revalidate visibility at the exact attack execution moment. An enemy may
+    # have entered WINDUP while the player was visible and then lost line of
+    # sight behind a physical decoration/prop before the projectile is spawned.
+    if d.ai not in ("melee", "charger") and hasattr(sim, "_target_line_clear"):
+        if not sim._target_line_clear(enemy.x, enemy.y, p.x, p.y):
+            enemy.state = "move"
+            enemy.timer = 0.0
+            return
     enemy.cooldown = d.cooldown
     if d.ai in ("melee", "charger"):
         target=enemy.target or {"kind":"player","obj":p,"x":p.x,"y":p.y}
