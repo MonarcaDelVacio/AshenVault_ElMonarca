@@ -25,3 +25,19 @@ def test_chase_prefers_direct_line_of_sight():
     chase(enemy,sim,0.1,50)
     assert moved
     assert moved[0][0]>0
+
+
+def test_chase_separates_from_other_enemy_without_self_reference_error():
+    enemy = SimpleNamespace(x=100.0, y=100.0, radius=10.0, d=SimpleNamespace(ai="melee"), strafe=1)
+    other = SimpleNamespace(x=104.0, y=100.0, radius=10.0, alive=True)
+    player = SimpleNamespace(x=220.0, y=100.0)
+    moved = []
+    sim = SimpleNamespace(
+        player=player,
+        enemies=[enemy, other],
+        arena=SimpleNamespace(line_of_sight=lambda *a: True),
+        move_actor=lambda x, y, dx, dy, r: (moved.append((dx, dy)) or (x + dx, y + dy)),
+    )
+    chase(enemy, sim, 0.1, 50)
+    assert moved
+    assert moved[0][0] > 0
