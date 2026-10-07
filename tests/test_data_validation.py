@@ -93,3 +93,15 @@ def test_data_graph_rejects_invalid_enemy_sprite_set():
     }
     errors = validate_data_graph(graph)
     assert any("sprite_set inválido" in error for error in errors)
+
+def test_data_graph_rejects_enemy_without_sprite_set():
+    graph = {
+        "weapons": {},
+        "enemies": {"bad": {}},
+        "characters": {},
+        "bosses": {},
+        "biomes": {},
+        "biome_bosses": {},
+    }
+    errors = validate_data_graph(graph)
+    assert any("falta sprite_set" in error for error in errors)
