@@ -352,7 +352,7 @@ class Arena:
 class Room:
     def __init__(self,rid,adata):
         self.id=tuple(rid); self.data=adata; self.room_type=adata.get("room_type","combat")
-        self.items=[]; self.pickups=[]; self.decorations=list(adata.get("decorations", [])); self.cleared=self.room_type not in ("start","combat","elite","boss","challenge","miniboss"); self.entered=False
+        self.items=[]; self.pickups=[]; self.chest=None; self.shop_offers=[]; self.shop_initialized=False; self.decorations=list(adata.get("decorations", [])); self.cleared=self.room_type not in ("start","combat","elite","boss","challenge","miniboss"); self.entered=False
         self.special_resolved=False
         self.enemies_spawned=False; self.doors_locked=False
         self.arena=Arena(adata,self.id)
