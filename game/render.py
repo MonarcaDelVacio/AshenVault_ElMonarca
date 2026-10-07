@@ -1519,11 +1519,8 @@ class Renderer:
                 max_y = max(y for _, y in run)
                 span = max(max_x - min_x + 1, max_y - min_y + 1) * TILE
                 sprite = self._tiled_wall_strip(diagonal, True, span)
-                if max_y != min_y:
-                    # Scale the finished model along its long axis and rotate it
-                    # exactly 45° for a multi-cell diagonal boundary.
-                    sprite = pygame.transform.rotate(sprite, -45 if max_y > min_y else 45)
-
+                # The 45° model in walls.png already contains its intended
+                # perspective/orientation. It must NOT be rotated again.
                 center_x = (min_x + max_x + 1) * TILE / 2
                 center_y = (min_y + max_y + 1) * TILE / 2
                 target.blit(
