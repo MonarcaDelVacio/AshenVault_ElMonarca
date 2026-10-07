@@ -9,6 +9,7 @@ from .assets import AssetRegistry
 from .assets.bounds import decoration_max_size
 from .rendering.atlas_geometry import alpha_runs, split_grid_frames
 from .rendering.sprite_geometry import fit_dimensions
+from .rendering.weapon_geometry import melee_grip_anchor, weapon_max_dimension
 
 VIEW_W, VIEW_H = 960, 540
 
@@ -1249,13 +1250,7 @@ class Renderer:
         self._fit_cache[key]=out
         return out
     def _melee_grip_anchor(weapon_def):
-        path=str(getattr(weapon_def,"weapon_sprite","")).lower()
-        if "guadana" in path: return (0.20,0.82)
-        if "martillo" in path: return (0.19,0.78)
-        if "hacha" in path: return (0.18,0.78)
-        if "lanza" in path: return (0.17,0.78)
-        if "espada" in path: return (0.18,0.79)
-        return (0.18,0.78)
+        return melee_grip_anchor(getattr(weapon_def, "weapon_sprite", ""))
 
     def _rotate_weapon_from_grip(self, image, weapon_def, rotation, flipped=False):
         image=self._fit_image(image,self._weapon_max_dimension(getattr(weapon_def,"class","pistol")))
@@ -1274,11 +1269,7 @@ class Renderer:
 
     @staticmethod
     def _weapon_max_dimension(weapon_class):
-        return {
-            "pistol": 29, "smg": 32, "shotgun": 34, "rifle": 38,
-            "precision": 42, "machinegun": 39, "launcher": 37,
-            "magic": 35, "special": 38, "experimental": 34, "melee": 37, "throwable": 24,
-        }.get(weapon_class, 32)
+        return weapon_max_dimension(weapon_class)
 
     def text(self, surf, s, pos, color=(235, 235, 240), font=None, center=False, right=False):
         img = (font or self.font).render(s, True, color)
